@@ -160,6 +160,36 @@ export function formatHrs(n: number | null | undefined): string {
   return `${n.toFixed(1)} hrs`;
 }
 
+/**
+ * Streak length in weeks: count of consecutive ISO weeks (going backwards
+ * from now) where ≥1 decision was created. 0 if nothing this week.
+ * Pass an array of decision createdAt timestamps; order doesn't matter.
+ */
+export function streakWeeks(timestamps: Array<Date | string>): number {
+  if (!Array.isArray(timestamps) || timestamps.length === 0) return 0;
+  const weekKey = (d: Date) => {
+    // Normalize to the Monday of the ISO week (UTC).
+    const x = new Date(
+      Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+    );
+    const day = x.getUTCDay() || 7; // Sun = 0 → 7
+    if (day !== 1) x.setUTCDate(x.getUTCDate() - (day - 1));
+    return x.toISOString().slice(0, 10);
+  };
+  const have = new Set<string>();
+  for (const t of timestamps) {
+    const dt = t instanceof Date ? t : new Date(t);
+    if (!Number.isNaN(dt.getTime())) have.add(weekKey(dt));
+  }
+  let streak = 0;
+  const cursor = new Date();
+  while (have.has(weekKey(cursor))) {
+    streak++;
+    cursor.setUTCDate(cursor.getUTCDate() - 7);
+  }
+  return streak;
+}
+
 /** Friendly "X days ago" / "today" / explicit-date for older. */
 export function relativeDay(d: Date | string | null | undefined): string {
   if (!d) return "";

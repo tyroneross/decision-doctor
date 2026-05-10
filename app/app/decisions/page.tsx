@@ -1,10 +1,18 @@
-import Link from "next/link";
 import { desc } from "drizzle-orm";
 import { decisions } from "@/lib/db/schema";
 import { runWithActor, withActor } from "@/lib/db/actor";
 import { getSessionActor } from "@/lib/auth-session";
+import { totalHoursSaved, streakWeeks } from "@/lib/decision-display";
+import {
+  DecisionsListClient,
+  type DecisionRow,
+  type ListSummary,
+} from "@/components/decisions/DecisionsListClient";
+import { EmptyState } from "@/components/decisions/EmptyState";
 
-// SSR — RLS-enforced. List the user's prior decisions, newest first.
+// SSR — RLS-enforced. Loads the user's prior decisions, projects to a
+// shape the list client can render, and computes the hero-ledger
+// aggregates server-side so the client gets serialized primitives.
 export default async function DecisionsHistoryPage() {
   const actor = await getSessionActor();
   if (!actor) return null; // layout redirects; defensive
@@ -20,6 +28,8 @@ export default async function DecisionsHistoryPage() {
             templateId: decisions.templateId,
             status: decisions.status,
             createdAt: decisions.createdAt,
+            recommendation: decisions.recommendation,
+            workloadReducers: decisions.workloadReducers,
           })
           .from(decisions)
           .orderBy(desc(decisions.createdAt))
@@ -28,74 +38,39 @@ export default async function DecisionsHistoryPage() {
   );
 
   if (rows.length === 0) {
-    return (
-      <section className="space-y-6">
-        <header>
-          <h1 className="text-xl font-semibold">Your decisions</h1>
-          <p className="text-sm text-ink-500">
-            Nothing here yet. Make your first decision in about three minutes.
-          </p>
-        </header>
-        <div className="rounded-lg border border-ink-100 p-6">
-          <h2 className="text-base font-medium text-ink-900">
-            Start with a decision template
-          </h2>
-          <p className="mt-1 text-sm text-ink-500">
-            Three templates ship today: clinical capacity, pricing, and an
-            administrative hire. Each takes seven fields or fewer.
-          </p>
-          <Link
-            href="/app/decisions/new"
-            className="mt-4 inline-flex items-center rounded-md bg-ink-900 px-3 py-2 text-sm font-medium text-white hover:bg-ink-700"
-          >
-            Start a decision
-          </Link>
-        </div>
-      </section>
-    );
+    return <EmptyState />;
   }
 
-  return (
-    <section className="space-y-6">
-      <header className="flex items-end justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Your decisions</h1>
-          <p className="text-sm text-ink-500">
-            {rows.length} decision{rows.length === 1 ? "" : "s"} on record.
-          </p>
-        </div>
-        <Link
-          href="/app/decisions/new"
-          className="rounded bg-ink-900 px-3 py-2 text-sm font-medium text-white hover:bg-ink-700"
-        >
-          New
-        </Link>
-      </header>
-      <ul className="divide-y divide-ink-100 rounded-lg border border-ink-100">
-        {rows.map((d) => (
-          <li key={d.id}>
-            <Link
-              href={`/app/decisions/${d.id}`}
-              className="flex items-baseline justify-between px-4 py-3 hover:bg-ink-100/40"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-ink-900">
-                  {d.title ?? "Untitled decision"}
-                </p>
-                <p className="text-xs text-ink-500">
-                  {d.templateId} · {d.status}
-                </p>
-              </div>
-              <time
-                dateTime={d.createdAt.toISOString()}
-                className="text-xs text-ink-500"
-              >
-                {d.createdAt.toLocaleDateString()}
-              </time>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
+  // Defensive projection — JSON columns come back as `unknown`.
+  const projected: DecisionRow[] = rows.map((r) => {
+    const rec =
+      r.recommendation && typeof r.recommendation === "object"
+        ? (r.recommendation as {
+            option?: string;
+            confidence?: number;
+          })
+        : null;
+    const reducerArr = Array.isArray(r.workloadReducers) ? r.workloadReducers : [];
+    return {
+      id: r.id,
+      title: r.title,
+      templateId: r.templateId,
+      status: r.status,
+      createdAt: r.createdAt.toISOString(),
+      recommendationOption: rec?.option ?? null,
+      recommendationConfidence:
+        typeof rec?.confidence === "number" ? rec.confidence : null,
+      hoursSaved: totalHoursSaved(reducerArr),
+      reducerCount: reducerArr.length,
+    };
+  });
+
+  const summary: ListSummary = {
+    totalHoursPerWeek: projected.reduce((s, r) => s + r.hoursSaved, 0),
+    decisions: projected.length,
+    skillsShipped: projected.reduce((s, r) => s + r.reducerCount, 0),
+    streakWeeks: streakWeeks(rows.map((r) => r.createdAt)),
+  };
+
+  return <DecisionsListClient rows={projected} summary={summary} />;
 }
