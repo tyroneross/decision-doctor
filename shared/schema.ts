@@ -24,6 +24,8 @@ export const DecisionSourceSchema = z.object({
 });
 
 export const DecisionContextSchema = z.object({
+  // userId + tenantId are Postgres uuids (verified via information_schema 2026-05-10).
+  // Server overrides client-supplied values from the session actor regardless.
   userId: z.string().uuid(),
   tenantId: z.string().uuid(),
   previousDecisionIds: z.array(z.string().uuid()).optional(),

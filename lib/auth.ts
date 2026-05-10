@@ -9,7 +9,13 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { magicLink } from "better-auth/plugins";
 import { authDb } from "@/lib/db/auth-db";
-import { tenants, user, account, session, verification } from "@/lib/db/schema";
+import {
+  tenants,
+  users,
+  accounts,
+  sessions,
+  verifications,
+} from "@/lib/db/schema";
 import { sendMagicLinkEmail } from "@/lib/email/send-magic-link";
 import { env } from "@/lib/env";
 
@@ -22,7 +28,15 @@ const TRUSTED_ORIGINS = [
 export const auth = betterAuth({
   database: drizzleAdapter(authDb, {
     provider: "pg",
-    schema: { user, account, session, verification },
+    // Map Better Auth's logical model names (singular) to our drizzle schema
+    // tables (plural — match the live Neon DB). The drizzle adapter takes the
+    // schema object keyed by Better Auth's expected logical names.
+    schema: {
+      user: users,
+      account: accounts,
+      session: sessions,
+      verification: verifications,
+    },
   }),
   // Surface unexpected errors in dev; keep info+ in prod so we don't drown logs.
   logger: {

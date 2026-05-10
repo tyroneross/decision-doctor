@@ -14,10 +14,11 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
 import { Pool } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { sql, eq, inArray } from "drizzle-orm";
-import { decisions, tenants, user } from "@/lib/db/schema";
+import { decisions, tenants, users } from "@/lib/db/schema";
 import { runWithActor, withActor } from "@/lib/db/actor";
 
 // Setup/teardown use the OWNER role (DATABASE_URL_UNPOOLED). That role has
@@ -39,11 +40,11 @@ const createdDecisionIds: string[] = [];
 
 beforeAll(async () => {
   // Create two distinct users + tenants. Use unique emails so re-runs don't collide.
-  // user.id is TEXT (Better Auth convention) — generate ids client-side via crypto.
+  // users.id is uuid (verified via information_schema 2026-05-10).
   const stamp = Date.now();
-  userAId = `rls-test-A-${stamp}-${Math.random().toString(36).slice(2, 8)}`;
-  userBId = `rls-test-B-${stamp}-${Math.random().toString(36).slice(2, 8)}`;
-  await setupDb.insert(user).values([
+  userAId = randomUUID();
+  userBId = randomUUID();
+  await setupDb.insert(users).values([
     {
       id: userAId,
       email: `rls-test-A-${stamp}@example.invalid`,
@@ -76,7 +77,7 @@ afterAll(async () => {
     await setupDb.delete(decisions).where(inArray(decisions.id, createdDecisionIds));
   }
   await setupDb.delete(tenants).where(inArray(tenants.id, [tenantAId, tenantBId]));
-  await setupDb.delete(user).where(inArray(user.id, [userAId, userBId]));
+  await setupDb.delete(users).where(inArray(users.id, [userAId, userBId]));
   await setupPool.end();
 });
 

@@ -1,14 +1,9 @@
 // PRD §7.1 — Multi-tenant schema (single-user UX, multi-tenant-ready).
 //
-// Schema mirrors the actual Neon database, which already contains Better Auth
-// auto-generated tables (`user`, `account`, `session`, `verification`) — singular,
-// text-typed ids. The Decision Doctor tables (`tenants`, `decisions`, `audit_events`)
-// reference `user.id` as TEXT to match Better Auth's id shape.
-//
-// Discovered 2026-05-10: Phase 1 schema declared `users` (plural, UUID id) but the
-// live DB had Better Auth's singular tables with text ids. RLS still works because
-// policies compare `tenant_id::text = current_setting(...)` and `owner_user_id` is
-// also text.
+// Schema mirrors the actual Neon database — verified via information_schema
+// 2026-05-10. Tables are PLURAL: `users`, `accounts`, `sessions`, `verifications`,
+// `tenants`, `decisions`, `audit_events`. ALL primary keys + foreign keys are
+// `uuid` (Better Auth was configured to use uuid generateId, not text/cuid).
 
 import { sql } from "drizzle-orm";
 import {
@@ -25,9 +20,9 @@ import {
 // Schema mirrored here so app code can JOIN; do NOT modify columns without
 // running Better Auth's `generate` command in lockstep.
 
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name"),
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().default(""),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
@@ -35,13 +30,13 @@ export const user = pgTable("user", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const account = pgTable("account", {
-  id: text("id").primaryKey(),
+export const accounts = pgTable("accounts", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
-  userId: text("user_id")
+  userId: uuid("user_id")
     .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "cascade" }),
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
@@ -53,21 +48,21 @@ export const account = pgTable("account", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const session = pgTable("session", {
-  id: text("id").primaryKey(),
+export const sessions = pgTable("sessions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   expiresAt: timestamp("expires_at").notNull(),
   token: text("token").notNull().unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  userId: text("user_id")
+  userId: uuid("user_id")
     .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "cascade" }),
 });
 
-export const verification = pgTable("verification", {
-  id: text("id").primaryKey(),
+export const verifications = pgTable("verifications", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
@@ -78,9 +73,9 @@ export const verification = pgTable("verification", {
 // --- Tenants — one auto-created per user in v1 ("Personal") ---
 export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  ownerUserId: text("owner_user_id")
+  ownerUserId: uuid("owner_user_id")
     .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull().default("Personal"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -90,9 +85,9 @@ export const decisions = pgTable(
   "decisions",
   {
     id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-    userId: text("user_id")
+    userId: uuid("user_id")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
@@ -123,9 +118,9 @@ export const auditEvents = pgTable(
   "audit_events",
   {
     id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-    userId: text("user_id")
+    userId: uuid("user_id")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
@@ -140,9 +135,9 @@ export const auditEvents = pgTable(
   }),
 );
 
-// Type exports — singular names match Better Auth convention
-export type User = typeof user.$inferSelect;
-export type NewUser = typeof user.$inferInsert;
+// Type exports — plural matches DB; type names stay singular for ergonomics.
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
 export type Tenant = typeof tenants.$inferSelect;
 export type Decision = typeof decisions.$inferSelect;
 export type NewDecision = typeof decisions.$inferInsert;
