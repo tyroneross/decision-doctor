@@ -1,18 +1,38 @@
 // PRD §3 + T-10 — per-user 24h decision rate limit.
 //
-// In-memory sliding window. Acceptable per PRD §3 because v1 is single-region
-// Vercel + low volume; if the function instance recycles, the user gets a
-// fresh budget — graceful degradation, not security boundary.
+// Two-mode implementation, env-gated:
+//   - When UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set
+//     (production / preview on Vercel), use @upstash/ratelimit's
+//     sliding-window algorithm against Redis. Multi-region-safe; survives
+//     Vercel function recycling and concurrent regions.
+//   - Otherwise (dev w/o Redis, tests), fall back to the in-memory
+//     sliding-window. The same per-process bucket the route used before.
+//     Graceful degradation, not a security boundary.
 //
-// Migrate to Upstash Redis later (the @upstash/ratelimit dep is already
-// installed) by wrapping the same surface.
+// Same contract surface — but `checkRateLimit` is now ASYNC. Route handlers
+// must `await` it. Existing callers (chat + decisions) already live inside
+// async route handlers, so the signature change is mechanical.
 
 import "server-only";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+import { env } from "@/lib/env";
+
+// ─── Public contract ────────────────────────────────────────────────────
+
+export interface RateLimitResult {
+  ok: boolean;
+  remaining: number;
+  /** ms-since-epoch when the user's bucket resets. */
+  resetAt: number;
+}
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 const CAP = 20;
 
-const buckets = new Map<string, number[]>(); // userId → timestamps[]
+// ─── In-memory fallback (dev / no Redis) ────────────────────────────────
+
+const buckets = new Map<string, number[]>(); // userId → ms timestamps[]
 
 function gc(now: number) {
   for (const [k, ts] of buckets) {
@@ -22,11 +42,7 @@ function gc(now: number) {
   }
 }
 
-export function checkRateLimit(userId: string): {
-  ok: boolean;
-  remaining: number;
-  resetAt: number;
-} {
+function checkInMemory(userId: string): RateLimitResult {
   const now = Date.now();
   if (Math.random() < 0.01) gc(now); // probabilistic cleanup
   const ts = (buckets.get(userId) ?? []).filter((t) => now - t < WINDOW_MS);
@@ -37,4 +53,55 @@ export function checkRateLimit(userId: string): {
   ts.push(now);
   buckets.set(userId, ts);
   return { ok: true, remaining: CAP - ts.length, resetAt: now + WINDOW_MS };
+}
+
+// Test-only: reset the in-memory bucket. Imported by tests; ignored in prod
+// because we hit the Upstash branch there.
+export function __resetInMemoryForTests() {
+  buckets.clear();
+}
+
+// ─── Upstash branch (lazy singleton) ────────────────────────────────────
+
+let upstashLimiter: Ratelimit | null | undefined;
+function getUpstashLimiter(): Ratelimit | null {
+  if (upstashLimiter !== undefined) return upstashLimiter;
+  const url = env.UPSTASH_REDIS_REST_URL;
+  const token = env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) {
+    upstashLimiter = null;
+    return null;
+  }
+  const redis = new Redis({ url, token });
+  upstashLimiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(CAP, "24 h"),
+    analytics: false,
+    prefix: "dd:rl:user",
+  });
+  return upstashLimiter;
+}
+
+// ─── Public entry ───────────────────────────────────────────────────────
+
+export async function checkRateLimit(userId: string): Promise<RateLimitResult> {
+  const limiter = getUpstashLimiter();
+  if (!limiter) return checkInMemory(userId);
+  try {
+    const res = await limiter.limit(userId);
+    return {
+      ok: res.success,
+      remaining: res.remaining,
+      // Upstash returns `reset` as ms-since-epoch (the upper window edge).
+      resetAt: res.reset,
+    };
+  } catch (e) {
+    // Redis hiccup — degrade gracefully to the in-memory bucket so the
+    // request isn't silently denied.
+    console.warn(
+      "[ratelimit] Upstash unreachable, falling back to in-memory:",
+      e instanceof Error ? e.message : String(e),
+    );
+    return checkInMemory(userId);
+  }
 }

@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   }
 
   // T-10 — per-user rate limit (20 / 24h).
-  const rl = checkRateLimit(actor.userId);
+  const rl = await checkRateLimit(actor.userId);
   if (!rl.ok) {
     return Response.json(
       {

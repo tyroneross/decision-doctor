@@ -71,7 +71,7 @@ export async function POST(req: Request) {
 
   // 3. Rate limit (shared bucket with /api/decisions — chat-driven runs cost
   //    the same Groq budget).
-  const rl = checkRateLimit(actor.userId);
+  const rl = await checkRateLimit(actor.userId);
   if (!rl.ok) {
     return NextResponse.json(
       {
