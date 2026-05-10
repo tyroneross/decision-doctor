@@ -36,9 +36,43 @@ Commit decomposition (10 commits planned, build-loop's plan phase finalizes):
 9. C9 feat(ratelimit+audit): T-10 (20/day) + audit_events writes
 10. C10 chore(deploy): Vercel link + env + first deploy
 
-## Phase 3 — Deploy (⏳ pending)
+## Phase 2 — Build-loop dispatch (✅ complete)
 
-Vercel preview URL via `vercel link` (logged in as `tyronerossjr`) + `vercel env add` for all 8 env vars + `vercel --prod`.
+| # | Commit | Status | Notes |
+|---|---|---|---|
+| C1 | scaffold + Phase 1 | ✅ | 7906556 |
+| C3 | RLS test + app_user role | ✅ | 5bcfcee |
+| C4 | Better Auth + magic-link + email/password | ✅ | 3562d3b |
+| C5 | MCDA Stages 1-5 + 3 templates | ✅ | 427da0d |
+| C6/7/8/9 | UI + PWA + rate-limit + audit | ✅ | 92e4fd7 |
+| env fix | preprocess optional env vars | ✅ | f81511d |
+
+**Tests at HEAD (`f81511d`):**
+- ✅ `pnpm typecheck` — clean
+- ✅ `pnpm build` — 10 routes generated
+- ✅ `pnpm vitest run` — 5 / 5 (T-08 RLS isolation × 2; T-03 engine × 3)
+
+**Schema reality discovered Phase 2:** live Neon DB had PLURAL table names (`users`, `accounts`, `sessions`, `verifications`) and ALL ids are `uuid` (not `text`). Schema declared singular + text id. Verified via `information_schema.columns`; rebased `lib/db/schema.ts`, `lib/auth.ts`, `tests/rls-isolation.test.ts`, and `shared/schema.ts` to the live shape. Better Auth's drizzle adapter receives `{ user: users, account: accounts, ... }` so its internal logical names still resolve. Added missing `decisions.title` column via `ALTER TABLE`.
+
+**Skipped (per user instruction):** Railway / Python sidecar — math is fully deterministic in TypeScript (Stage 4 ELECTRE + Stage 5 TOPSIS). Confidence number traces to `lib/engine/stage5-ranking.ts:computeTopsis`.
+
+## Phase 3 — Deploy (✅ complete)
+
+- ✅ `vercel link` → `tyrone-ross-projects/decision-doctor` (project id `prj_5lbniJuDaVKmKBEyQAJPsF2UcmR2`)
+- ✅ `vercel env add` for 9 vars in **production** + **development** scopes (preview scope skipped — CLI requires per-branch enumeration; production deploys land via main)
+- ✅ `vercel --prod` (deployment id `dpl_DLLhiCJAT5L95nvrhhh3kLV2FZzH`, build duration ~44s)
+- ✅ **Live URL: https://decision-doctor-xi.vercel.app** (alias) — also reachable at the per-deployment hash URL
+- ✅ Smoke: `GET /` → 307 → `/sign-in`; `GET /sign-in` → 200; `GET /api/templates` → JSON with 3 templates (capacity, pricing, admin-hire)
+- ⚠️ Untested in prod: end-to-end magic-link flow, recommendation render at 375px viewport, print-to-PDF — these need a manual session because they require an inbox + a logged-in browser (Resend will not deliver to `@example.invalid`)
+
+## Open follow-ups (not blocking)
+
+1. ⚠️ **Preview-scope env vars not set** — Vercel CLI's `env add … preview` requires per-branch enumeration; only production + development received the secrets. Result: PR preview deploys will fail env validation. Workaround: set them via the Vercel dashboard (5 minutes) or via `vercel env add KEY preview <branch> --value <v> --yes` once a branch exists.
+2. ⚠️ **Magic-link from Resend in prod requires sender domain verification** for `tyrone@rosslabsdigital.com`-shaped from-addresses; if `AUTH_FROM_EMAIL` uses a non-verified domain, Resend will return a hard error on the first sign-in. Verify domain in Resend dashboard if so.
+3. ⚠️ **Pre-existing `decision-doctor.vercel.app` host taken by another project** — production lives at `decision-doctor-xi.vercel.app`. Optionally reclaim or pick a custom domain.
+4. ⚠️ **Rate-limit is in-memory** (per `lib/ratelimit.ts`). Acceptable for v1 single-region Vercel; promote to Upstash Redis when traffic grows. The `@upstash/ratelimit` dep is already in `package.json`.
+5. ❓ **Better Auth schema sync at next push** — if Better Auth ever runs its `generate` command against this DB it may attempt to recreate singular tables. Pin Better Auth's adapter mapping in tests when an integration test for sign-in is added.
+6. ❓ **Sentry not wired** — `SENTRY_DSN` is optional in env.ts. PRD §22.6 marks observability as P1; deferred.
 
 ## What you can do in parallel right now
 
