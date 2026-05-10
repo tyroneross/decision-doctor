@@ -10,18 +10,15 @@ import {
   type DecisionCategory,
 } from "@/lib/decision-display";
 
-// Server-side projection of a decisions row that we serialize down here.
-// Mirrors the columns selected in app/app/decisions/page.tsx — JSON cols
-// stay typed unknown so the client guards each access.
 export interface DecisionRow {
   id: string;
   title: string | null;
   templateId: string;
   status: string;
-  createdAt: string; // ISO
+  createdAt: string;
   recommendationOption: string | null;
   recommendationConfidence: number | null;
-  hoursSaved: number; // computed server-side via totalHoursSaved()
+  hoursSaved: number;
   reducerCount: number;
 }
 
@@ -78,106 +75,86 @@ export function DecisionsListClient({ rows, summary }: Props) {
   }, [rows, filter]);
 
   return (
-    <section className="space-y-8">
-      {/* HERO LEDGER — time-back is the lead, decisions count is supporting */}
-      <article
-        data-component="LedgerHero"
-        className="grad-coral relative overflow-hidden rounded-3xl p-8 text-white shadow-ledger sm:p-10"
-      >
+    <section className="space-y-5">
+      {/* COMPACT HERO — focused on key metric */}
+      <article className="grad-coral relative overflow-hidden rounded-2xl p-5 text-white">
         <div
           aria-hidden
-          className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white opacity-15 blur-2xl"
+          className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/20 blur-2xl"
         />
-        <div
-          aria-hidden
-          className="absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-white opacity-10 blur-2xl"
-        />
-        <div className="relative grid grid-cols-1 gap-8 md:grid-cols-12 md:items-end md:gap-10">
-          <div className="md:col-span-7">
-            <p className="text-xs font-bold uppercase tracking-widest opacity-90 sm:text-sm">
-              Your decisions · since you started
+        <div className="relative flex items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider opacity-80">
+              Time saved weekly
             </p>
-            <p className="mt-3 text-5xl font-bold leading-tight tracking-tight sm:text-6xl md:text-7xl">
-              🕐 {formatHrs(summary.totalHoursPerWeek)}/wk back
-            </p>
-            <p className="mt-4 max-w-2xl text-base opacity-95 sm:text-lg">
-              {summary.skillsShipped} starter skill{summary.skillsShipped === 1 ? "" : "s"}
-              {" "}shipped · {summary.decisions} decision{summary.decisions === 1 ? "" : "s"} made.
-              Most recent first below.
+            <p className="mt-1 text-3xl font-bold tracking-tight">
+              {formatHrs(summary.totalHoursPerWeek)}/wk
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-4 md:col-span-5">
-            <Stat label="Decisions" value={String(summary.decisions)} />
-            <Stat label="Skills shipped" value={String(summary.skillsShipped)} />
-            <Stat
-              label="Streak"
-              value={
-                summary.streakWeeks > 0
-                  ? `${summary.streakWeeks} wk${summary.streakWeeks === 1 ? "" : "s"} 🔥`
-                  : "—"
-              }
-            />
+          <div className="flex gap-2">
+            <StatPill label="Decisions" value={summary.decisions} />
+            <StatPill label="Skills" value={summary.skillsShipped} />
+            {summary.streakWeeks > 0 && (
+              <StatPill label="Streak" value={`${summary.streakWeeks}w`} icon="fire" />
+            )}
           </div>
         </div>
       </article>
 
-      {/* FILTER CHIPS — Miller-friendly: ≤6 category + 2 time chips */}
-      <div className="flex flex-wrap items-center gap-3">
-        <FilterChip
-          active={filter === "all"}
-          onClick={() => setFilter("all")}
-          variant="primary"
-        >
-          All · {counts.all}
-        </FilterChip>
-        {([
-          ["capacity", "Capacity"],
-          ["pricing", "Pricing"],
-          ["admin", "Admin hire"],
-        ] as const).map(([key, label]) => {
-          const cat = categoryFor(
-            key === "admin" ? "admin-hire" : key,
-          );
-          return (
-            <FilterChip
-              key={key}
-              active={filter === key}
-              onClick={() => setFilter(key)}
-              dotColor={cat.hex}
-              fg={cat.fg}
-              bg={cat.bg}
-              count={counts[key]}
-            >
-              {label}
-            </FilterChip>
-          );
-        })}
-        <span aria-hidden className="mx-2 hidden h-6 w-px bg-rule sm:inline-block" />
-        <FilterChip
-          active={filter === "this-week"}
-          onClick={() => setFilter("this-week")}
-          variant="ghost"
-        >
-          This week · {counts["this-week"]}
-        </FilterChip>
-        <FilterChip
-          active={filter === "this-month"}
-          onClick={() => setFilter("this-month")}
-          variant="ghost"
-        >
-          This month · {counts["this-month"]}
-        </FilterChip>
+      {/* FILTER BAR — horizontal scroll on mobile */}
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="flex items-center gap-2 pb-2">
+          <FilterChip
+            active={filter === "all"}
+            onClick={() => setFilter("all")}
+            variant="primary"
+          >
+            All {counts.all}
+          </FilterChip>
+          {([
+            ["capacity", "Capacity"],
+            ["pricing", "Pricing"],
+            ["admin", "Admin"],
+          ] as const).map(([key, label]) => {
+            const cat = categoryFor(key === "admin" ? "admin-hire" : key);
+            return (
+              <FilterChip
+                key={key}
+                active={filter === key}
+                onClick={() => setFilter(key)}
+                dotColor={cat.hex}
+              >
+                {label} {counts[key]}
+              </FilterChip>
+            );
+          })}
+          <span aria-hidden className="mx-1 h-4 w-px bg-ink-200" />
+          <FilterChip
+            active={filter === "this-week"}
+            onClick={() => setFilter("this-week")}
+            variant="ghost"
+          >
+            Week {counts["this-week"]}
+          </FilterChip>
+          <FilterChip
+            active={filter === "this-month"}
+            onClick={() => setFilter("this-month")}
+            variant="ghost"
+          >
+            Month {counts["this-month"]}
+          </FilterChip>
+        </div>
       </div>
 
-      {/* CARDS */}
+      {/* DECISION LIST */}
       {filtered.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-rule bg-white p-8 text-center text-sm text-ink-500">
-          No decisions match this filter yet.
-        </p>
+        <div className="rounded-xl border border-dashed border-rule bg-cream-2/50 py-12 text-center">
+          <p className="text-sm text-ink-500">No decisions match this filter.</p>
+        </div>
       ) : (
-        <ul className="space-y-4">
+        <ul className="space-y-3">
           {filtered.map((row) => (
-            <DecisionRowCard key={row.id} row={row} />
+            <DecisionCard key={row.id} row={row} />
           ))}
         </ul>
       )}
@@ -185,17 +162,26 @@ export function DecisionsListClient({ rows, summary }: Props) {
   );
 }
 
-// ─── Sub-components ─────────────────────────────────────────────────────
+/* ─── Sub-components ─────────────────────────────────────────────────── */
 
-function Stat({ label, value }: { label: string; value: string }) {
+function StatPill({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: number | string;
+  icon?: "fire";
+}) {
   return (
-    <div className="rounded-2xl bg-white/15 p-4 backdrop-blur">
-      <p className="text-xs uppercase tracking-widest opacity-90 sm:text-xs">
-        {label}
-      </p>
-      <p className="mt-2 text-2xl font-bold leading-tight sm:text-3xl">
+    <div className="flex flex-col items-center rounded-xl bg-white/15 px-3 py-2 backdrop-blur-sm">
+      <span className="text-lg font-bold leading-none">
         {value}
-      </p>
+        {icon === "fire" && " 🔥"}
+      </span>
+      <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wide opacity-80">
+        {label}
+      </span>
     </div>
   );
 }
@@ -206,66 +192,57 @@ function FilterChip({
   children,
   variant = "category",
   dotColor,
-  fg,
-  bg,
-  count,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
   variant?: "primary" | "category" | "ghost";
   dotColor?: string;
-  fg?: string;
-  bg?: string;
-  count?: number;
 }) {
+  const base =
+    "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-coral";
+
   if (variant === "primary") {
     return (
       <button
         type="button"
         onClick={onClick}
-        className={
-          "ease-soft inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 " +
-          (active
-            ? "grad-coral text-white shadow-coral-press"
-            : "border border-rule bg-white text-ink-700 hover:border-coral hover:text-coral")
-        }
+        className={`${base} ${
+          active
+            ? "grad-coral text-white shadow-sm"
+            : "border border-rule bg-white text-ink-700 hover:border-coral hover:text-coral"
+        }`}
         aria-pressed={active}
       >
         {children}
       </button>
     );
   }
+
   if (variant === "ghost") {
     return (
       <button
         type="button"
         onClick={onClick}
-        className={
-          "ease-soft inline-flex h-10 items-center rounded-full px-4 text-sm font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 " +
-          (active
-            ? "bg-cream-2 text-ink-900"
-            : "text-ink-700 hover:bg-cream-2")
-        }
+        className={`${base} ${
+          active ? "bg-cream-2 text-ink-900" : "text-ink-500 hover:bg-cream-2 hover:text-ink-700"
+        }`}
         aria-pressed={active}
       >
         {children}
       </button>
     );
   }
-  // category
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className={
-        "ease-soft inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 " +
-        (bg ?? "") +
-        " " +
-        (fg ?? "") +
-        " " +
-        (active ? "border-current shadow-sm" : "border-rule")
-      }
+      className={`${base} border ${
+        active
+          ? "border-ink-300 bg-white text-ink-900 shadow-sm"
+          : "border-rule bg-white text-ink-600 hover:border-ink-300"
+      }`}
       aria-pressed={active}
     >
       {dotColor && (
@@ -275,39 +252,36 @@ function FilterChip({
           style={{ backgroundColor: dotColor }}
         />
       )}
-      <span>
-        {children}
-        {typeof count === "number" && ` · ${count}`}
-      </span>
+      {children}
     </button>
   );
 }
 
-function DecisionRowCard({ row }: { row: DecisionRow }) {
+function DecisionCard({ row }: { row: DecisionRow }) {
   const cat = categoryFor(row.templateId);
   const band = confidenceBand(row.recommendationConfidence ?? 0);
-  const title = row.title ?? row.recommendationOption ?? "Untitled decision";
-  const reducerLabel =
-    row.reducerCount > 0
-      ? `${row.reducerCount} workload reducer${row.reducerCount === 1 ? "" : "s"}`
-      : "Decision recorded";
+  const title = row.title ?? row.recommendationOption ?? "Untitled";
+  const hoursSaved = row.hoursSaved > 0 ? formatHrs(row.hoursSaved) : null;
 
   return (
     <li>
       <Link
         href={`/app/decisions/${row.id}`}
-        className="ease-soft lift relative block overflow-hidden rounded-2xl border border-rule bg-white p-6 hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+        className="group relative block rounded-xl border border-rule bg-white p-4 transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-coral"
       >
-        {/* Left edge color stripe — Common Region cue per category */}
+        {/* Category stripe */}
         <span
           aria-hidden
-          className={`absolute inset-y-0 left-0 w-2 ${cat.stripe}`}
+          className={`absolute inset-y-0 left-0 w-1 rounded-l-xl ${cat.stripe}`}
         />
-        <div className="grid grid-cols-1 gap-4 pl-4 md:grid-cols-12 md:items-center md:gap-6">
-          <div className="md:col-span-7">
-            <div className="flex flex-wrap items-center gap-3">
+
+        <div className="flex items-start gap-3 pl-2">
+          {/* Main content */}
+          <div className="min-w-0 flex-1">
+            {/* Meta row */}
+            <div className="flex flex-wrap items-center gap-2">
               <span
-                className={`inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-bold uppercase tracking-widest ${cat.bg} ${cat.fg}`}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase ${cat.bg} ${cat.fg}`}
               >
                 <span
                   aria-hidden
@@ -315,50 +289,58 @@ function DecisionRowCard({ row }: { row: DecisionRow }) {
                 />
                 {cat.label}
               </span>
-              <span className="text-xs font-semibold text-ink-500">
-                {relativeDay(row.createdAt)}
-              </span>
-              {row.recommendationConfidence !== null && (
+              <span className="text-[11px] text-ink-400">{relativeDay(row.createdAt)}</span>
+              {row.recommendationConfidence !== null && row.recommendationConfidence > 0 && (
                 <span
-                  className={`inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-bold uppercase tracking-widest ${band.bg} ${band.fg}`}
+                  className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${band.bg} ${band.fg}`}
                 >
-                  {band.icon} {band.label} · {row.recommendationConfidence}%
+                  {band.icon} {row.recommendationConfidence}%
                 </span>
               )}
             </div>
-            <h3 className="mt-3 text-lg font-bold leading-snug sm:text-xl">
+
+            {/* Title — truncated to 2 lines */}
+            <h3 className="mt-2 line-clamp-2 text-[15px] font-semibold leading-snug text-ink-900">
               {title}
             </h3>
-            <p className="mt-2 text-sm text-ink-500">
-              {reducerLabel}
-            </p>
+
+            {/* Reducers count */}
+            {row.reducerCount > 0 && (
+              <p className="mt-1 text-xs text-ink-500">
+                {row.reducerCount} workload reducer{row.reducerCount === 1 ? "" : "s"}
+              </p>
+            )}
           </div>
-          <div className="md:col-span-3">
-            <p className="text-xs uppercase tracking-widest text-ink-500">
-              Saves you
-            </p>
-            <p className="grad-coral-text mt-1 text-2xl font-bold leading-tight sm:text-3xl">
-              🕐 {formatHrs(row.hoursSaved)}/wk
-            </p>
+
+          {/* Time saved badge */}
+          <div className="flex flex-col items-end gap-1 pt-0.5">
+            {hoursSaved ? (
+              <>
+                <span className="text-[11px] font-medium uppercase tracking-wide text-ink-400">
+                  Saves
+                </span>
+                <span className="grad-coral-text text-lg font-bold leading-none">
+                  {hoursSaved}/wk
+                </span>
+              </>
+            ) : (
+              <span className="rounded-md bg-cream-2 px-2 py-1 text-[11px] font-medium text-ink-500">
+                Pending
+              </span>
+            )}
           </div>
-          <div className="hidden items-center justify-end md:col-span-2 md:flex">
-            <span
-              aria-hidden
-              className="grad-coral inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-bold text-white shadow-sm"
-            >
-              Open
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              >
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </span>
-          </div>
+
+          {/* Arrow indicator */}
+          <svg
+            viewBox="0 0 24 24"
+            className="mt-3 h-5 w-5 shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-coral"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
         </div>
       </Link>
     </li>
