@@ -1,0 +1,34 @@
+{
+  "name": "decision-doctor-workers",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Background worker service for Decision Doctor — pg-boss queue + node-cron schedules + arXiv/Anthropic/OpenAI/Perplexity ingest adapters. Runs on Railway.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "enqueue:arxiv": "tsx src/cli/enqueue-arxiv.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "drizzle-orm": "^0.45.2",
+    "dotenv": "^17.4.2",
+    "node-cron": "^3.0.3",
+    "openai": "^6.37.0",
+    "pg-boss": "^10.1.5",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.21.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
