@@ -127,10 +127,10 @@ export function IntakeForm({ template }: { template: PublicTemplate }) {
         type="submit"
         disabled={!filled || busy}
         className={
-          "w-full min-h-11 rounded-md py-3 text-sm font-medium transition " +
+          "w-full min-h-11 rounded-md py-3 text-sm font-medium shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 " +
           (filled && !busy
-            ? "bg-ink-900 text-white hover:bg-ink-700"
-            : "bg-ink-100 text-ink-700 cursor-not-allowed")
+            ? "bg-brand-600 text-white hover:bg-brand-700 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]"
+            : "bg-ink-100 text-ink-700 cursor-not-allowed shadow-none")
         }
         aria-disabled={!filled || busy}
       >
@@ -295,8 +295,8 @@ function SliderRow({
         </label>
         <span
           className={
-            "inline-flex min-w-[3.5rem] justify-center rounded px-2 py-0.5 text-sm tabular-nums font-medium " +
-            (hasUserValue ? "bg-ink-900 text-white" : "bg-ink-100 text-ink-500")
+            "inline-flex min-w-[3.5rem] justify-center rounded px-2 py-0.5 text-sm tabular-nums font-medium transition-colors duration-200 " +
+            (hasUserValue ? "bg-brand-600 text-white" : "bg-ink-100 text-ink-500")
           }
           aria-live="polite"
           aria-label={`Current value ${numericValue}`}
@@ -317,7 +317,7 @@ function SliderRow({
         onPointerDown={() => {
           if (!hasUserValue) handleChange(numericValue);
         }}
-        className="mt-2 block h-11 w-full cursor-pointer accent-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-600"
+        className="mt-2 block h-11 w-full cursor-pointer accent-brand-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2"
         aria-valuemin={min}
         aria-valuemax={max}
         aria-valuenow={numericValue}

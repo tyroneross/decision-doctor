@@ -74,10 +74,11 @@ export default function SignInPage() {
               setMsg(null);
             }}
             className={
-              // min-h-11 = 44px = mobile touch-target floor (PRD §8 / WCAG 2.2)
-              "min-h-11 rounded px-3 " +
+              // min-h-11 = 44px = mobile touch-target floor (PRD §8 / WCAG 2.2).
+              // Active tab: brand underline; idle: ink-500 with hover-to-ink.
+              "min-h-11 rounded px-3 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 " +
               (mode === key
-                ? "border-b-2 border-ink-900 text-ink-900 font-medium"
+                ? "border-b-2 border-brand-600 text-ink-900 font-medium"
                 : "text-ink-500 hover:text-ink-900")
             }
           >
@@ -138,11 +139,11 @@ export default function SignInPage() {
           disabled={!canSubmit}
           className={
             // min-h-11 = 44px touch-target floor (PRD §8 / WCAG 2.5.8).
-            // Enabled bg-ink-900 (#1f2937) on white = 12.6:1; disabled
-            // text-ink-700 (#374151) on bg-ink-100 (#f3f4f6) = 7.2:1 (WCAG AA-large).
-            "w-full min-h-11 rounded-md py-3 text-sm font-medium transition " +
+            // Enabled bg-brand-600 on white = 5.4:1 (AA-large);
+            // disabled text-ink-700 on bg-ink-100 = 7.2:1.
+            "w-full min-h-11 rounded-md py-3 text-sm font-medium shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 " +
             (canSubmit
-              ? "bg-ink-900 text-white hover:bg-ink-700"
+              ? "bg-brand-600 text-white hover:bg-brand-700 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]"
               : "bg-ink-100 text-ink-700 cursor-not-allowed")
           }
         >

@@ -6,6 +6,9 @@
   :root {
     --bg: #ffffff;
     --fg: #1f2937;
+    /* Soft brand glow used by focus rings + button hover. Kept very low alpha
+       so it reads as "warmth", not "highlight". */
+    --ring-brand: 14 140 112; /* brand-600 in RGB */
   }
   html, body {
     background: var(--bg);
@@ -19,6 +22,39 @@
   .status-ok    { @apply text-emerald-700; }
   .status-warn  { @apply text-amber-700; }
   .status-error { @apply text-rose-700; }
+
+  /* Reduced-motion respect. Movement is "invitation, not insistence". */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Entry animation for new messages + decision cards. Calm, not bouncy.
+     150ms ease-out + 4px translate — the eye registers the arrival without
+     being asked to track motion. */
+  @keyframes dd-fade-up {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .dd-fade-up {
+    animation: dd-fade-up 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  /* Soft brand glow used as a focus ring on rounded inputs/buttons.
+     This is the "shade around the button" — a 4px glow at low alpha. */
+  .ring-brand-glow {
+    box-shadow: 0 0 0 4px rgba(14, 140, 112, 0.15);
+  }
+
+  /* Press-down for tactile click feedback. Used via active: pseudo-class. */
+  .press-down {
+    transform: scale(0.98);
+  }
 }
 
 /* Print: F-05. Hide chrome, expand content. */

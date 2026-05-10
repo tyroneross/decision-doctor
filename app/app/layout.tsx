@@ -28,19 +28,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-3 text-sm sm:gap-4">
             <Link
               href="/app/decisions"
-              className="hidden min-h-11 items-center text-ink-700 hover:text-ink-900 sm:inline-flex"
+              className="hidden min-h-11 items-center rounded-md px-2 text-ink-700 transition-colors hover:bg-ink-50 hover:text-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 sm:inline-flex"
             >
               History
             </Link>
             <Link
               href="/app/chat"
-              className="inline-flex min-h-11 items-center rounded border border-ink-300 px-3 text-ink-900 hover:border-ink-700"
+              className="inline-flex min-h-11 items-center rounded-md border border-ink-300 px-3 text-ink-900 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-600 hover:text-brand-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 active:translate-y-0 active:scale-[0.98]"
             >
               Chat
             </Link>
             <Link
               href="/app/decisions/new"
-              className="inline-flex min-h-11 items-center rounded bg-ink-900 px-3 text-white hover:bg-ink-700"
+              className="inline-flex min-h-11 items-center rounded-md bg-brand-600 px-3 text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 active:translate-y-0 active:scale-[0.98]"
             >
               New
             </Link>

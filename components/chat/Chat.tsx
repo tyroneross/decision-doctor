@@ -205,7 +205,7 @@ export function Chat() {
         <div className="flex items-center gap-3">
           <span
             aria-hidden
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-50 text-accent-600"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"
           >
             {/* Stylized DD mark — keeps the brand calm but the page isn't bare */}
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -224,7 +224,7 @@ export function Chat() {
         <button
           type="button"
           onClick={reset}
-          className="min-h-11 rounded px-2 text-xs text-ink-500 hover:text-ink-900"
+          className="min-h-11 rounded-md px-3 text-xs text-ink-500 transition-colors duration-150 hover:bg-ink-50 hover:text-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2"
         >
           New chat
         </button>
@@ -238,14 +238,14 @@ export function Chat() {
           <li
             key={i}
             className={
-              "flex items-end gap-2 " +
+              "dd-fade-up flex items-end gap-2 " +
               (m.role === "user" ? "justify-end" : "justify-start")
             }
           >
             {m.role === "assistant" && (
               <span
                 aria-hidden
-                className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-50 text-[11px] font-medium text-accent-600 sm:flex"
+                className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-[11px] font-medium text-brand-700 ring-1 ring-brand-100 sm:flex"
               >
                 DD
               </span>
@@ -254,8 +254,8 @@ export function Chat() {
               className={
                 "max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed shadow-sm " +
                 (m.role === "user"
-                  ? "rounded-br-md bg-ink-900 text-white"
-                  : "rounded-bl-md bg-ink-100 text-ink-900")
+                  ? "rounded-br-md bg-brand-700 text-white"
+                  : "rounded-bl-md bg-brand-50 text-ink-900 ring-1 ring-brand-100/60")
               }
             >
               {m.content}
@@ -274,7 +274,7 @@ export function Chat() {
                 key={t}
                 type="button"
                 onClick={() => sendQuick(t)}
-                className="min-h-11 rounded-full border border-ink-300 bg-white px-4 text-sm text-ink-700 transition hover:border-ink-700 hover:text-ink-900"
+                className="dd-fade-up group min-h-11 rounded-full border border-ink-300 bg-white px-4 text-sm text-ink-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-600 hover:text-brand-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 active:translate-y-0 active:scale-[0.98]"
               >
                 {t}
               </button>
@@ -286,15 +286,15 @@ export function Chat() {
           <li className="flex items-end gap-2">
             <span
               aria-hidden
-              className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-50 text-[11px] font-medium text-accent-600 sm:flex"
+              className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-[11px] font-medium text-brand-700 ring-1 ring-brand-100 sm:flex"
             >
               DD
             </span>
-            <div className="rounded-2xl rounded-bl-md bg-ink-100 px-4 py-3 shadow-sm">
+            <div className="rounded-2xl rounded-bl-md bg-brand-50 px-4 py-3 shadow-sm">
               <span className="flex gap-1" aria-label="Thinking">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-ink-500 [animation-delay:-0.3s]" />
-                <span className="h-2 w-2 animate-pulse rounded-full bg-ink-500 [animation-delay:-0.15s]" />
-                <span className="h-2 w-2 animate-pulse rounded-full bg-ink-500" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-brand-600 [animation-delay:-0.3s]" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-brand-600 [animation-delay:-0.15s]" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-brand-600" />
               </span>
             </div>
           </li>
@@ -336,16 +336,16 @@ export function Chat() {
           placeholder="Tell me what's on your mind…"
           disabled={busy}
           autoComplete="off"
-          className="block min-h-11 w-full rounded-full border-ink-300 px-4 focus:border-accent-600 focus:ring-accent-600"
+          className="block min-h-11 w-full rounded-full border-ink-300 px-4 transition-shadow duration-200 hover:border-ink-500 focus:border-brand-600 focus:ring-2 focus:ring-brand-600/30 focus:ring-offset-0"
         />
         <button
           type="submit"
           disabled={!input.trim() || busy}
           aria-label="Send message"
           className={
-            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition " +
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 " +
             (input.trim() && !busy
-              ? "bg-ink-900 text-white hover:bg-ink-700"
+              ? "bg-brand-600 text-white hover:bg-brand-700 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.96]"
               : "bg-ink-100 text-ink-500 cursor-not-allowed")
           }
         >
@@ -398,7 +398,7 @@ function DecisionCard({
         : { label: "Coin flip — see robust alt", tone: "text-rose-700" };
 
   return (
-    <article className="rounded-2xl border border-ink-300 bg-white p-4 shadow-sm">
+    <article className="dd-fade-up rounded-2xl border border-brand-100 bg-white p-5 shadow-md ring-1 ring-brand-50">
       <p className={"text-xs font-medium uppercase tracking-wide " + band.tone}>
         {band.label}
       </p>
@@ -416,8 +416,8 @@ function DecisionCard({
         </p>
       )}
 
-      <details className="mt-4 text-sm">
-        <summary className="cursor-pointer text-ink-500 hover:text-ink-900">
+      <details className="group mt-4 text-sm">
+        <summary className="inline-flex min-h-11 cursor-pointer items-center rounded-md px-2 -mx-2 text-ink-500 transition-colors hover:bg-brand-50 hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
           Show the work · alternatives, robust alternative
         </summary>
         <div className="mt-3 space-y-3 pl-1">
