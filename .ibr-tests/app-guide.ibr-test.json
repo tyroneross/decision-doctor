@@ -1,0 +1,47 @@
+{
+  "app-guide": {
+    "target": "app/(app)/app/page.tsx",
+    "url": "http://127.0.0.1:3100/app",
+    "tests": [
+      {
+        "name": "Guide a messy capacity question into the structured intake.",
+        "steps": [
+          {
+            "screenshot": "app-guide-start"
+          },
+          {
+            "assert": {
+              "text": "Ask the practice decision."
+            }
+          },
+          {
+            "fill": {
+              "target": "Decision question",
+              "value": "I am exhausted and my waitlist keeps growing. Should I keep accepting new intakes?"
+            }
+          },
+          {
+            "click": "Guide me"
+          },
+          {
+            "wait": 800
+          },
+          {
+            "click": "Start Capacity intake"
+          },
+          {
+            "wait": "Capacity decision"
+          },
+          {
+            "assert": {
+              "text": "No PHI is needed"
+            }
+          },
+          {
+            "screenshot": "app-guide-capacity-intake"
+          }
+        ]
+      }
+    ]
+  }
+}

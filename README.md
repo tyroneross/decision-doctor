@@ -2,7 +2,7 @@
 
 Transparent decision engine for solo healthcare practitioners.
 
-**Source of truth:** [`decision-doctor-prd.md`](./decision-doctor-prd.md). The README only handles bootstrap; everything else lives in the PRD.
+**Source of truth:** [`Reference files/decision-doctor-prd.md`](./Reference%20files/decision-doctor-prd.md). The README only handles bootstrap; everything else lives in the PRD.
 
 ## Bootstrap (10 min)
 
@@ -30,6 +30,22 @@ pnpm lint
 pnpm dev   # → http://localhost:3000
 
 # 6. Start with feature F-01 — see PRD §5
+```
+
+## Branch C guide workflow
+
+Branch C adds a no-PHI decision guide on `/app` and `/api/guide`.
+
+- It accepts a plain-language practice decision question and an AI maturity level.
+- It maps common capacity, pricing, and admin-hire questions to the matching structured intake path.
+- It stays deterministic and local: no Groq call, no database write, and no patient-identifiable detail needed before intake.
+
+For parallel branch work, this workflow can be validated without touching the shared database:
+
+```bash
+pnpm test -- --run tests/decision-guide.test.ts
+pnpm dev -- -p 3100
+ibr test --file .ibr-tests/app-guide.ibr-test.json --output-dir .ibr/test-results --json --headless
 ```
 
 ## Open Questions to resolve on day 1

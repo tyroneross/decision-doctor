@@ -1,0 +1,76 @@
+{
+  "app-guide-pricing": {
+    "target": "app/(app)/app/page.tsx",
+    "url": "http://127.0.0.1:3100/app",
+    "tests": [
+      {
+        "name": "Draft: guide pricing question to pricing intake.",
+        "steps": [
+          {
+            "screenshot": "app-guide-pricing-start"
+          },
+          {
+            "assert": {
+              "text": "Question guide"
+            }
+          },
+          {
+            "click": "Pricing"
+          },
+          {
+            "click": "Guide me"
+          },
+          {
+            "wait": 800
+          },
+          {
+            "click": "Start Pricing intake"
+          },
+          {
+            "wait": "Pricing decision"
+          },
+          {
+            "screenshot": "app-guide-pricing-intake"
+          }
+        ]
+      }
+    ]
+  },
+  "app-guide-admin": {
+    "target": "app/(app)/app/page.tsx",
+    "url": "http://127.0.0.1:3100/app",
+    "tests": [
+      {
+        "name": "Draft: guide admin question to admin-hire intake.",
+        "steps": [
+          {
+            "screenshot": "app-guide-admin-start"
+          },
+          {
+            "assert": {
+              "text": "Question guide"
+            }
+          },
+          {
+            "click": "Admin help"
+          },
+          {
+            "click": "Guide me"
+          },
+          {
+            "wait": 800
+          },
+          {
+            "click": "Start Admin hire intake"
+          },
+          {
+            "wait": "Admin hire decision"
+          },
+          {
+            "screenshot": "app-guide-admin-intake"
+          }
+        ]
+      }
+    ]
+  }
+}

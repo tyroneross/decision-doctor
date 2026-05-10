@@ -1,7 +1,11 @@
 {
-  "status": "no_tests",
-  "suggested_action": "generate_for_changed_routes",
-  "untested_surfaces": ["/app"],
-  "scope": "changed",
-  "route": "http://127.0.0.1:3000/app"
+  "status": "ran",
+  "ran": 1,
+  "pass": 1,
+  "fail": [],
+  "skipped_for_scope": [],
+  "untested_surfaces": [
+    "app/(app)/app/page.tsx"
+  ],
+  "duration_s": 2.53
 }
