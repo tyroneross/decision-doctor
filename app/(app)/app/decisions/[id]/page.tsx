@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import { DecisionOutputSchema, ChatTranscriptSchema, type DecisionOutput } from "@/shared/schema";
 import { RecommendationView } from "@/components/recommendation/recommendation-view";
 import { SavedConversationView } from "@/components/recommendation/saved-conversation-view";
+import { StackRecommendationView } from "@/components/recommendation/stack-recommendation-view";
 import { loadTemplate } from "@/lib/engine/templates";
 
 export default async function DecisionPage({
@@ -89,6 +90,26 @@ export default async function DecisionPage({
     );
   }
 
+  // Detect AI-leverage stack rows by the recommendation.option prefix —
+  // the orchestrator emits "Deploy this stack: …" for v2 outputs.
+  const isStackRecommendation = candidate.recommendation?.option?.startsWith("Deploy this stack:");
+
+  if (isStackRecommendation) {
+    return (
+      <main className="px-4 sm:px-6 py-6 max-w-3xl mx-auto">
+        <div className="text-xs text-ink-muted">
+          <span className="uppercase tracking-wide">Audit my week</span>
+          <span className="mx-2">·</span>
+          <span>{new Date(row.createdAt).toLocaleDateString()}</span>
+        </div>
+        <div className="mt-3">
+          <StackRecommendationView decision={decision} shareToken={row.shareToken} />
+        </div>
+      </main>
+    );
+  }
+
+  // Legacy v1 single-recommendation rows fall through to the existing renderer.
   const validIds = ["capacity", "pricing", "admin-hire"] as const;
   const tplId = (validIds as readonly string[]).includes(row.templateId)
     ? (row.templateId as (typeof validIds)[number])
@@ -96,7 +117,6 @@ export default async function DecisionPage({
   const tplTitle = tplId ? loadTemplate(tplId).title : "Decision";
   return (
     <main className="px-4 sm:px-6 py-6 max-w-3xl mx-auto">
-      {/* Lightweight breadcrumb only — the RecommendationView owns the H1 */}
       <div className="text-xs text-ink-muted">
         <span className="uppercase tracking-wide">{tplTitle}</span>
         <span className="mx-2">·</span>

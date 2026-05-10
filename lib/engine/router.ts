@@ -46,15 +46,23 @@ export interface RouterOutput {
 // Tuned from the digest's signal table; adjust when persona retests show drift.
 // ---------------------------------------------------------------------------
 
-// Template patterns route a free-form message to the matching template.
-// "capacity" is the id used by the v2 AI-leverage finder template (back-compat).
-// The pattern catches BOTH v2 framing ("find AI", "free up my time", "audit
-// my week", "automate workflow", "what AI helps") AND v1 business-decision
-// framing ("cap intakes", "burned out", "waitlist") so users describing the
-// problem either way land in the same chat flow.
+// PRD v2 §LD-11 + user clarification 2026-05-10: SINGLE-MODE product. Every
+// chat routes to the AI-leverage finder. Hiring / capacity / pricing
+// questions are SECONDARY follow-ups that come AFTER the time-savings
+// recommendation, not separate top-level flows.
+//
+// Practitioners describe their decisions in many ways ("I'm burnt out",
+// "should I hire", "I waste 10 hours on charts", "find AI for my practice")
+// — they all land in the AI-leverage week-audit. The follow-on hiring/pricing
+// guidance gets surfaced ON the recommendation page after the AI tools stack
+// is shown.
+//
+// Patterns retained but now purely diagnostic — they help the chat-orchestrator
+// emit a more specific opening rationale ("This is about your patient load"
+// vs "This is about hiring") but never change the destination template.
 const TEMPLATE_PATTERNS = {
   capacity:
-    /\b(find ai|audit (?:my )?week|free up (?:my )?(?:time|hours|week)|automate (?:my )?(?:workflow|admin|notes|comms)|streamline (?:my )?(?:workflow|practice|notes|admin)|cap intakes?|panel|caseload|patient load|burn(?:ed)? out|workload|too many patients|waitlist|see fewer|spend too much time on (?:notes|charting|comms|messaging|billing|admin)|patient (?:messaging|comms) eats|what ai (?:helps|tools|can))\b/i,
+    /\b(find ai|audit (?:my )?week|free up (?:my )?(?:time|hours|week)|automate (?:my )?(?:workflow|admin|notes|comms)|streamline (?:my )?(?:workflow|practice|notes|admin)|cap intakes?|panel|caseload|patient load|burn(?:ed)? out|workload|too many patients|waitlist|see fewer|spend too much time on (?:notes|charting|comms|messaging|billing|admin)|patient (?:messaging|comms) eats|what ai (?:helps|tools|can)|hir(?:e|ing)|associate|second clinician|retir(?:e|ing|ement)|cap (?:new )?patients|raise (?:my )?(?:prices|rates))\b/i,
   pricing:
     /\b(raise (?:my )?(?:prices|rates)|cash[- ]pay|self[- ]pay|insurance panel|drop (?:a |my )?payer|reimbursement|fee schedule)\b/i,
   "admin-hire":
@@ -100,21 +108,60 @@ export function classifyHeuristic(message: string): RouterOutput {
   const m = message.trim();
   if (m.length === 0) {
     return {
+      mode: "structured_enumerable",
+      confidence: 0.5,
+      templateMatch: "capacity",
+      missingInfo: [],
+      rationale:
+        "Tell me about your week — even one sentence. I'll find AI tools that free hours.",
+    };
+  }
+
+  // PRD v2 §LD-11: SINGLE-MODE PRODUCT. Every chat goes to the AI-leverage
+  // template ("capacity" id). Patterns set the OPENING RATIONALE only — the
+  // destination is always the same.
+  // (Hank persona retest 2026-05-10: "hire vs cap vs retire" was matching
+  // generic_structured patterns and ending at the placeholder; users describe
+  // the same underlying time-pressure problem 100 different ways.)
+  let rationale = "I'll ask a few quick questions about your week and find AI tools that free the most hours.";
+  for (const [tplId, pat] of Object.entries(TEMPLATE_PATTERNS) as [
+    keyof typeof TEMPLATE_PATTERNS,
+    RegExp,
+  ][]) {
+    if (pat.test(m)) {
+      const opening: Record<string, string> = {
+        capacity: "Sounds like you're stretched thin. I'll ask about where your week goes and find AI tools that free the most hours.",
+        pricing: "Pricing sits downstream of where your time goes — let me first find AI tools that free hours, then we can revisit pricing.",
+        "admin-hire": "Hiring sits downstream of how much you can automate first. Let me find the AI tools that would free hours BEFORE you hire — usually you need fewer hours of help than you think.",
+      };
+      rationale = opening[tplId] ?? rationale;
+      break;
+    }
+  }
+  return {
+    mode: "structured_enumerable",
+    confidence: 0.95,
+    templateMatch: "capacity", // single-mode: always route to the AI-leverage template
+    missingInfo: [],
+    rationale,
+  };
+}
+
+// Legacy multi-mode classification kept for tests + future re-introduction
+// of design-brief / values-map modes (deferred per PRD v2 §17). Not used by
+// the live `routeMessage()` path.
+export function classifyHeuristicLegacy(message: string): RouterOutput {
+  const m = message.trim();
+  if (m.length === 0) {
+    return {
       mode: "generative_design",
       confidence: 0.0,
       templateMatch: null,
-      missingInfo: ["a description of the decision you're facing"],
+      missingInfo: [],
       rationale: "Empty message — need an opening description.",
     };
   }
 
-  // 1. Template match (highest priority — fastest path).
-  // CRITICAL: when a template matches, we COMMIT to structured_enumerable
-  // regardless of whether the user gave a number on this turn. The chat
-  // orchestrator will collect the missing fields turn-by-turn. Letting
-  // confidence drop below 0.7 here lets the LLM override → wrong pipeline.
-  // (Persona panel 2026-05-10: Priya's "Hire a VA" went to generative_design
-  // because of this; Maya's "Pricing" chip ended at the v1.1 placeholder.)
   for (const [tplId, pat] of Object.entries(TEMPLATE_PATTERNS) as [
     keyof typeof TEMPLATE_PATTERNS,
     RegExp,
@@ -127,7 +174,6 @@ export function classifyHeuristic(message: string): RouterOutput {
       };
       return {
         mode: "structured_enumerable",
-        // Always confident enough to commit; orchestrator handles missing fields.
         confidence: 0.95,
         templateMatch: tplId,
         missingInfo: [],
