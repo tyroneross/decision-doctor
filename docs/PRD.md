@@ -51,7 +51,15 @@ When a key business decision arises, they trust Decision Doctor to get them to t
 
 User-reported success: "I got my Mondays back" and "the math made it feel safe."
 
-**Why now.** MLT20 Buildathon Round 1 due 2026-05-12. Equity prompt rewards owner-operator ICP and named users. Beyond the buildathon, the LLM capability curve has crossed the threshold where customized skills/plugins/agents for solo practitioners are technically feasible and economically rational at consumer pricing — a window that did not exist 12 months ago.
+**Why now.** Three forces converge:
+
+1. **AI capability has crossed the reliability threshold.** Frontier models in 2026 are good enough that the bottleneck on real-world value is no longer raw capability — it's the **scaffold around the model**. Using a model on its own (chat in a tab) leaves most of the value on the table. The harness — skills, plugins, tool-use, memory, retrieval, agents — is where compounding leverage lives. Decision Doctor is one of those scaffolds, built for SMBs.
+
+2. **Compounding starts with the first deployed tool.** AI benefits don't show up as a single moment of insight; they accumulate as workflows get progressively automated, then composed. A practitioner who ships their first AI tool in week 1 is 6 months ahead of one who waits to "figure it out." The right moment to begin is **the first decision the practitioner is willing to make with an AI partner** — Decision Doctor surfaces that decision in the first session and ships the tool that comes with it. Delay is the only meaningful cost.
+
+3. **SMBs need AI tied to the decisions they already care about.** Enterprises can spin up AI teams to find use cases; SMB owners can't. The wedge is to **meet them in the work they're already doing** — pricing, capacity, admin, referrals, notes — and incorporate AI exactly where they're already focused. Adoption follows attention. Decision Doctor inverts the typical "here's AI; find a use case" framing: the use case is the user's existing question, and the AI tool is the answer that ships alongside the decision.
+
+Near-term anchor: **MLT20 Buildathon Round 1 due 2026-05-12**. The equity prompt rewards owner-operator ICP and named users — both already satisfied. Longer-term, the LLM capability curve makes customized skills/plugins/agents for solo practitioners technically feasible and economically rational at consumer pricing — a window that did not exist 12 months ago.
 
 ## 2A. How to execute this PRD (LLM context)
 
