@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>09 — Decision History</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .wf-box { border: 1px dashed #9ca3af; background: #fff; }
+  .wf-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+  .frame { width: 375px; min-height: 720px; margin: 24px auto; border: 1px solid #d1d5db; position: relative; }
+  .row { border-bottom: 1px solid #e5e7eb; }
+  .swatch { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+  .green { background: #16a34a; } .amber { background: #d97706; } .red { background: #dc2626; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <p class="wf-label text-center mt-6">Wireframe · 375px · F-06 — Decision History list</p>
+  <div class="frame bg-white pb-24" data-component="DecisionHistory">
+    <header class="px-5 pt-5 pb-3 border-b border-gray-200" data-component="HistoryHeader">
+      <p class="wf-label">decision doctor</p>
+      <h1 class="text-xl font-semibold mt-1">Your decisions</h1>
+      <p class="text-sm text-gray-500 mt-1">12 total · most recent first.</p>
+    </header>
+
+    <section class="px-5" data-component="DecisionList">
+      <a class="row block py-4" href="#" data-component="DecisionRow">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="wf-label">Capacity · May 8</p>
+            <p class="text-sm font-medium mt-0.5">Hire a part-time virtual assistant (10 hr/wk).</p>
+          </div>
+          <span class="text-xs whitespace-nowrap"><span class="swatch green"></span> 78%</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">Saved · 3 workload reducers · audit ✓</p>
+      </a>
+
+      <a class="row block py-4" href="#" data-component="DecisionRow">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="wf-label">Pricing · Apr 30</p>
+            <p class="text-sm font-medium mt-0.5">Raise self-pay rate by 8% on Jul 1.</p>
+          </div>
+          <span class="text-xs whitespace-nowrap"><span class="swatch amber"></span> 62%</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">Saved · 4 workload reducers</p>
+      </a>
+
+      <a class="row block py-4" href="#" data-component="DecisionRow">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="wf-label">Admin hire · Apr 20</p>
+            <p class="text-sm font-medium mt-0.5">Defer hire 60 days · revisit Jun 20.</p>
+          </div>
+          <span class="text-xs whitespace-nowrap"><span class="swatch red"></span> 41%</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">Robust path was: keep DIY admin · 8 hr/wk</p>
+      </a>
+
+      <a class="row block py-4" href="#" data-component="DecisionRow">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="wf-label">Capacity · Apr 12</p>
+            <p class="text-sm font-medium mt-0.5">Cap intakes for 8 weeks.</p>
+          </div>
+          <span class="text-xs whitespace-nowrap"><span class="swatch green"></span> 81%</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">Outcome: held the line · revisit Jun 7</p>
+      </a>
+    </section>
+
+    <nav class="absolute left-0 right-0 bottom-0 px-5 py-3 border-t border-gray-200 flex items-center justify-between text-sm bg-white" data-component="BottomNav">
+      <a class="text-gray-500" href="#">Decide</a>
+      <a class="text-gray-900 font-medium border-b-2 border-gray-900 pb-1" href="#">History</a>
+      <a class="text-gray-500" href="#">Account</a>
+    </nav>
+  </div>
+</body>
+</html>

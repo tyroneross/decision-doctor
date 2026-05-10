@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>02 — Template Selector (Question-Led)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .wf-box { border: 1px dashed #9ca3af; background: #fff; }
+  .wf-chip { border: 1px solid #9ca3af; background: #f9fafb; }
+  .wf-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+  .frame { width: 375px; min-height: 720px; margin: 24px auto; border: 1px solid #d1d5db; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <p class="wf-label text-center mt-6">Wireframe · 375px · F-01 Template Selector — Question-Led Variant</p>
+  <div class="frame bg-white" data-component="TemplateSelectorQuestionLed">
+    <header class="px-5 pt-6 pb-2" data-component="AppHeader">
+      <p class="wf-label">decision doctor</p>
+    </header>
+
+    <section class="px-5 pt-4" data-component="QuestionPrompt">
+      <h1 class="text-2xl font-semibold leading-snug">What decision are you facing?</h1>
+      <p class="text-sm text-gray-500 mt-2">Tap one. Or describe it in your own words.</p>
+    </section>
+
+    <section class="px-5 pt-5 flex flex-wrap gap-2" data-component="TemplateChips">
+      <button class="wf-chip rounded-full px-4 py-2 text-sm" data-template="capacity">Capacity</button>
+      <button class="wf-chip rounded-full px-4 py-2 text-sm" data-template="pricing">Pricing</button>
+      <button class="wf-chip rounded-full px-4 py-2 text-sm" data-template="admin-hire">A hire</button>
+    </section>
+
+    <section class="px-5 pt-6" data-component="FreeTextProbe">
+      <label class="wf-label" for="probe">In your words (no patient details)</label>
+      <textarea id="probe" rows="3" class="mt-2 w-full wf-box rounded-md p-3 text-sm" placeholder="e.g. 'Should I close my waitlist or hire a VA?'"></textarea>
+      <p class="text-xs text-gray-400 mt-1">We will route you to the closest template.</p>
+    </section>
+
+    <section class="px-5 pt-6 text-xs text-gray-500" data-component="TrustStrip">
+      <p>· No patient names or identifiers — ever.</p>
+      <p>· Saved on this device until you submit.</p>
+      <p>· Method: Multi-Criteria Decision Analysis (5 stages).</p>
+    </section>
+
+    <div class="px-5 pt-8 pb-6">
+      <button class="w-full bg-gray-900 text-white rounded-md py-3 text-sm font-medium" data-component="PrimaryCTA">Continue</button>
+    </div>
+
+    <nav class="px-5 py-3 border-t border-gray-200 flex items-center justify-between text-sm" data-component="BottomNav">
+      <a class="text-gray-900 font-medium border-b-2 border-gray-900 pb-1" href="#">Decide</a>
+      <a class="text-gray-500" href="#">History</a>
+      <a class="text-gray-500" href="#">Account</a>
+    </nav>
+  </div>
+</body>
+</html>

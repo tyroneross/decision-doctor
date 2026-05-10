@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Web · Template Selector + cmd-K (Sunrise)</title>
+<link rel="preconnect" href="https://rsms.me" />
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --cream:#fff7ef; --cream-2:#ffeede;
+    --ink:#1f1410; --ink-700:#4a3a30; --ink-500:#8a7a6e; --ink-300:#c8b8a8;
+    --coral:#ff6b4a; --coral-2:#ff8d5e; --peach:#ffb085;
+    --sun:#ffc857; --teal:#0fb8a6; --plum:#7b3f6f;
+    --rule:#f1d8be;
+    --good:#1f7a5a; --warn:#b66a18; --bad:#b8332a;
+  }
+  body { background: var(--cream); color: var(--ink); font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .grad-coral      { background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 60%, var(--sun) 100%); }
+  .grad-coral-text { background: linear-gradient(135deg, var(--coral), var(--plum)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  button:focus-visible, a:focus-visible, input:focus-visible {
+    outline: none; box-shadow: 0 0 0 4px rgba(255,107,74,.22); border-color: var(--coral);
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  .label { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+  kbd { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: var(--cream-2); border: 1px solid var(--rule); color: var(--ink-700); }
+  .scrim { position: fixed; inset: 0; background: rgba(31,20,16,.40); backdrop-filter: blur(4px); z-index: 50; }
+  .palette { width: 640px; max-width: calc(100vw - 32px); border-radius: 20px; background: #fff; border: 1px solid var(--rule); box-shadow: 0 20px 60px rgba(31,20,16,.20); }
+</style>
+</head>
+<body class="min-h-screen">
+
+  <!-- TOP NAV -->
+  <header class="border-b" style="border-color:var(--rule); background:rgba(255,247,239,.8); backdrop-filter:blur(12px); position:sticky; top:0; z-index:10" data-component="TopNav">
+    <div class="mx-auto max-w-[1280px] px-8 h-16 flex items-center gap-6">
+      <a href="#" class="flex items-center gap-2"><span class="grad-coral rounded-lg" style="width:24px;height:24px;display:inline-block"></span><span class="text-[15px] font-semibold tracking-tight" style="color:var(--ink)">Decision Doctor</span></a>
+      <div class="flex-1 flex justify-center">
+        <button class="rounded-2xl bg-white pl-4 pr-2 py-2.5 flex items-center gap-3 w-[460px] text-left" style="border:1px solid var(--rule)" data-component="GlobalSearchTrigger">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-500)">
+            <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+          </svg>
+          <span class="flex-1 text-[14px]" style="color:var(--ink-500)">What's eating you?  ·  Search past decisions, templates, playbooks…</span>
+          <kbd>⌘K</kbd>
+        </button>
+      </div>
+      <nav class="flex items-center gap-1">
+        <a href="#" class="px-3 py-2 text-[14px] font-semibold rounded-lg" style="color:var(--ink); border-bottom:2px solid var(--coral)">Decide</a>
+        <a href="#" class="px-3 py-2 text-[14px] rounded-lg hover:bg-white" style="color:var(--ink-500)">History</a>
+        <a href="#" class="px-3 py-2 text-[14px] rounded-lg hover:bg-white" style="color:var(--ink-500)">Account</a>
+        <span class="ml-2 grad-coral rounded-full" style="width:32px;height:32px;display:inline-block"></span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <main class="mx-auto max-w-[1280px] px-8 pt-12 pb-10" data-component="HeroSection">
+    <p class="label" style="color:var(--coral)">Welcome back, Tyrone</p>
+    <h1 class="mt-3 text-[48px] leading-[1.05] font-semibold tracking-tight max-w-3xl" style="color:var(--ink)">
+      Where do you want <span class="grad-coral-text">time back</span>?
+    </h1>
+    <p class="mt-3 text-[16px] max-w-2xl" style="color:var(--ink-500)">
+      Pick a template, or hit <kbd>⌘K</kbd> and describe what's eating you. Each decision takes ~5 minutes — math shown.
+    </p>
+  </main>
+
+  <!-- TEMPLATE GRID (3-up) -->
+  <section class="mx-auto max-w-[1280px] px-8 pb-12 grid grid-cols-3 gap-6" data-component="TemplateGrid">
+
+    <a href="#" class="group rounded-3xl bg-white p-6 transition" style="border:1px solid var(--rule); box-shadow: 0 4px 16px rgba(255,107,74,.04)" data-component="TemplateCard" data-template="capacity">
+      <p class="label" style="color:var(--ink-500)">~5 min · 6 questions</p>
+      <p class="mt-3 text-[22px] font-semibold leading-tight" style="color:var(--ink)">Decide your capacity</p>
+      <p class="mt-2 text-[14px]" style="color:var(--ink-700)">Cap intakes? Open more slots? Reduce hours? Trade off margin against burnout against income.</p>
+      <p class="mt-6 text-[13px] font-semibold flex items-center gap-1" style="color:var(--coral)">Start <span aria-hidden="true">→</span></p>
+    </a>
+
+    <a href="#" class="group rounded-3xl bg-white p-6 transition" style="border:1px solid var(--rule); box-shadow: 0 4px 16px rgba(255,107,74,.04)" data-component="TemplateCard" data-template="pricing">
+      <p class="label" style="color:var(--ink-500)">~5 min · 7 questions</p>
+      <p class="mt-3 text-[22px] font-semibold leading-tight" style="color:var(--ink)">Decide pricing</p>
+      <p class="mt-2 text-[14px]" style="color:var(--ink-700)">Raise rates? Stay put? Sliding scale? Considers churn risk, payer mix, and target margin.</p>
+      <p class="mt-6 text-[13px] font-semibold flex items-center gap-1" style="color:var(--coral)">Start <span aria-hidden="true">→</span></p>
+    </a>
+
+    <a href="#" class="group rounded-3xl bg-white p-6 transition" style="border:1px solid var(--rule); box-shadow: 0 4px 16px rgba(255,107,74,.04)" data-component="TemplateCard" data-template="admin-hire">
+      <p class="label" style="color:var(--ink-500)">~5 min · 7 questions</p>
+      <p class="mt-3 text-[22px] font-semibold leading-tight" style="color:var(--ink)">Decide a hire</p>
+      <p class="mt-2 text-[14px]" style="color:var(--ink-700)">VA, billing service, in-person admin, or DIY? Compares cost-vs-time-back and reversibility.</p>
+      <p class="mt-6 text-[13px] font-semibold flex items-center gap-1" style="color:var(--coral)">Start <span aria-hidden="true">→</span></p>
+    </a>
+
+  </section>
+
+  <!-- RECENT STRIP -->
+  <section class="mx-auto max-w-[1280px] px-8 pb-16" data-component="RecentStrip">
+    <div class="flex items-baseline justify-between">
+      <h2 class="label" style="color:var(--ink-500)">Pick up where you left</h2>
+      <a href="#" class="text-[13px] font-semibold" style="color:var(--coral)">See history →</a>
+    </div>
+    <div class="mt-3 grid grid-cols-3 gap-4">
+      <a href="#" class="block rounded-2xl bg-white p-4" style="border:1px solid var(--rule)">
+        <p class="text-[12px]" style="color:var(--ink-500)">Capacity · in progress</p>
+        <p class="mt-1 text-[15px] font-medium" style="color:var(--ink)">2 of 5 groups answered</p>
+        <p class="mt-1 text-[12px]" style="color:var(--coral)">Resume →</p>
+      </a>
+      <a href="#" class="block rounded-2xl bg-white p-4" style="border:1px solid var(--rule)">
+        <p class="text-[12px]" style="color:var(--ink-500)">Pricing · Apr 30</p>
+        <p class="mt-1 text-[15px] font-medium leading-tight" style="color:var(--ink)">Raise self-pay rate by 8% on Jul 1.</p>
+        <p class="mt-1 text-[12px] font-semibold" style="color:var(--warn)">Confidence 62%</p>
+      </a>
+      <a href="#" class="block rounded-2xl bg-white p-4" style="border:1px solid var(--rule)">
+        <p class="text-[12px]" style="color:var(--ink-500)">Admin hire · Apr 20</p>
+        <p class="mt-1 text-[15px] font-medium leading-tight" style="color:var(--ink)">Defer hire 60 days · revisit Jun 20.</p>
+        <p class="mt-1 text-[12px] font-semibold" style="color:var(--bad)">Confidence 41%</p>
+      </a>
+    </div>
+  </section>
+
+  <!-- ⌘K PALETTE OPEN STATE (mockup affordance — shows what cmd-K reveals) -->
+  <div class="scrim flex items-start justify-center pt-24" data-component="CommandPalette" role="dialog" aria-label="Command palette" aria-modal="true">
+    <div class="palette">
+
+      <div class="px-4 py-3 flex items-center gap-3" style="border-bottom:1px solid var(--rule)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-500)">
+          <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+        </svg>
+        <input type="search" autofocus value="should I hire someone or just close my waitlist"
+               class="flex-1 text-[16px] outline-none bg-transparent" style="color:var(--ink)" />
+        <kbd>esc</kbd>
+      </div>
+
+      <div class="max-h-[420px] overflow-y-auto">
+
+        <p class="px-4 pt-3 pb-1 label" style="color:var(--ink-500)">Templates that fit · 2</p>
+
+        <a href="#" class="flex items-start gap-3 px-4 py-3 hover:bg-[color:var(--cream-2)]" data-component="PaletteResult">
+          <span class="mt-1 inline-block" style="width:24px;height:3px;border-radius:999px;background:var(--good);flex-shrink:0;margin-top:9px"></span>
+          <div class="flex-1">
+            <p class="text-[14px] font-semibold" style="color:var(--ink)">Decide a hire</p>
+            <p class="text-[12px]" style="color:var(--ink-500)">Strong match · 0.91 · matched on "hire someone" + prior decision pattern</p>
+          </div>
+          <kbd>↵</kbd>
+        </a>
+
+        <a href="#" class="flex items-start gap-3 px-4 py-3 hover:bg-[color:var(--cream-2)]">
+          <span class="mt-1 inline-block" style="width:24px;height:3px;border-radius:999px;background:var(--warn);flex-shrink:0;margin-top:9px"></span>
+          <div class="flex-1">
+            <p class="text-[14px] font-semibold" style="color:var(--ink)">Decide your capacity</p>
+            <p class="text-[12px]" style="color:var(--ink-500)">Partial match · 0.74 · "close my waitlist" maps to capacity choice</p>
+          </div>
+          <kbd>↵</kbd>
+        </a>
+
+        <p class="px-4 pt-4 pb-1 label" style="color:var(--ink-500)">Past decisions like this · 2</p>
+
+        <a href="#" class="flex items-start gap-3 px-4 py-3 hover:bg-[color:var(--cream-2)]">
+          <span class="text-[12px] font-semibold mt-0.5 tabular-nums" style="color:var(--bad);width:36px;flex-shrink:0">41%</span>
+          <div class="flex-1">
+            <p class="text-[14px] font-medium" style="color:var(--ink)">Defer hire 60 days · revisit Jun 20.</p>
+            <p class="text-[12px]" style="color:var(--ink-500)">Apr 20 · Admin hire</p>
+          </div>
+        </a>
+
+        <a href="#" class="flex items-start gap-3 px-4 py-3 hover:bg-[color:var(--cream-2)]">
+          <span class="text-[12px] font-semibold mt-0.5 tabular-nums" style="color:var(--good);width:36px;flex-shrink:0">81%</span>
+          <div class="flex-1">
+            <p class="text-[14px] font-medium" style="color:var(--ink)">Cap intakes for 8 weeks.</p>
+            <p class="text-[12px]" style="color:var(--ink-500)">Apr 12 · Capacity</p>
+          </div>
+        </a>
+
+      </div>
+
+      <div class="px-4 py-2.5 flex items-center justify-between text-[12px]" style="color:var(--ink-500); border-top:1px solid var(--rule); background:var(--cream-2)">
+        <span>Press <kbd>↵</kbd> to start matched template · <kbd>↑↓</kbd> to navigate</span>
+        <span>Plain language · no patient details</span>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

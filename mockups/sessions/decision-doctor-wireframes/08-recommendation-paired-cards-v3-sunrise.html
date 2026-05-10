@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>08 v3 — Recommendation Paired Cards (Sunrise + Disagree)</title>
+<link rel="preconnect" href="https://rsms.me" />
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --cream:#fff7ef; --cream-2:#ffeede;
+    --ink:#1f1410; --ink-700:#4a3a30; --ink-500:#8a7a6e; --ink-300:#c8b8a8;
+    --coral:#ff6b4a; --coral-2:#ff8d5e; --peach:#ffb085;
+    --sun:#ffc857; --teal:#0fb8a6; --plum:#7b3f6f;
+    --rule:#f1d8be;
+    --good:#1f7a5a; --warn:#b66a18; --bad:#b8332a;
+  }
+  body { background: var(--cream); color: var(--ink); font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .grad-coral { background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 60%, var(--sun) 100%); }
+  details > summary { list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  button:focus-visible, a:focus-visible, summary:focus-visible {
+    outline: none; box-shadow: 0 0 0 4px rgba(255,107,74,.22); border-color: var(--coral);
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  .frame { width: 375px; min-height: 100dvh; margin: 24px auto; border: 1px solid var(--rule); border-radius: 28px; overflow: hidden; background: var(--cream); position: relative; }
+  .label { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <p class="text-center mt-6 text-[12px]" style="color:var(--ink-500)">375px · F-04 alt v3 · Sunrise · paired paths + Disagree (J4 anti-nudge fix)</p>
+
+  <article class="frame pb-28" data-component="PairedRecommendationV3">
+
+    <header class="flex items-center justify-between px-5 pt-5 pb-3" data-component="ResultHeader">
+      <button aria-label="Edit" class="-ml-2 px-2 min-h-[44px] min-w-[44px] text-[15px]" style="color:var(--ink-500)">←</button>
+      <p class="label" style="color:var(--coral)">Capacity · 2 paths</p>
+      <button aria-label="Share" class="-mr-2 px-2 min-h-[44px] text-[13px]" style="color:var(--ink-500)">Share</button>
+    </header>
+
+    <section class="px-5" data-component="PairExplainer">
+      <h1 class="text-[20px] font-semibold tracking-tight leading-tight" style="color:var(--ink)">Two paths the math supports.</h1>
+      <p class="mt-1 text-[14px]" style="color:var(--ink-500)">Both clear your constraints. Pick the trade you'd rather make.</p>
+    </section>
+
+    <section class="px-5 mt-5 space-y-3" data-component="PathPair">
+
+      <article class="rounded-2xl bg-white p-4" style="border:1px solid var(--rule)" data-component="PathRecommended">
+        <div class="flex items-center justify-between">
+          <p class="label" style="color:var(--good)">Higher upside</p>
+          <span class="text-[12px] font-semibold tabular-nums" style="color:var(--good)">78%</span>
+        </div>
+        <p class="mt-2 text-[16px] font-semibold leading-tight" style="color:var(--ink)">Hire a part-time VA · 10 hr/wk</p>
+        <p class="mt-1 text-[13px]" style="color:var(--ink-700)">~6 clinical hr/wk back · margin-sensitive · 30-day reversal point.</p>
+        <ul class="mt-2 text-[13px] list-disc pl-5 space-y-0.5" style="color:var(--ink-700)">
+          <li>Margin if VA at $25/hr: ~$1,800 net/mo</li>
+          <li>Risk: bad-hire churn (mitigated by 30-day check)</li>
+        </ul>
+      </article>
+
+      <article class="rounded-2xl bg-white p-4" style="border:1px solid var(--rule)" data-component="PathRobust">
+        <div class="flex items-center justify-between">
+          <p class="label" style="color:var(--warn)">Lower regret</p>
+          <span class="text-[12px] font-semibold" style="color:var(--warn)">Robust</span>
+        </div>
+        <p class="mt-2 text-[16px] font-semibold leading-tight" style="color:var(--ink)">Cap intakes 8 wk · revisit</p>
+        <p class="mt-1 text-[13px]" style="color:var(--ink-700)">No hire risk · keeps Friday off · weakens "more income" goal.</p>
+        <ul class="mt-2 text-[13px] list-disc pl-5 space-y-0.5" style="color:var(--ink-700)">
+          <li>Margin: flat</li>
+          <li>Lowest regret if your goals shift</li>
+        </ul>
+      </article>
+
+    </section>
+
+    <section class="px-5 mt-3" data-component="DoNothingChip">
+      <button class="w-full rounded-2xl bg-white p-3 text-left min-h-[56px]" style="border:1px solid var(--rule)">
+        <p class="text-[14px] font-medium" style="color:var(--ink)">Defer 90 days · do nothing</p>
+        <p class="mt-0.5 text-[12px]" style="color:var(--ink-500)">Eliminated at Stage 4. Tap to see why.</p>
+      </button>
+    </section>
+
+    <section class="px-5 mt-3" data-component="ShowMath">
+      <details class="rounded-2xl bg-white" style="border:1px solid var(--rule)">
+        <summary class="flex items-center justify-between min-h-[44px] px-4 py-3 text-[15px] font-medium cursor-pointer" style="color:var(--ink)">
+          Show the math (5 stages)
+          <span class="text-[14px]" style="color:var(--ink-500)">▾</span>
+        </summary>
+        <div class="px-4 pb-3 text-[13px]" style="color:var(--ink-700)">
+          Weights, vetoes, ELECTRE, TOPSIS — collapsed by default.
+        </div>
+      </details>
+    </section>
+
+    <footer class="absolute left-0 right-0 bottom-0 px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]" style="background:rgba(255,247,239,.92); backdrop-filter: blur(8px); border-top:1px solid var(--rule)" data-component="StickyActions">
+      <div class="grid grid-cols-3 gap-2" data-component="TripleAction">
+        <button class="rounded-2xl py-3 min-h-[48px] text-[14px] font-semibold" style="color:var(--ink); background:#fff; border:1px solid var(--rule)">Disagree</button>
+        <button class="rounded-2xl py-3 min-h-[48px] text-[14px] font-semibold" style="color:var(--ink); background:#fff; border:1px solid var(--rule)">Save both</button>
+        <button class="grad-coral text-white rounded-2xl py-3 min-h-[48px] text-[14px] font-semibold" style="box-shadow:0 8px 24px rgba(255,107,74,.30)">Pick path</button>
+      </div>
+    </footer>
+
+  </article>
+</body>
+</html>

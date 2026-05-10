@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>08 — Paired Recommendation + Robust</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .wf-box { border: 1px dashed #9ca3af; background: #fff; }
+  .wf-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+  .frame { width: 375px; min-height: 880px; margin: 24px auto; border: 1px solid #d1d5db; position: relative; }
+  .swatch { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+  .green { background: #16a34a; } .amber { background: #d97706; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <p class="wf-label text-center mt-6">Wireframe · 375px · F-04 — Paired cards (anti-nudge framing)</p>
+  <div class="frame bg-white pb-24" data-component="PairedRecommendation">
+    <header class="px-5 pt-5 pb-3 flex items-center justify-between" data-component="ResultHeader">
+      <button class="text-sm text-gray-500">← Edit</button>
+      <p class="wf-label">Capacity · 2 paths</p>
+      <button class="text-sm text-gray-500">Share</button>
+    </header>
+
+    <section class="px-5 pt-3" data-component="PairExplainer">
+      <h1 class="text-base font-medium leading-snug">Two paths the math supports. You choose.</h1>
+      <p class="text-xs text-gray-500 mt-1">Both clear the constraints you set. They differ in trade-offs.</p>
+    </section>
+
+    <section class="px-5 pt-5 space-y-4" data-component="PathPair">
+      <article class="wf-box rounded-md p-4" data-component="PathRecommended">
+        <div class="flex items-center justify-between">
+          <p class="wf-label">Higher upside</p>
+          <span class="text-xs"><span class="swatch green"></span> 78%</span>
+        </div>
+        <p class="text-base font-semibold mt-1">Hire a part-time VA (10 hr/wk)</p>
+        <p class="text-xs text-gray-600 mt-1">+~6 clinical hr/wk · margin sensitive · 30-day reversal point built in.</p>
+        <ul class="text-xs text-gray-700 mt-2 list-disc pl-4 space-y-0.5">
+          <li>Margin if VA at $25/hr: ~$1,800 net/mo</li>
+          <li>Risk: bad-hire churn (mitigated by 30-day check)</li>
+        </ul>
+      </article>
+
+      <article class="wf-box rounded-md p-4" data-component="PathRobust">
+        <div class="flex items-center justify-between">
+          <p class="wf-label">Lower regret</p>
+          <span class="text-xs"><span class="swatch amber"></span> Robust</span>
+        </div>
+        <p class="text-base font-semibold mt-1">Cap intakes 8 wk · revisit</p>
+        <p class="text-xs text-gray-600 mt-1">No hire risk · keeps Friday off · weakens "more income" goal.</p>
+        <ul class="text-xs text-gray-700 mt-2 list-disc pl-4 space-y-0.5">
+          <li>Margin: flat</li>
+          <li>Lowest regret if your goals shift</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="px-5 pt-5" data-component="DoNothingChip">
+      <button class="w-full wf-box rounded-md p-3 text-sm text-left" data-component="DoNothingOption">
+        <p class="font-medium">Defer for 90 days · do nothing</p>
+        <p class="text-xs text-gray-500 mt-1">Eliminated at Stage 4. Tap to see why.</p>
+      </button>
+    </section>
+
+    <section class="px-5 pt-5" data-component="ShowMath">
+      <details class="wf-box rounded-md">
+        <summary class="px-3 py-2 text-sm font-medium cursor-pointer">Show the math (5 stages)</summary>
+        <div class="px-3 py-2 text-xs text-gray-600">Weights, vetoes, ELECTRE, TOPSIS — collapsed by default.</div>
+      </details>
+    </section>
+
+    <footer class="absolute left-0 right-0 bottom-0 px-5 py-3 border-t border-gray-200 bg-white flex gap-2" data-component="StickyActions">
+      <button class="flex-1 wf-box rounded-md py-2 text-sm">Save both</button>
+      <button class="flex-1 bg-gray-900 text-white rounded-md py-2 text-sm font-medium">Pick a path</button>
+    </footer>
+  </div>
+</body>
+</html>

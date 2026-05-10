@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>05 — Intake Resume Banner</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .wf-box { border: 1px dashed #9ca3af; background: #fff; }
+  .wf-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+  .frame { width: 375px; min-height: 720px; margin: 24px auto; border: 1px solid #d1d5db; position: relative; }
+  .resume-bar { background: #fffbe6; border-bottom: 1px solid #facc15; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <p class="wf-label text-center mt-6">Wireframe · 375px · F-02 + interrupt-resume cue (Iqbal/Horvitz CHI 2007)</p>
+  <div class="frame bg-white pb-24" data-component="IntakeWithResume">
+    <header class="px-5 pt-5 pb-3 border-b border-gray-200 flex items-center justify-between" data-component="ScrollHeader">
+      <button class="text-sm text-gray-500">← Templates</button>
+      <p class="wf-label">Capacity · resume</p>
+      <button class="text-sm text-gray-500">Discard</button>
+    </header>
+
+    <div class="resume-bar px-5 py-3 text-sm" data-component="ResumeBanner">
+      <p class="font-medium">You were on Q3: Capacity assumptions</p>
+      <p class="text-xs text-gray-600 mt-0.5">Started 18 min ago. 2 of 5 groups answered. Tap to continue.</p>
+    </div>
+
+    <section class="px-5 pt-5" data-component="ResumeContext">
+      <p class="wf-label">What we already have</p>
+      <div class="mt-3 wf-box rounded-md p-3 text-sm">
+        <p>Active patients: <span class="font-medium">42</span></p>
+        <p>Sessions/wk: <span class="font-medium">15–25</span></p>
+        <button class="text-xs text-gray-500 mt-2 underline">Edit answers</button>
+      </div>
+    </section>
+
+    <main class="px-5 pt-6" data-component="ContinueQuestion">
+      <p class="wf-label">Next — Available capacity</p>
+      <h2 class="text-lg font-semibold mt-1">Hours/wk you could add</h2>
+      <input type="number" class="mt-3 w-full wf-box rounded-md p-3 text-base" placeholder="0–20" />
+    </main>
+
+    <section class="px-5 pt-6" data-component="PWAInstallHint">
+      <div class="wf-box rounded-md p-3 text-xs text-gray-600 flex items-start gap-2">
+        <span>📱</span>
+        <span>Install Decision Doctor on your phone to keep these answers between calls.
+          <button class="underline ml-1">Install</button>
+          <button class="underline ml-2 text-gray-400">Not now</button>
+        </span>
+      </div>
+    </section>
+
+    <footer class="absolute left-0 right-0 bottom-0 px-5 py-4 border-t border-gray-200 bg-white" data-component="StickyCTA">
+      <button class="w-full bg-gray-900 text-white rounded-md py-3 text-sm font-medium">Continue</button>
+      <p class="text-xs text-gray-400 mt-2 text-center">Auto-saving every change · works offline</p>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>10 — 1-Page Print Summary</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-serif, Georgia, serif; }
+  .wf-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; font-family: ui-sans-serif, system-ui, sans-serif; }
+  .page { width: 600px; min-height: 800px; margin: 24px auto; padding: 36px 40px; background: #fff; border: 1px solid #d1d5db; }
+  .rule { border-top: 1px solid #d1d5db; }
+  .inline-meta { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #6b7280; }
+  .pill { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; border: 1px solid #9ca3af; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <p class="wf-label text-center mt-6" style="font-family:ui-sans-serif,system-ui,sans-serif;">Wireframe · F-05 — 1-page print/PDF (no chrome)</p>
+  <article class="page" data-component="PrintSummary">
+    <header data-component="PrintHeader">
+      <p class="inline-meta">Decision Doctor · Capacity · May 8, 2026</p>
+      <h1 class="text-2xl font-semibold mt-2 leading-snug">Hire a part-time virtual assistant (10 hr/wk).</h1>
+      <p class="text-sm text-gray-700 mt-2">Reclaims ~6 hr/wk of clinical capacity. Fits constraint: no new evening hours.</p>
+      <p class="inline-meta mt-2">Confidence: <span class="pill">Moderate · 78%</span></p>
+    </header>
+
+    <section class="rule mt-6 pt-4" data-component="RobustSection">
+      <p class="wf-label">Robust fallback</p>
+      <p class="text-base mt-1">Cap intakes for 8 weeks; revisit if "more income" goal weakens.</p>
+    </section>
+
+    <section class="rule mt-6 pt-4" data-component="AlternativesSection">
+      <p class="wf-label">Alternatives considered</p>
+      <ol class="mt-2 text-sm space-y-2 list-decimal pl-5">
+        <li>Add 4 evening hours/wk — <em>eliminated at Stage 2 (constraint).</em></li>
+        <li>Hire full-time admin — <em>eliminated at Stage 4 (margin, reversibility).</em></li>
+        <li>Do nothing 90 days — <em>eliminated at Stage 4 (burnout goal).</em></li>
+      </ol>
+    </section>
+
+    <section class="rule mt-6 pt-4" data-component="MethodSection">
+      <p class="wf-label">Method (Multi-Criteria Decision Analysis · 5 stages)</p>
+      <table class="text-xs mt-2 w-full" data-component="MethodTable">
+        <tbody>
+          <tr><td class="py-1 pr-2 align-top">1 · Values</td><td>margin > burnout-relief > income > reversibility</td></tr>
+          <tr><td class="py-1 pr-2 align-top">2 · Constraints</td><td>1 of 4 alternatives vetoed</td></tr>
+          <tr><td class="py-1 pr-2 align-top">3 · Weights</td><td>0.40 · 0.30 · 0.20 · 0.10</td></tr>
+          <tr><td class="py-1 pr-2 align-top">4 · Outranking</td><td>ELECTRE — 2 dominated</td></tr>
+          <tr><td class="py-1 pr-2 align-top">5 · Ranking</td><td>TOPSIS top-1 0.71 / top-2 0.53 → margin 0.18</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="rule mt-6 pt-4" data-component="PlaybookSection">
+      <p class="wf-label">Action items</p>
+      <ol class="mt-2 text-sm space-y-1 list-decimal pl-5">
+        <li>Post the VA job description (paste-ready, included).</li>
+        <li>Set a 30-day check-in. If retention &lt;80% goals met, fall back to "cap intakes 8 wk."</li>
+        <li>Bring back to Decision Doctor on Jun 7 with outcome data.</li>
+      </ol>
+    </section>
+
+    <footer class="rule mt-6 pt-3 inline-meta" data-component="PrintFooter">
+      Decision id 9f3b · model openai/gpt-oss-120b · runtime 4.2s · no PHI · printed without auth
+    </footer>
+  </article>
+</body>
+</html>

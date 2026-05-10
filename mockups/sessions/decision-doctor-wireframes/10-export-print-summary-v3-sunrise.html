@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>10 v3 — 1-Page Print Summary (Sunrise)</title>
+<link rel="preconnect" href="https://rsms.me" />
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --cream:#fff7ef;
+    --ink:#1f1410; --ink-700:#4a3a30; --ink-500:#8a7a6e; --ink-300:#c8b8a8;
+    --coral:#ff6b4a; --peach:#ffb085; --plum:#7b3f6f;
+    --rule:#f1d8be; --good:#1f7a5a;
+  }
+  body { background: #f4ede4; color: var(--ink); font-family: Inter, -apple-system, system-ui, sans-serif; }
+  .grad-coral-text { background: linear-gradient(135deg, var(--coral), var(--plum)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .page { width: 600px; min-height: 800px; margin: 24px auto; padding: 40px 44px; background: #ffffff; border: 1px solid var(--rule); border-radius: 8px; box-shadow: 0 8px 32px rgba(31,20,16,.06); }
+  .label { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-500); }
+  .pill { display:inline-block; font-size: 12px; font-weight:600; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--rule); color: var(--good); }
+  .rule { border-top: 1px solid var(--rule); }
+  @media print { body { background: #fff; } .page { box-shadow: none; border: none; margin: 0; } }
+</style>
+</head>
+<body>
+  <p class="text-center mt-6 text-[12px]" style="color:var(--ink-500)">F-05 v3 · Sunrise · print/PDF (no chrome) · prints landscape-clean on letter</p>
+
+  <article class="page" data-component="PrintSummaryV3">
+
+    <header data-component="PrintHeader" class="flex items-baseline justify-between">
+      <div>
+        <p class="label" style="color:var(--coral)">decision doctor</p>
+        <p class="mt-1 text-[12px]" style="color:var(--ink-500)">Capacity · May 8, 2026</p>
+      </div>
+      <span class="pill">Confidence Moderate · 78%</span>
+    </header>
+
+    <h1 class="mt-5 text-[28px] leading-tight font-semibold tracking-tight" style="color:var(--ink)">
+      Hire a part-time VA — <span class="grad-coral-text">reclaim ~6 hr/wk</span>.
+    </h1>
+    <p class="mt-2 text-[15px]" style="color:var(--ink-700)">Fits the constraint you set: no new evening hours.</p>
+
+    <section class="rule mt-6 pt-4" data-component="RobustSection">
+      <p class="label">Robust fallback</p>
+      <p class="mt-1 text-[15px]" style="color:var(--ink-700)">
+        <span class="font-semibold" style="color:var(--ink)">If your goals shift →</span>
+        cap intakes for 8 weeks; revisit if "more income" weakens.
+      </p>
+    </section>
+
+    <section class="rule mt-6 pt-4" data-component="AlternativesSection">
+      <p class="label">Alternatives considered</p>
+      <ol class="mt-2 text-[14px] space-y-1.5 list-decimal pl-5" style="color:var(--ink-700)">
+        <li><span class="font-medium" style="color:var(--ink)">Add 4 evening hours/wk</span> — eliminated at Stage 2 (constraint).</li>
+        <li><span class="font-medium" style="color:var(--ink)">Hire full-time admin</span> — eliminated at Stage 4 (margin, reversibility).</li>
+        <li><span class="font-medium" style="color:var(--ink)">Do nothing 90 days</span> — eliminated at Stage 4 (burnout goal).</li>
+      </ol>
+    </section>
+
+    <section class="rule mt-6 pt-4" data-component="MethodSection">
+      <p class="label">Method · Multi-Criteria Decision Analysis · 5 stages</p>
+      <table class="mt-2 w-full text-[13px]" data-component="MethodTable">
+        <tbody>
+          <tr><td class="py-1 pr-3 align-top font-medium whitespace-nowrap" style="color:var(--ink)">1 · Values</td><td style="color:var(--ink-700)">margin &gt; burnout-relief &gt; income &gt; reversibility</td></tr>
+          <tr style="border-top:1px solid var(--rule)"><td class="py-1 pr-3 align-top font-medium whitespace-nowrap" style="color:var(--ink)">2 · Constraints</td><td style="color:var(--ink-700)">1 of 4 alternatives vetoed</td></tr>
+          <tr style="border-top:1px solid var(--rule)"><td class="py-1 pr-3 align-top font-medium whitespace-nowrap" style="color:var(--ink)">3 · Weights</td><td style="color:var(--ink-700)">0.40 · 0.30 · 0.20 · 0.10</td></tr>
+          <tr style="border-top:1px solid var(--rule)"><td class="py-1 pr-3 align-top font-medium whitespace-nowrap" style="color:var(--ink)">4 · Outranking</td><td style="color:var(--ink-700)">ELECTRE — 2 dominated</td></tr>
+          <tr style="border-top:1px solid var(--rule)"><td class="py-1 pr-3 align-top font-medium whitespace-nowrap" style="color:var(--ink)">5 · Ranking</td><td style="color:var(--ink-700)">TOPSIS top-1 0.71 / top-2 0.53 → margin 0.18</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="rule mt-6 pt-4" data-component="PlaybookSection">
+      <p class="label">Action items</p>
+      <ol class="mt-2 text-[14px] space-y-1.5 list-decimal pl-5" style="color:var(--ink-700)">
+        <li>Post the VA job description (paste-ready, included).</li>
+        <li>Set a 30-day check-in. If retention &lt;80% goals met, fall back to "cap intakes 8 wk."</li>
+        <li>Bring back to Decision Doctor on Jun 7 with outcome data.</li>
+      </ol>
+    </section>
+
+    <footer class="rule mt-6 pt-3 text-[11px]" style="color:var(--ink-500)" data-component="PrintFooter">
+      Decision id 9f3b · model openai/gpt-oss-120b · runtime 4.2s · no PHI · printed without auth
+    </footer>
+
+  </article>
+</body>
+</html>

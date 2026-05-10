@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>05 v3 — Intake Resume Banner (Sunrise)</title>
+<link rel="preconnect" href="https://rsms.me" />
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --cream:#fff7ef; --cream-2:#ffeede;
+    --ink:#1f1410; --ink-700:#4a3a30; --ink-500:#8a7a6e; --ink-300:#c8b8a8;
+    --coral:#ff6b4a; --coral-2:#ff8d5e; --peach:#ffb085;
+    --sun:#ffc857; --teal:#0fb8a6; --plum:#7b3f6f;
+    --rule:#f1d8be;
+  }
+  body { background: var(--cream); color: var(--ink); font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .grad-coral { background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 60%, var(--sun) 100%); }
+  button:focus-visible, a:focus-visible, input:focus-visible {
+    outline: none; box-shadow: 0 0 0 4px rgba(255,107,74,.22); border-color: var(--coral);
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  .frame { width: 375px; min-height: 100dvh; margin: 24px auto; border: 1px solid var(--rule); border-radius: 28px; overflow: hidden; background: var(--cream); position: relative; }
+  .label { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <p class="text-center mt-6 text-[12px]" style="color:var(--ink-500)">375px · F-02+resume v3 · Sunrise · interrupt-recovery cue (Iqbal/Horvitz CHI 2007)</p>
+
+  <article class="frame pb-28" data-component="IntakeResumeV3">
+
+    <header class="flex items-center justify-between px-5 pt-5 pb-3" data-component="ScrollHeader">
+      <button aria-label="Back" class="-ml-2 px-2 min-h-[44px] min-w-[44px] text-[15px]" style="color:var(--ink-500)">←</button>
+      <p class="label" style="color:var(--coral)">Capacity · resume</p>
+      <button class="-mr-2 px-2 min-h-[44px] text-[13px]" style="color:var(--ink-500)">Discard</button>
+    </header>
+
+    <section class="px-5 pt-1" data-component="ResumeBanner">
+      <div class="rounded-2xl px-4 py-3 flex items-start gap-3" style="background:var(--cream-2); border:1px solid var(--peach)">
+        <div class="mt-0.5 grad-coral rounded-full" style="width:8px;height:8px;flex-shrink:0;margin-top:7px"></div>
+        <div class="flex-1">
+          <p class="text-[15px] font-semibold" style="color:var(--ink)">You were on Q3 — capacity assumptions</p>
+          <p class="mt-0.5 text-[13px]" style="color:var(--ink-700)">Started 18 min ago · 2 of 5 groups answered. Tap continue to pick up.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-5 mt-5" data-component="ResumeContext">
+      <p class="label" style="color:var(--ink-500)">What you've answered</p>
+      <div class="mt-3 rounded-2xl bg-white p-4" style="border:1px solid var(--rule)">
+        <div class="flex items-baseline justify-between">
+          <p class="text-[14px]" style="color:var(--ink-700)">Active patients</p>
+          <p class="text-[14px] font-semibold tabular-nums" style="color:var(--ink)">42</p>
+        </div>
+        <div class="flex items-baseline justify-between mt-2 pt-2" style="border-top:1px solid var(--rule)">
+          <p class="text-[14px]" style="color:var(--ink-700)">Sessions / wk</p>
+          <p class="text-[14px] font-semibold" style="color:var(--ink)">15–25</p>
+        </div>
+        <button class="mt-3 text-[13px] font-medium underline min-h-[28px]" style="color:var(--ink-500)">Edit answers</button>
+      </div>
+    </section>
+
+    <main class="px-5 mt-5" data-component="ContinueQuestion">
+      <p class="label" style="color:var(--coral)">Next — Available capacity</p>
+      <h2 class="mt-2 text-[20px] font-semibold tracking-tight leading-tight" style="color:var(--ink)">
+        How many hours/wk could you realistically add?
+      </h2>
+      <input type="number" inputmode="numeric" placeholder="0–20"
+             class="mt-3 w-full rounded-xl bg-white px-4 py-3 text-[16px] outline-none"
+             style="border:1px solid var(--rule); color:var(--ink);" />
+    </main>
+
+    <section class="px-5 mt-5" data-component="PWAInstallHint">
+      <div class="rounded-2xl px-4 py-3 flex items-start gap-3" style="background:#fff; border:1px dashed var(--peach)">
+        <span class="text-[16px]" style="color:var(--coral)">⤓</span>
+        <div class="flex-1">
+          <p class="text-[14px] font-medium" style="color:var(--ink)">Install on your phone</p>
+          <p class="mt-0.5 text-[12px]" style="color:var(--ink-500)">Keep these answers between calls. Works offline.</p>
+          <div class="mt-2 flex items-center gap-3">
+            <button class="text-[13px] font-semibold min-h-[36px] px-3 rounded-lg" style="color:var(--coral); background:var(--cream-2); border:1px solid var(--peach)">Install</button>
+            <button class="text-[13px] min-h-[36px] px-2" style="color:var(--ink-500)">Not now</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="absolute left-0 right-0 bottom-0 px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]" style="background:rgba(255,247,239,.92); backdrop-filter: blur(8px); border-top:1px solid var(--rule)" data-component="StickyCTA">
+      <button class="grad-coral text-white w-full rounded-2xl py-4 min-h-[48px] text-[15px] font-semibold" style="box-shadow: 0 8px 24px rgba(255,107,74,.30)">
+        Continue
+      </button>
+      <p class="mt-2 text-center text-[12px]" style="color:var(--ink-500)">Auto-saved on every change · works offline</p>
+    </footer>
+
+  </article>
+</body>
+</html>

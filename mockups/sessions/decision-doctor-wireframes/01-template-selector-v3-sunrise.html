@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>01 v3 — Template Selector (Sunrise)</title>
+<link rel="preconnect" href="https://rsms.me" />
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --cream:#fff7ef; --cream-2:#ffeede;
+    --ink:#1f1410; --ink-700:#4a3a30; --ink-500:#8a7a6e; --ink-300:#c8b8a8;
+    --coral:#ff6b4a; --coral-2:#ff8d5e; --peach:#ffb085;
+    --sun:#ffc857; --teal:#0fb8a6; --plum:#7b3f6f;
+    --rule:#f1d8be;
+  }
+  body { background: var(--cream); color: var(--ink); font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .grad-coral-text { background: linear-gradient(135deg, var(--coral), var(--plum)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  button:focus-visible, a:focus-visible, input:focus-visible {
+    outline: none; box-shadow: 0 0 0 4px rgba(255,107,74,.22); border-color: var(--coral);
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  .frame { width: 375px; min-height: 100dvh; margin: 24px auto; border: 1px solid var(--rule); border-radius: 28px; overflow: hidden; background: var(--cream); position: relative; }
+  .label { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <p class="text-center mt-6 text-[12px]" style="color:var(--ink-500)">375px · F-01 v3 · Sunrise · semantic search woven in</p>
+
+  <article class="frame pb-20" data-component="TemplateSelectorV3">
+
+    <header class="px-5 pt-6" data-component="AppHeader">
+      <p class="label" style="color:var(--coral)">decision doctor</p>
+      <h1 class="mt-2 text-[26px] leading-tight font-semibold tracking-tight" style="color:var(--ink)">
+        Where do you want <span class="grad-coral-text">time back</span>?
+      </h1>
+      <p class="mt-2 text-[14px]" style="color:var(--ink-500)">~5 min each. Math shown. Saved on this device.</p>
+    </header>
+
+    <section class="px-5 mt-5" data-component="SearchInput">
+      <a href="#" class="rounded-2xl bg-white px-4 py-3 flex items-center gap-3 min-h-[48px]" style="border:1px solid var(--rule); color:var(--ink-500)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+        </svg>
+        <span class="flex-1 text-[15px]">Or describe what's eating you…</span>
+      </a>
+    </section>
+
+    <main class="px-5 mt-5 space-y-3" data-component="TemplateCardList">
+
+      <a href="#" class="block rounded-2xl bg-white p-4 min-h-[88px]" style="border:1px solid var(--rule)" data-component="TemplateCard" data-template="capacity">
+        <p class="text-[16px] font-semibold" style="color:var(--ink)">Decide your capacity</p>
+        <p class="mt-1 text-[14px]" style="color:var(--ink-700)">Cap intakes? Open more slots? Reduce hours?</p>
+      </a>
+
+      <a href="#" class="block rounded-2xl bg-white p-4 min-h-[88px]" style="border:1px solid var(--rule)" data-component="TemplateCard" data-template="pricing">
+        <p class="text-[16px] font-semibold" style="color:var(--ink)">Decide pricing</p>
+        <p class="mt-1 text-[14px]" style="color:var(--ink-700)">Raise rates? Stay put? Sliding scale?</p>
+      </a>
+
+      <a href="#" class="block rounded-2xl bg-white p-4 min-h-[88px]" style="border:1px solid var(--rule)" data-component="TemplateCard" data-template="admin-hire">
+        <p class="text-[16px] font-semibold" style="color:var(--ink)">Decide a hire</p>
+        <p class="mt-1 text-[14px]" style="color:var(--ink-700)">VA, billing service, in-person admin, or DIY?</p>
+      </a>
+
+    </main>
+
+    <nav class="absolute left-0 right-0 bottom-0 px-5 pt-2 pb-[calc(env(safe-area-inset-bottom)+8px)] flex items-center justify-around" style="background:rgba(255,247,239,.92); backdrop-filter: blur(8px); border-top:1px solid var(--rule)" data-component="BottomNav">
+      <a href="#" class="text-[13px] font-semibold py-2 px-3 min-h-[44px] flex items-center" style="color:var(--ink); border-bottom:2px solid var(--coral)">Decide</a>
+      <a href="#" class="text-[13px] py-2 px-3 min-h-[44px] flex items-center" style="color:var(--ink-500)">History</a>
+      <a href="#" class="text-[13px] py-2 px-3 min-h-[44px] flex items-center" style="color:var(--ink-500)">Account</a>
+    </nav>
+
+  </article>
+</body>
+</html>

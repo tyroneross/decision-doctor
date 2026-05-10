@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>06 — Recommendation Hero Card</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .wf-box { border: 1px dashed #9ca3af; background: #fff; }
+  .wf-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+  .frame { width: 375px; min-height: 880px; margin: 24px auto; border: 1px solid #d1d5db; position: relative; }
+  .conf-bar { height: 6px; background: #e5e7eb; border-radius: 3px; }
+  .conf-fill { height: 100%; background: #16a34a; border-radius: 3px; }
+  .acc-row { border-top: 1px solid #e5e7eb; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <p class="wf-label text-center mt-6">Wireframe · 375px · F-04 — Recommendation Hero (default per spec)</p>
+  <div class="frame bg-white pb-24" data-component="RecommendationHero">
+    <header class="px-5 pt-5 pb-3 flex items-center justify-between" data-component="ResultHeader">
+      <button class="text-sm text-gray-500">← Edit</button>
+      <p class="wf-label">Capacity · result</p>
+      <button class="text-sm text-gray-500">Share</button>
+    </header>
+
+    <section class="px-5 pt-2" data-component="HeroCard">
+      <p class="wf-label">Recommended</p>
+      <h1 class="text-2xl font-semibold mt-1 leading-snug">Hire a part-time virtual assistant (10 hr/wk).</h1>
+      <p class="text-sm text-gray-700 mt-2">Reclaims ~6 hr/wk of clinical capacity. Fits stated constraint of no new evening hours.</p>
+
+      <div class="mt-4" data-component="ConfidenceBlock">
+        <div class="flex items-center justify-between text-sm">
+          <p class="font-medium">Confidence</p>
+          <p>Moderate · <span class="font-semibold">78%</span></p>
+        </div>
+        <div class="conf-bar mt-2"><div class="conf-fill" style="width:78%"></div></div>
+        <p class="text-xs text-gray-500 mt-1">Top option vs runner-up margin: 0.18.</p>
+      </div>
+    </section>
+
+    <section class="px-5 pt-6" data-component="RobustFallback">
+      <div class="wf-box rounded-md p-3">
+        <p class="wf-label">Robust fallback</p>
+        <p class="text-sm font-semibold mt-1">Cap intakes for 8 weeks, no hire.</p>
+        <p class="text-xs text-gray-600 mt-1">Lowest regret if your "more income" goal weakens or hiring lands a bad fit.</p>
+      </div>
+    </section>
+
+    <section class="px-5 pt-6" data-component="Alternatives">
+      <details class="wf-box rounded-md">
+        <summary class="px-3 py-2 text-sm font-medium cursor-pointer">Alternatives considered (3)</summary>
+        <div class="acc-row px-3 py-2 text-sm">
+          <p class="font-medium">Add 4 evening hours/wk</p>
+          <p class="text-xs text-gray-600">Eliminated at Stage 2 — violates "no new evening hours" constraint.</p>
+        </div>
+        <div class="acc-row px-3 py-2 text-sm">
+          <p class="font-medium">Hire full-time admin</p>
+          <p class="text-xs text-gray-600">Eliminated at Stage 4 — outranked on margin and reversibility.</p>
+        </div>
+        <div class="acc-row px-3 py-2 text-sm">
+          <p class="font-medium">Do nothing for 90 days</p>
+          <p class="text-xs text-gray-600">Eliminated at Stage 4 — fails "less burnout" goal under current load.</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="px-5 pt-3" data-component="MethodTrace">
+      <details class="wf-box rounded-md">
+        <summary class="px-3 py-2 text-sm font-medium cursor-pointer">Show the math (5 stages)</summary>
+        <div class="px-3 py-2 text-xs text-gray-600 space-y-1">
+          <p>1 · Values · margin > burnout-relief > income-growth</p>
+          <p>2 · Constraints · 1 of 4 alternatives vetoed</p>
+          <p>3 · Weights · margin 0.40 · burnout 0.30 · income 0.20 · reversibility 0.10</p>
+          <p>4 · Outranking · ELECTRE eliminated 2 dominated</p>
+          <p>5 · Ranking · TOPSIS top-1 0.71 / top-2 0.53</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="px-5 pt-6" data-component="WorkloadReducers">
+      <p class="wf-label">Workload reducers (3)</p>
+      <div class="mt-2 flex gap-3 overflow-x-auto pb-1">
+        <div class="wf-box rounded-md p-3 min-w-[220px] text-sm">
+          <p class="font-medium">VA job description (paste-ready)</p>
+          <p class="text-xs text-gray-500 mt-1">Prompt · 200 words · ready for Indeed/Upwork.</p>
+        </div>
+        <div class="wf-box rounded-md p-3 min-w-[220px] text-sm">
+          <p class="font-medium">First-30-days playbook</p>
+          <p class="text-xs text-gray-500 mt-1">Playbook · 6 steps.</p>
+        </div>
+        <div class="wf-box rounded-md p-3 min-w-[220px] text-sm">
+          <p class="font-medium">Weekly check-in template</p>
+          <p class="text-xs text-gray-500 mt-1">Skill · recurring.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="absolute left-0 right-0 bottom-0 px-5 py-3 border-t border-gray-200 bg-white flex gap-2" data-component="StickyActions">
+      <button class="flex-1 wf-box rounded-md py-2 text-sm">Show the work</button>
+      <button class="flex-1 bg-gray-900 text-white rounded-md py-2 text-sm font-medium">Save</button>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Web · Semantic Search Results (Sunrise)</title>
+<link rel="preconnect" href="https://rsms.me" />
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --cream:#fff7ef; --cream-2:#ffeede;
+    --ink:#1f1410; --ink-700:#4a3a30; --ink-500:#8a7a6e; --ink-300:#c8b8a8;
+    --coral:#ff6b4a; --coral-2:#ff8d5e; --peach:#ffb085;
+    --sun:#ffc857; --teal:#0fb8a6; --plum:#7b3f6f;
+    --rule:#f1d8be;
+    --good:#1f7a5a; --warn:#b66a18; --bad:#b8332a;
+  }
+  body { background: var(--cream); color: var(--ink); font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .grad-coral { background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 60%, var(--sun) 100%); }
+  .grad-coral-text { background: linear-gradient(135deg, var(--coral), var(--plum)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  button:focus-visible, a:focus-visible, input:focus-visible {
+    outline: none; box-shadow: 0 0 0 4px rgba(255,107,74,.22); border-color: var(--coral);
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  .label { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+  kbd { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: var(--cream-2); border: 1px solid var(--rule); color: var(--ink-700); }
+  .match-bar { width: 32px; height: 3px; border-radius: 999px; }
+  mark { background: linear-gradient(transparent 60%, rgba(255,200,87,.5) 60%); color: inherit; padding: 0 1px; }
+</style>
+</head>
+<body class="min-h-screen">
+
+  <!-- TOP NAV (search expanded inline) -->
+  <header class="border-b" style="border-color:var(--rule); background:rgba(255,247,239,.8); backdrop-filter:blur(12px); position:sticky; top:0; z-index:10">
+    <div class="mx-auto max-w-[1280px] px-8 h-16 flex items-center gap-6">
+      <a href="#" class="flex items-center gap-2"><span class="grad-coral rounded-lg" style="width:24px;height:24px;display:inline-block"></span><span class="text-[15px] font-semibold tracking-tight" style="color:var(--ink)">Decision Doctor</span></a>
+      <div class="flex-1 flex justify-center">
+        <div class="rounded-2xl bg-white pl-4 pr-2 py-2.5 flex items-center gap-3 w-[640px]" style="border:2px solid var(--coral); box-shadow: 0 0 0 4px rgba(255,107,74,.12)" data-component="ActiveSearchInput">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--coral)"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" autofocus value="should I hire someone or just close my waitlist"
+                 class="flex-1 text-[15px] outline-none bg-transparent" style="color:var(--ink)" />
+          <button aria-label="Clear" class="text-[13px]" style="color:var(--ink-500)">✕</button>
+        </div>
+      </div>
+      <nav class="flex items-center gap-1">
+        <a href="#" class="px-3 py-2 text-[14px]" style="color:var(--ink-500)">Decide</a>
+        <a href="#" class="px-3 py-2 text-[14px]" style="color:var(--ink-500)">History</a>
+        <a href="#" class="px-3 py-2 text-[14px]" style="color:var(--ink-500)">Account</a>
+        <span class="ml-2 grad-coral rounded-full" style="width:32px;height:32px;display:inline-block"></span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- RESULTS HEADER -->
+  <main class="mx-auto max-w-[1280px] px-8 pt-10 pb-6" data-component="SearchHeader">
+    <p class="label" style="color:var(--coral)">Search results</p>
+    <h1 class="mt-3 text-[28px] leading-tight font-semibold tracking-tight max-w-3xl" style="color:var(--ink)">
+      "should I hire someone or just close my waitlist"
+    </h1>
+    <p class="mt-2 text-[14px]" style="color:var(--ink-500)">
+      Plain language interpreted via semantic match (embeddings · cosine similarity).
+      <span class="font-semibold" style="color:var(--good)">No PHI detected</span> — input was checked locally before query.
+    </p>
+  </main>
+
+  <!-- 2-COLUMN RESULTS -->
+  <section class="mx-auto max-w-[1280px] px-8 pb-16 grid grid-cols-12 gap-8">
+
+    <!-- LEFT (8): templates + history -->
+    <div class="col-span-12 lg:col-span-8 space-y-8" data-component="ResultsColumn">
+
+      <div data-component="TemplateMatches">
+        <div class="flex items-baseline justify-between">
+          <h2 class="label" style="color:var(--ink-500)">Templates that fit · 2 strong matches</h2>
+          <a href="#" class="text-[12px]" style="color:var(--ink-500)">Why these? <span class="underline">explain →</span></a>
+        </div>
+
+        <div class="mt-3 grid grid-cols-2 gap-4">
+          <a href="#" class="block rounded-3xl bg-white p-6 transition" style="border:1px solid var(--rule)" data-component="TemplateMatchPrimary">
+            <div class="flex items-center gap-2">
+              <span class="match-bar" style="background:var(--good)"></span>
+              <p class="text-[12px] font-semibold tabular-nums" style="color:var(--good)">Strong match · 0.91</p>
+            </div>
+            <p class="mt-3 text-[20px] font-semibold leading-tight" style="color:var(--ink)">Decide a hire</p>
+            <p class="mt-2 text-[14px]" style="color:var(--ink-700)">VA, billing service, in-person admin, or DIY?</p>
+            <p class="mt-3 text-[12px]" style="color:var(--ink-500)">
+              Picked because: <mark>"hire someone"</mark> · prior pattern of admin-hire decisions · waitlist ↔ capacity correlation
+            </p>
+            <p class="mt-4 text-[13px] font-semibold" style="color:var(--coral)">Start this template →</p>
+          </a>
+
+          <a href="#" class="block rounded-3xl bg-white p-6 transition" style="border:1px solid var(--rule)" data-component="TemplateMatchSecondary">
+            <div class="flex items-center gap-2">
+              <span class="match-bar" style="background:var(--warn)"></span>
+              <p class="text-[12px] font-semibold tabular-nums" style="color:var(--warn)">Partial match · 0.74</p>
+            </div>
+            <p class="mt-3 text-[20px] font-semibold leading-tight" style="color:var(--ink)">Decide your capacity</p>
+            <p class="mt-2 text-[14px]" style="color:var(--ink-700)">Cap intakes? Open more slots? Reduce hours?</p>
+            <p class="mt-3 text-[12px]" style="color:var(--ink-500)">
+              Picked because: <mark>"close my waitlist"</mark> maps to capacity choice
+            </p>
+            <p class="mt-4 text-[13px] font-semibold" style="color:var(--coral)">Start this template →</p>
+          </a>
+        </div>
+      </div>
+
+      <div data-component="HistoryMatches">
+        <div class="flex items-baseline justify-between">
+          <h2 class="label" style="color:var(--ink-500)">Past decisions like this · 2 found</h2>
+          <a href="#" class="text-[12px]" style="color:var(--ink-500)">See all history →</a>
+        </div>
+
+        <div class="mt-3 rounded-3xl bg-white overflow-hidden" style="border:1px solid var(--rule)">
+
+          <a href="#" class="block px-5 py-4">
+            <div class="flex items-baseline gap-4">
+              <span class="text-[12px] font-semibold tabular-nums" style="color:var(--bad);width:48px;flex-shrink:0">41%</span>
+              <div class="flex-1">
+                <p class="text-[15px] font-medium" style="color:var(--ink)">Defer hire 60 days · revisit Jun 20.</p>
+                <p class="mt-1 text-[12px]" style="color:var(--ink-500)">Apr 20 · Admin hire · matched on <mark>"hire"</mark> + <mark>"waitlist"</mark></p>
+              </div>
+              <span class="text-[13px] font-semibold" style="color:var(--coral)">Open →</span>
+            </div>
+          </a>
+
+          <a href="#" class="block px-5 py-4" style="border-top:1px solid var(--rule)">
+            <div class="flex items-baseline gap-4">
+              <span class="text-[12px] font-semibold tabular-nums" style="color:var(--good);width:48px;flex-shrink:0">81%</span>
+              <div class="flex-1">
+                <p class="text-[15px] font-medium" style="color:var(--ink)">Cap intakes for 8 weeks.</p>
+                <p class="mt-1 text-[12px]" style="color:var(--ink-500)">Apr 12 · Capacity · matched on <mark>"close waitlist"</mark></p>
+              </div>
+              <span class="text-[13px] font-semibold" style="color:var(--coral)">Open →</span>
+            </div>
+          </a>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT (4): query intel + privacy / saved playbooks -->
+    <aside class="col-span-12 lg:col-span-4 space-y-5" data-component="SidePanel">
+
+      <section class="rounded-3xl bg-white p-5" style="border:1px solid var(--rule)" data-component="QueryIntel">
+        <p class="label" style="color:var(--ink-500)">How we understood you</p>
+        <ul class="mt-3 space-y-2 text-[13px]" style="color:var(--ink-700)">
+          <li>· Intent class: <span class="font-semibold" style="color:var(--ink)">resource decision</span></li>
+          <li>· Time signal: <span class="font-semibold" style="color:var(--ink)">capacity strain</span></li>
+          <li>· Action verb: <span class="font-semibold" style="color:var(--ink)">hire</span> · close</li>
+          <li>· Object: <span class="font-semibold" style="color:var(--ink)">waitlist</span> (capacity entity)</li>
+          <li>· Disjunction: <span class="font-semibold" style="color:var(--ink)">hire vs cap</span> ↔ admin-hire ∪ capacity</li>
+        </ul>
+        <p class="mt-3 text-[12px]" style="color:var(--ink-500)">Embedding model: text-embedding-3-small · 1536-dim · cosine threshold 0.55</p>
+      </section>
+
+      <section class="rounded-3xl bg-white p-5" style="border:1px solid var(--rule); border-left:4px solid var(--good)" data-component="PrivacyAffirm">
+        <p class="label" style="color:var(--good)">Privacy check passed</p>
+        <p class="mt-2 text-[14px]" style="color:var(--ink-700)">Your query was scanned locally for patient identifiers (names, DOBs, MRNs, ICD codes). None detected. Only the cleaned query reached the embedding model.</p>
+      </section>
+
+      <section class="rounded-3xl bg-white p-5" style="border:1px solid var(--rule)" data-component="PlaybookMatches">
+        <p class="label" style="color:var(--ink-500)">Playbooks that match · 1</p>
+        <a href="#" class="block mt-3">
+          <p class="text-[14px] font-semibold" style="color:var(--ink)">VA job description (paste-ready)</p>
+          <p class="mt-1 text-[12px]" style="color:var(--ink-500)">From your May 8 capacity decision · 200 words</p>
+          <p class="mt-2 text-[12px] font-semibold" style="color:var(--coral)">Copy →</p>
+        </a>
+      </section>
+
+    </aside>
+
+  </section>
+
+</body>
+</html>

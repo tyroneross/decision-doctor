@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>03 v2 — Intake Stepper (simplified)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .wf-box { border: 1px dashed #9ca3af; background: #fff; }
+  .wf-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+  .frame { width: 375px; min-height: 720px; margin: 24px auto; border: 1px solid #d1d5db; position: relative; }
+  .step-dot { width: 6px; height: 6px; border-radius: 999px; background: #d1d5db; }
+  .step-dot.active { background: #111827; }
+  .step-dot.done { background: #6b7280; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <p class="wf-label text-center mt-6">Wireframe · 375px · F-02 v2 — Stepper (chrome stripped)</p>
+  <div class="frame bg-white pb-24" data-component="IntakeStepperV2">
+    <header class="px-5 pt-5 pb-3 flex items-center justify-between" data-component="StepperHeader">
+      <button class="text-sm text-gray-500" aria-label="Back">←</button>
+      <div class="flex items-center gap-2" data-component="StepDots">
+        <span class="step-dot done"></span>
+        <span class="step-dot done"></span>
+        <span class="step-dot active"></span>
+        <span class="step-dot"></span>
+        <span class="step-dot"></span>
+      </div>
+      <span class="text-xs text-gray-500">3 / 5</span>
+    </header>
+
+    <main class="px-5 pt-5" data-component="QuestionGroup">
+      <h2 class="text-xl font-semibold">Current load</h2>
+
+      <div class="mt-5 space-y-5">
+        <div data-component="NumberField">
+          <label class="text-sm">Active patients on your panel</label>
+          <input type="number" class="mt-2 w-full wf-box rounded-md p-3 text-base" placeholder="e.g. 42" />
+        </div>
+
+        <div data-component="SelectField">
+          <label class="text-sm">Avg sessions per week</label>
+          <div class="mt-2 grid grid-cols-4 gap-2 text-sm">
+            <button class="wf-box rounded-md py-2">&lt;15</button>
+            <button class="wf-box rounded-md py-2 bg-gray-100">15–25</button>
+            <button class="wf-box rounded-md py-2">26–35</button>
+            <button class="wf-box rounded-md py-2">&gt;35</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="absolute left-0 right-0 bottom-0 px-5 py-4 border-t border-gray-200 bg-white" data-component="StickyCTA">
+      <button class="w-full bg-gray-900 text-white rounded-md py-3 text-sm font-medium">Next</button>
+      <p class="text-xs text-gray-400 mt-2 text-center">Auto-saved · numbers and ranges only · no patient details</p>
+    </footer>
+  </div>
+</body>
+</html>

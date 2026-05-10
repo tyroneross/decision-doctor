@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>04 — Intake Single-Scroll</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .wf-box { border: 1px dashed #9ca3af; background: #fff; }
+  .wf-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+  .frame { width: 375px; min-height: 920px; margin: 24px auto; border: 1px solid #d1d5db; position: relative; }
+  .group-rule { border-top: 1px solid #e5e7eb; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <p class="wf-label text-center mt-6">Wireframe · 375px · F-02 Intake — Single Scroll (all groups, sticky CTA)</p>
+  <div class="frame bg-white pb-24" data-component="IntakeSingleScroll">
+    <header class="px-5 pt-5 pb-3 border-b border-gray-200 flex items-center justify-between" data-component="ScrollHeader">
+      <button class="text-sm text-gray-500">← Templates</button>
+      <p class="wf-label">Capacity</p>
+      <button class="text-sm text-gray-500">Save</button>
+    </header>
+
+    <section class="px-5 pt-5" data-component="GroupCurrentLoad">
+      <p class="wf-label">1 of 5 — Current load</p>
+      <div class="mt-3 space-y-4">
+        <div><label class="text-sm">Active patients</label><input type="number" class="mt-1 w-full wf-box rounded-md p-2 text-base" /></div>
+        <div><label class="text-sm">Sessions / wk</label><input type="number" class="mt-1 w-full wf-box rounded-md p-2 text-base" /></div>
+      </div>
+    </section>
+
+    <section class="px-5 pt-6 group-rule pt-6 mt-6" data-component="GroupCapacity">
+      <p class="wf-label">2 of 5 — Available capacity</p>
+      <div class="mt-3 space-y-4">
+        <div><label class="text-sm">Hours/wk you could realistically add</label><input type="number" class="mt-1 w-full wf-box rounded-md p-2 text-base" /></div>
+      </div>
+    </section>
+
+    <section class="px-5 pt-6 group-rule pt-6 mt-6" data-component="GroupConstraints">
+      <p class="wf-label">3 of 5 — Hard constraints</p>
+      <div class="mt-3 space-y-2 text-sm">
+        <label class="flex items-center gap-2"><input type="checkbox" /> No new evening hours</label>
+        <label class="flex items-center gap-2"><input type="checkbox" /> No more than 30 hr clinical/wk</label>
+        <label class="flex items-center gap-2"><input type="checkbox" /> Must keep Friday off</label>
+      </div>
+    </section>
+
+    <section class="px-5 pt-6 group-rule pt-6 mt-6" data-component="GroupGoals">
+      <p class="wf-label">4 of 5 — What success looks like</p>
+      <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+        <button class="wf-box rounded-md py-2">More income</button>
+        <button class="wf-box rounded-md py-2 bg-gray-100">More margin</button>
+        <button class="wf-box rounded-md py-2">Less burnout</button>
+        <button class="wf-box rounded-md py-2">Steady waitlist</button>
+      </div>
+    </section>
+
+    <section class="px-5 pt-6 group-rule pt-6 mt-6" data-component="GroupContext">
+      <p class="wf-label">5 of 5 — Anything else</p>
+      <textarea rows="3" class="mt-3 w-full wf-box rounded-md p-2 text-sm" placeholder="Optional. No patient identifiers."></textarea>
+    </section>
+
+    <footer class="absolute left-0 right-0 bottom-0 px-5 py-4 border-t border-gray-200 bg-white" data-component="StickyCTA">
+      <button class="w-full bg-gray-900 text-white rounded-md py-3 text-sm font-medium">Get my recommendation</button>
+      <p class="text-xs text-gray-400 mt-2 text-center">~5 sec · saved locally · no PHI</p>
+    </footer>
+  </div>
+</body>
+</html>

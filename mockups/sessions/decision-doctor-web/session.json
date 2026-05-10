@@ -1,0 +1,11 @@
+{
+  "slug": "decision-doctor-web",
+  "name": "Decision Doctor — web app (desktop, 1280px)",
+  "goal": "Desktop variants of the core flow at 1280px primary, applying Sunrise palette + time-reclaim copy + IBR structural rules. Establishes top-nav, cmd-K semantic search, two-column layouts where appropriate.",
+  "createdAt": "2026-05-10T12:10:00Z",
+  "updatedAt": "2026-05-10T12:10:00Z",
+  "status": "active",
+  "tags": ["desktop", "web", "sunrise", "v3"],
+  "supersededBy": null,
+  "decision": null
+}

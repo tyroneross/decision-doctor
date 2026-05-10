@@ -1,0 +1,11 @@
+{
+  "slug": "decision-doctor-v2-concepts",
+  "name": "Decision Doctor — v2 visual concepts (sourced from UI Guidance)",
+  "goal": "5 high-fidelity visual concept directions (sunrise hero, electric mint, pipeline wizard, bento dashboard, bloom organic). Files live in ~/dev/git-folder/UI Guidance/mockups/ and are symlinked here.",
+  "createdAt": "2026-05-10T11:22:30Z",
+  "updatedAt": "2026-05-10T11:36:00Z",
+  "status": "active",
+  "tags": ["concept", "visual", "v2", "sourced-external"],
+  "supersededBy": null,
+  "decision": null
+}

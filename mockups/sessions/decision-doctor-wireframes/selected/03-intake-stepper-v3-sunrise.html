@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>03 v3 — Intake Stepper (Sunrise)</title>
+<link rel="preconnect" href="https://rsms.me" />
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --cream:#fff7ef; --cream-2:#ffeede;
+    --ink:#1f1410; --ink-700:#4a3a30; --ink-500:#8a7a6e; --ink-300:#c8b8a8;
+    --coral:#ff6b4a; --coral-2:#ff8d5e; --peach:#ffb085;
+    --sun:#ffc857; --teal:#0fb8a6; --plum:#7b3f6f;
+    --rule:#f1d8be;
+  }
+  body { background: var(--cream); color: var(--ink); font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .grad-coral { background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 60%, var(--sun) 100%); }
+  button:focus-visible, a:focus-visible, input:focus-visible {
+    outline: none; box-shadow: 0 0 0 4px rgba(255,107,74,.22); border-color: var(--coral);
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  .frame { width: 375px; min-height: 100dvh; margin: 24px auto; border: 1px solid var(--rule); border-radius: 28px; overflow: hidden; background: var(--cream); position: relative; }
+  .label { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+  .dot { width: 8px; height: 8px; border-radius: 999px; }
+  .chip-active { background: var(--coral); color: #fff; border-color: var(--coral); }
+</style>
+</head>
+<body>
+  <p class="text-center mt-6 text-[12px]" style="color:var(--ink-500)">375px · F-02 v3 · Sunrise palette · time-reclaim framing</p>
+
+  <article class="frame pb-28" data-component="IntakeStepperV3">
+
+    <header class="flex items-center justify-between px-5 pt-5 pb-3" data-component="StepperHeader">
+      <button aria-label="Back" class="-ml-2 px-2 min-h-[44px] min-w-[44px] text-[15px]" style="color:var(--ink-500)">←</button>
+      <div class="flex items-center gap-1.5" aria-label="Progress" data-component="StepDots">
+        <span class="dot" style="background:var(--peach)"></span>
+        <span class="dot" style="background:var(--peach)"></span>
+        <span class="dot" aria-current="step" style="background:var(--coral)"></span>
+        <span class="dot" style="background:var(--rule)"></span>
+        <span class="dot" style="background:var(--rule)"></span>
+      </div>
+      <span class="text-[12px] tabular-nums font-medium" style="color:var(--ink-500)">3 / 5</span>
+    </header>
+
+    <main class="px-5" data-component="QuestionGroup">
+      <p class="label" style="color:var(--coral)">What's eating today</p>
+      <h2 class="mt-2 text-[22px] leading-tight font-semibold tracking-tight" style="color:var(--ink)">
+        Where does the time go right now?
+      </h2>
+
+      <div class="mt-6 space-y-5">
+
+        <div data-component="NumberField">
+          <label for="patients" class="text-[14px] font-medium" style="color:var(--ink)">Active patients on your panel</label>
+          <input id="patients" type="number" inputmode="numeric" placeholder="e.g. 42"
+                 class="mt-2 w-full rounded-xl bg-white px-4 py-3 text-[16px] outline-none"
+                 style="border:1px solid var(--rule); color:var(--ink);" />
+        </div>
+
+        <div data-component="ChipField">
+          <label class="text-[14px] font-medium" style="color:var(--ink)">Avg sessions per week</label>
+          <div role="radiogroup" class="mt-2 grid grid-cols-4 gap-2">
+            <button role="radio" aria-checked="false" class="min-h-[44px] rounded-xl bg-white text-[14px] font-medium" style="border:1px solid var(--rule); color:var(--ink-700)">&lt;15</button>
+            <button role="radio" aria-checked="true"  class="min-h-[44px] rounded-xl text-[14px] font-medium chip-active">15–25</button>
+            <button role="radio" aria-checked="false" class="min-h-[44px] rounded-xl bg-white text-[14px] font-medium" style="border:1px solid var(--rule); color:var(--ink-700)">26–35</button>
+            <button role="radio" aria-checked="false" class="min-h-[44px] rounded-xl bg-white text-[14px] font-medium" style="border:1px solid var(--rule); color:var(--ink-700)">&gt;35</button>
+          </div>
+          <p class="mt-1 text-[12px]" style="color:var(--ink-500)">Pick the closest range.</p>
+        </div>
+
+      </div>
+    </main>
+
+    <footer class="absolute left-0 right-0 bottom-0 px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]" style="background:rgba(255,247,239,.92); backdrop-filter: blur(8px); border-top:1px solid var(--rule)" data-component="StickyCTA">
+      <button class="grad-coral text-white w-full rounded-2xl py-4 min-h-[48px] text-[15px] font-semibold" style="box-shadow: 0 8px 24px rgba(255,107,74,.30)">
+        Next
+      </button>
+      <p class="mt-2 text-center text-[12px]" style="color:var(--ink-500)">Auto-saved · numbers and ranges only · no patient details</p>
+    </footer>
+
+  </article>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>07 — Recommendation Tabs</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .wf-box { border: 1px dashed #9ca3af; background: #fff; }
+  .wf-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+  .frame { width: 375px; min-height: 760px; margin: 24px auto; border: 1px solid #d1d5db; position: relative; }
+  .tab { padding: 8px 0; font-size: 13px; color: #6b7280; }
+  .tab.active { color: #111827; font-weight: 600; border-bottom: 2px solid #111827; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <p class="wf-label text-center mt-6">Wireframe · 375px · F-04 — Tabbed (Recommendation / Alternatives / Math / Playbook)</p>
+  <div class="frame bg-white pb-24" data-component="RecommendationTabs">
+    <header class="px-5 pt-5 pb-3 flex items-center justify-between" data-component="ResultHeader">
+      <button class="text-sm text-gray-500">← Edit</button>
+      <p class="wf-label">Capacity · result</p>
+      <button class="text-sm text-gray-500">Share</button>
+    </header>
+
+    <nav class="px-5 border-b border-gray-200 grid grid-cols-4 text-center" data-component="TabBar">
+      <button class="tab active" data-tab="rec">Rec</button>
+      <button class="tab" data-tab="alts">Alts (3)</button>
+      <button class="tab" data-tab="math">Math</button>
+      <button class="tab" data-tab="play">Playbook</button>
+    </nav>
+
+    <section class="px-5 pt-5" data-component="ActiveTabRec">
+      <p class="wf-label">Recommended</p>
+      <h1 class="text-xl font-semibold mt-1">Hire a part-time virtual assistant (10 hr/wk).</h1>
+      <div class="mt-3 flex items-center gap-3">
+        <span class="text-sm">Confidence</span>
+        <span class="text-sm font-semibold">Moderate · 78%</span>
+      </div>
+      <p class="text-sm text-gray-700 mt-3">Reclaims ~6 hr/wk of clinical capacity. Fits stated constraint of no new evening hours.</p>
+
+      <div class="mt-5 wf-box rounded-md p-3" data-component="RobustInline">
+        <p class="wf-label">Robust fallback</p>
+        <p class="text-sm font-semibold mt-1">Cap intakes for 8 weeks.</p>
+        <p class="text-xs text-gray-600 mt-1">Lowest regret if assumptions shift.</p>
+      </div>
+    </section>
+
+    <section class="px-5 pt-6" data-component="HiddenTabPreview">
+      <p class="wf-label">What's in each tab</p>
+      <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600">
+        <div class="wf-box rounded-md p-2">Alts — 3 options + reason eliminated</div>
+        <div class="wf-box rounded-md p-2">Math — 5 stages + weights table</div>
+        <div class="wf-box rounded-md p-2">Playbook — 3 paste-ready artifacts</div>
+        <div class="wf-box rounded-md p-2">Audit — input snapshot + version</div>
+      </div>
+    </section>
+
+    <footer class="absolute left-0 right-0 bottom-0 px-5 py-3 border-t border-gray-200 bg-white flex gap-2" data-component="StickyActions">
+      <button class="flex-1 wf-box rounded-md py-2 text-sm">Disagree</button>
+      <button class="flex-1 bg-gray-900 text-white rounded-md py-2 text-sm font-medium">Save</button>
+    </footer>
+  </div>
+</body>
+</html>

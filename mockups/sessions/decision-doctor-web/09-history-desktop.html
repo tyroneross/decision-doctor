@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Web · Time-Back Ledger (Sunrise)</title>
+<link rel="preconnect" href="https://rsms.me" />
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --cream:#fff7ef; --cream-2:#ffeede;
+    --ink:#1f1410; --ink-700:#4a3a30; --ink-500:#8a7a6e; --ink-300:#c8b8a8;
+    --coral:#ff6b4a; --coral-2:#ff8d5e; --peach:#ffb085;
+    --sun:#ffc857; --teal:#0fb8a6; --plum:#7b3f6f;
+    --rule:#f1d8be;
+    --good:#1f7a5a; --warn:#b66a18; --bad:#b8332a;
+  }
+  body { background: var(--cream); color: var(--ink); font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .grad-coral { background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 60%, var(--sun) 100%); }
+  .grad-coral-text { background: linear-gradient(135deg, var(--coral), var(--plum)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  button:focus-visible, a:focus-visible, input:focus-visible {
+    outline: none; box-shadow: 0 0 0 4px rgba(255,107,74,.22); border-color: var(--coral);
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  .label { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+  kbd { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: var(--cream-2); border: 1px solid var(--rule); color: var(--ink-700); }
+  tr:hover td { background: rgba(255,247,239,.6); }
+</style>
+</head>
+<body class="min-h-screen">
+
+  <!-- TOP NAV -->
+  <header class="border-b" style="border-color:var(--rule); background:rgba(255,247,239,.8); backdrop-filter:blur(12px); position:sticky; top:0; z-index:10">
+    <div class="mx-auto max-w-[1280px] px-8 h-16 flex items-center gap-6">
+      <a href="#" class="flex items-center gap-2"><span class="grad-coral rounded-lg" style="width:24px;height:24px;display:inline-block"></span><span class="text-[15px] font-semibold tracking-tight" style="color:var(--ink)">Decision Doctor</span></a>
+      <div class="flex-1 flex justify-center">
+        <button class="rounded-2xl bg-white pl-4 pr-2 py-2.5 flex items-center gap-3 w-[460px] text-left" style="border:1px solid var(--rule)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-500)"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <span class="flex-1 text-[14px]" style="color:var(--ink-500)">What's eating you?  ·  Search past decisions, templates, playbooks…</span>
+          <kbd>⌘K</kbd>
+        </button>
+      </div>
+      <nav class="flex items-center gap-1">
+        <a href="#" class="px-3 py-2 text-[14px] rounded-lg" style="color:var(--ink-500)">Decide</a>
+        <a href="#" class="px-3 py-2 text-[14px] font-semibold rounded-lg" style="color:var(--ink); border-bottom:2px solid var(--coral)">History</a>
+        <a href="#" class="px-3 py-2 text-[14px] rounded-lg" style="color:var(--ink-500)">Account</a>
+        <span class="ml-2 grad-coral rounded-full" style="width:32px;height:32px;display:inline-block"></span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HEADER -->
+  <main class="mx-auto max-w-[1280px] px-8 pt-10 pb-8" data-component="HeaderHero">
+    <p class="label" style="color:var(--coral)">Time-back ledger</p>
+    <div class="mt-3 flex items-end justify-between">
+      <h1 class="text-[40px] leading-[1.05] font-semibold tracking-tight max-w-3xl" style="color:var(--ink)">
+        <span class="grad-coral-text">~9 hr/wk</span> reclaimed since you started.
+      </h1>
+      <div class="text-right">
+        <p class="text-[12px]" style="color:var(--ink-500)">Decisions made</p>
+        <p class="text-[28px] font-semibold tabular-nums" style="color:var(--ink)">12</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- FILTER STRIP -->
+  <section class="mx-auto max-w-[1280px] px-8 pb-4 flex items-center gap-3 flex-wrap" data-component="Filters">
+    <span class="text-[12px] font-medium" style="color:var(--ink-500)">Show:</span>
+    <button class="px-3 py-1.5 rounded-full text-[13px] font-semibold" style="background:var(--coral); color:#fff">All</button>
+    <button class="px-3 py-1.5 rounded-full text-[13px] bg-white" style="color:var(--ink-700); border:1px solid var(--rule)">Capacity (4)</button>
+    <button class="px-3 py-1.5 rounded-full text-[13px] bg-white" style="color:var(--ink-700); border:1px solid var(--rule)">Pricing (3)</button>
+    <button class="px-3 py-1.5 rounded-full text-[13px] bg-white" style="color:var(--ink-700); border:1px solid var(--rule)">Admin hire (3)</button>
+    <span class="ml-auto text-[12px]" style="color:var(--ink-500)">Sort: <span style="color:var(--ink); font-weight:600">most recent</span> ▾</span>
+  </section>
+
+  <!-- TABLE -->
+  <section class="mx-auto max-w-[1280px] px-8 pb-16" data-component="DecisionTable">
+    <div class="rounded-3xl bg-white overflow-hidden" style="border:1px solid var(--rule)">
+      <table class="w-full text-[14px]">
+        <thead style="background:var(--cream-2)">
+          <tr>
+            <th class="px-5 py-3 text-left text-[12px] font-semibold uppercase tracking-wider" style="color:var(--ink-500)">Date</th>
+            <th class="px-5 py-3 text-left text-[12px] font-semibold uppercase tracking-wider" style="color:var(--ink-500)">Template</th>
+            <th class="px-5 py-3 text-left text-[12px] font-semibold uppercase tracking-wider" style="color:var(--ink-500)">Decision</th>
+            <th class="px-5 py-3 text-right text-[12px] font-semibold uppercase tracking-wider" style="color:var(--ink-500)">Confidence</th>
+            <th class="px-5 py-3 text-left text-[12px] font-semibold uppercase tracking-wider" style="color:var(--ink-500)">Outcome</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <tr style="border-top:1px solid var(--rule)">
+            <td class="px-5 py-4 whitespace-nowrap" style="color:var(--ink-700)">May 8</td>
+            <td class="px-5 py-4 whitespace-nowrap" style="color:var(--ink-700)">Capacity</td>
+            <td class="px-5 py-4"><a href="#" class="font-medium hover:underline" style="color:var(--ink)">Hire a part-time VA · 10 hr/wk.</a></td>
+            <td class="px-5 py-4 text-right whitespace-nowrap font-semibold tabular-nums" style="color:var(--good)">78%</td>
+            <td class="px-5 py-4 text-[13px]" style="color:var(--ink-500)">Saved · 3 playbooks</td>
+            <td class="px-5 py-4 text-right"><a href="#" class="text-[13px] font-semibold" style="color:var(--coral)">Open →</a></td>
+          </tr>
+
+          <tr style="border-top:1px solid var(--rule)">
+            <td class="px-5 py-4 whitespace-nowrap" style="color:var(--ink-700)">Apr 30</td>
+            <td class="px-5 py-4 whitespace-nowrap" style="color:var(--ink-700)">Pricing</td>
+            <td class="px-5 py-4"><a href="#" class="font-medium hover:underline" style="color:var(--ink)">Raise self-pay rate by 8% on Jul 1.</a></td>
+            <td class="px-5 py-4 text-right whitespace-nowrap font-semibold tabular-nums" style="color:var(--warn)">62%</td>
+            <td class="px-5 py-4 text-[13px]" style="color:var(--ink-500)">Saved · 4 playbooks</td>
+            <td class="px-5 py-4 text-right"><a href="#" class="text-[13px] font-semibold" style="color:var(--coral)">Open →</a></td>
+          </tr>
+
+          <tr style="border-top:1px solid var(--rule)">
+            <td class="px-5 py-4 whitespace-nowrap" style="color:var(--ink-700)">Apr 20</td>
+            <td class="px-5 py-4 whitespace-nowrap" style="color:var(--ink-700)">Admin hire</td>
+            <td class="px-5 py-4"><a href="#" class="font-medium hover:underline" style="color:var(--ink)">Defer hire 60 days · revisit Jun 20.</a></td>
+            <td class="px-5 py-4 text-right whitespace-nowrap font-semibold tabular-nums" style="color:var(--bad)">41%</td>
+            <td class="px-5 py-4 text-[13px]" style="color:var(--ink-500)">Robust path: keep DIY admin · 8 hr/wk</td>
+            <td class="px-5 py-4 text-right"><a href="#" class="text-[13px] font-semibold" style="color:var(--coral)">Open →</a></td>
+          </tr>
+
+          <tr style="border-top:1px solid var(--rule)">
+            <td class="px-5 py-4 whitespace-nowrap" style="color:var(--ink-700)">Apr 12</td>
+            <td class="px-5 py-4 whitespace-nowrap" style="color:var(--ink-700)">Capacity</td>
+            <td class="px-5 py-4"><a href="#" class="font-medium hover:underline" style="color:var(--ink)">Cap intakes for 8 weeks.</a></td>
+            <td class="px-5 py-4 text-right whitespace-nowrap font-semibold tabular-nums" style="color:var(--good)">81%</td>
+            <td class="px-5 py-4 text-[13px]" style="color:var(--ink-500)">Held · revisit Jun 7</td>
+            <td class="px-5 py-4 text-right"><a href="#" class="text-[13px] font-semibold" style="color:var(--coral)">Open →</a></td>
+          </tr>
+
+          <tr style="border-top:1px solid var(--rule)">
+            <td class="px-5 py-4 whitespace-nowrap" style="color:var(--ink-700)">Apr 3</td>
+            <td class="px-5 py-4 whitespace-nowrap" style="color:var(--ink-700)">Pricing</td>
+            <td class="px-5 py-4"><a href="#" class="font-medium hover:underline" style="color:var(--ink)">Add sliding scale for 4 slots.</a></td>
+            <td class="px-5 py-4 text-right whitespace-nowrap font-semibold tabular-nums" style="color:var(--good)">76%</td>
+            <td class="px-5 py-4 text-[13px]" style="color:var(--ink-500)">Saved · 2 playbooks</td>
+            <td class="px-5 py-4 text-right"><a href="#" class="text-[13px] font-semibold" style="color:var(--coral)">Open →</a></td>
+          </tr>
+
+        </tbody>
+      </table>
+
+      <div class="px-5 py-4 flex items-center justify-between text-[13px]" style="border-top:1px solid var(--rule); color:var(--ink-500); background:var(--cream-2)">
+        <span>Showing 5 of 12</span>
+        <button class="font-semibold" style="color:var(--coral)">Load more →</button>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

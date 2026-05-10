@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>06 v2 — Recommendation Hero (simplified)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .wf-box { border: 1px dashed #9ca3af; background: #fff; }
+  .wf-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+  .frame { width: 375px; min-height: 760px; margin: 24px auto; border: 1px solid #d1d5db; position: relative; }
+  .conf-bar { height: 6px; background: #e5e7eb; border-radius: 3px; }
+  .conf-fill { height: 100%; background: #16a34a; border-radius: 3px; }
+  .acc-row { border-top: 1px solid #e5e7eb; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <p class="wf-label text-center mt-6">Wireframe · 375px · F-04 v2 — Hero (RobustFallback inline · reducers collapsed)</p>
+  <div class="frame bg-white pb-20" data-component="RecommendationHeroV2">
+    <header class="px-5 pt-5 pb-3 flex items-center justify-between" data-component="ResultHeader">
+      <button class="text-sm text-gray-500">← Edit</button>
+      <p class="wf-label">Capacity · result</p>
+      <button class="text-sm text-gray-500">Share</button>
+    </header>
+
+    <section class="px-5 pt-2" data-component="HeroCard">
+      <p class="wf-label">Recommended · Confidence Moderate · 78%</p>
+      <h1 class="text-2xl font-semibold mt-1 leading-snug">Hire a part-time virtual assistant (10 hr/wk).</h1>
+      <p class="text-sm text-gray-700 mt-2">Reclaims ~6 hr/wk. Fits constraint of no new evening hours.</p>
+      <div class="conf-bar mt-3"><div class="conf-fill" style="width:78%"></div></div>
+      <p class="text-xs text-gray-700 mt-3"><span class="font-semibold">If your goals shift →</span> cap intakes 8 wk (lowest-regret fallback).</p>
+    </section>
+
+    <section class="px-5 pt-5" data-component="Alternatives">
+      <details class="wf-box rounded-md">
+        <summary class="px-3 py-2 text-sm font-medium cursor-pointer">Alternatives considered (3) · why each was eliminated</summary>
+        <div class="acc-row px-3 py-2 text-sm">
+          <p class="font-medium">Add 4 evening hours/wk</p>
+          <p class="text-xs text-gray-600">Stage 2 — violates "no new evening hours" constraint.</p>
+        </div>
+        <div class="acc-row px-3 py-2 text-sm">
+          <p class="font-medium">Hire full-time admin</p>
+          <p class="text-xs text-gray-600">Stage 4 — outranked on margin and reversibility.</p>
+        </div>
+        <div class="acc-row px-3 py-2 text-sm">
+          <p class="font-medium">Do nothing for 90 days</p>
+          <p class="text-xs text-gray-600">Stage 4 — fails "less burnout" goal under current load.</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="px-5 pt-3" data-component="MethodTrace">
+      <details class="wf-box rounded-md">
+        <summary class="px-3 py-2 text-sm font-medium cursor-pointer">Show the math (5 stages, MCDA)</summary>
+        <div class="px-3 py-2 text-xs text-gray-600 space-y-1">
+          <p>1 · Values · margin > burnout-relief > income</p>
+          <p>2 · Constraints · 1 of 4 vetoed</p>
+          <p>3 · Weights · 0.40 / 0.30 / 0.20 / 0.10</p>
+          <p>4 · Outranking · ELECTRE — 2 dominated</p>
+          <p>5 · Ranking · TOPSIS top-1 0.71 / top-2 0.53</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="px-5 pt-3" data-component="ActionItems">
+      <details class="wf-box rounded-md">
+        <summary class="px-3 py-2 text-sm font-medium cursor-pointer">3 ready-to-use playbooks</summary>
+        <div class="acc-row px-3 py-2 text-sm"><p class="font-medium">VA job description</p><p class="text-xs text-gray-500">Paste-ready · 200 words</p></div>
+        <div class="acc-row px-3 py-2 text-sm"><p class="font-medium">First-30-days playbook</p><p class="text-xs text-gray-500">6 steps</p></div>
+        <div class="acc-row px-3 py-2 text-sm"><p class="font-medium">Weekly check-in template</p><p class="text-xs text-gray-500">Recurring</p></div>
+      </details>
+    </section>
+
+    <footer class="absolute left-0 right-0 bottom-0 px-5 py-3 border-t border-gray-200 bg-white" data-component="StickyActions">
+      <button class="w-full bg-gray-900 text-white rounded-md py-3 text-sm font-medium">Save this decision</button>
+    </footer>
+  </div>
+</body>
+</html>

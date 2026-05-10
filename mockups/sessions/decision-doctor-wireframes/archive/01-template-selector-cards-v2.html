@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>01 v2 — Template Selector (simplified)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .wf-box { border: 1px dashed #9ca3af; background: #fff; }
+  .wf-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+  .frame { width: 375px; min-height: 720px; margin: 24px auto; border: 1px solid #d1d5db; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <p class="wf-label text-center mt-6">Wireframe · 375px · F-01 v2 — Cards (per-card metadata stripped)</p>
+  <div class="frame bg-white" data-component="TemplateSelectorScreenV2">
+    <header class="px-5 pt-6 pb-4 border-b border-gray-200" data-component="AppHeader">
+      <p class="wf-label">decision doctor</p>
+      <h1 class="text-xl font-semibold mt-1">What decision today?</h1>
+      <p class="text-sm text-gray-500 mt-1">Each takes about 5 minutes.</p>
+    </header>
+
+    <main class="px-5 py-5 space-y-3" data-component="TemplateCardList">
+      <button class="w-full text-left wf-box rounded-md p-4" data-component="TemplateCard" data-template="capacity">
+        <p class="text-base font-semibold">Decide your capacity</p>
+        <p class="text-sm text-gray-500 mt-1">Cap intakes? Open more slots? Reduce hours?</p>
+      </button>
+
+      <button class="w-full text-left wf-box rounded-md p-4" data-component="TemplateCard" data-template="pricing">
+        <p class="text-base font-semibold">Decide pricing</p>
+        <p class="text-sm text-gray-500 mt-1">Raise rates? Stay put? Sliding scale?</p>
+      </button>
+
+      <button class="w-full text-left wf-box rounded-md p-4" data-component="TemplateCard" data-template="admin-hire">
+        <p class="text-base font-semibold">Decide a hire</p>
+        <p class="text-sm text-gray-500 mt-1">VA, billing service, in-person admin, or DIY?</p>
+      </button>
+    </main>
+
+    <nav class="mt-6 px-5 py-3 border-t border-gray-200 flex items-center justify-between text-sm" data-component="BottomNav">
+      <a class="text-gray-900 font-medium border-b-2 border-gray-900 pb-1" href="#">Decide</a>
+      <a class="text-gray-500" href="#">History</a>
+      <a class="text-gray-500" href="#">Account</a>
+    </nav>
+  </div>
+</body>
+</html>

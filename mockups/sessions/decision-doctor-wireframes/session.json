@@ -1,0 +1,11 @@
+{
+  "slug": "decision-doctor-wireframes",
+  "name": "Decision Doctor — 10 wireframes (solo healthcare practitioner)",
+  "goal": "Explore 10 distinct UX takes covering F-01 through F-07 for solo psychiatry practitioner on 375px PWA. Scored by 6-judge panel.",
+  "createdAt": "2026-05-10T11:18:39Z",
+  "updatedAt": "2026-05-10T11:32:00Z",
+  "status": "active",
+  "tags": ["wireframe", "mobile", "healthcare", "v1"],
+  "supersededBy": null,
+  "decision": null
+}

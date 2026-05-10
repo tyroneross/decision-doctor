@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Web · Intake (Sunrise)</title>
+<link rel="preconnect" href="https://rsms.me" />
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --cream:#fff7ef; --cream-2:#ffeede;
+    --ink:#1f1410; --ink-700:#4a3a30; --ink-500:#8a7a6e; --ink-300:#c8b8a8;
+    --coral:#ff6b4a; --coral-2:#ff8d5e; --peach:#ffb085;
+    --sun:#ffc857; --teal:#0fb8a6; --plum:#7b3f6f;
+    --rule:#f1d8be;
+    --good:#1f7a5a;
+  }
+  body { background: var(--cream); color: var(--ink); font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .grad-coral { background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 60%, var(--sun) 100%); }
+  button:focus-visible, a:focus-visible, input:focus-visible {
+    outline: none; box-shadow: 0 0 0 4px rgba(255,107,74,.22); border-color: var(--coral);
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  .label { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+  kbd { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: var(--cream-2); border: 1px solid var(--rule); color: var(--ink-700); }
+  .step { display:flex; align-items:flex-start; gap:12px; padding:10px 12px; border-radius:12px; }
+  .step-dot { width: 22px; height: 22px; border-radius:999px; flex-shrink:0; display:flex;align-items:center;justify-content:center; font-size:11px; font-weight:700; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .step.active { background: var(--cream-2); }
+  .step.active .step-dot { background: var(--coral); color: #fff; }
+  .step.done .step-dot { background: var(--peach); color: #fff; }
+  .step.todo .step-dot { background: #fff; color: var(--ink-500); border:1px solid var(--rule); }
+  .chip-active { background: var(--coral); color: #fff; border-color: var(--coral) !important; }
+</style>
+</head>
+<body class="min-h-screen">
+
+  <!-- TOP NAV -->
+  <header class="border-b" style="border-color:var(--rule); background:rgba(255,247,239,.8); backdrop-filter:blur(12px); position:sticky; top:0; z-index:10">
+    <div class="mx-auto max-w-[1280px] px-8 h-16 flex items-center gap-6">
+      <a href="#" class="flex items-center gap-2"><span class="grad-coral rounded-lg" style="width:24px;height:24px;display:inline-block"></span><span class="text-[15px] font-semibold tracking-tight" style="color:var(--ink)">Decision Doctor</span></a>
+      <div class="flex-1 flex justify-center">
+        <button class="rounded-2xl bg-white pl-4 pr-2 py-2.5 flex items-center gap-3 w-[460px] text-left" style="border:1px solid var(--rule)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-500)"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <span class="flex-1 text-[14px]" style="color:var(--ink-500)">What's eating you?  ·  Search past decisions, templates, playbooks…</span>
+          <kbd>⌘K</kbd>
+        </button>
+      </div>
+      <nav class="flex items-center gap-1">
+        <a href="#" class="px-3 py-2 text-[14px] font-semibold rounded-lg" style="color:var(--ink); border-bottom:2px solid var(--coral)">Decide</a>
+        <a href="#" class="px-3 py-2 text-[14px] rounded-lg" style="color:var(--ink-500)">History</a>
+        <a href="#" class="px-3 py-2 text-[14px] rounded-lg" style="color:var(--ink-500)">Account</a>
+        <span class="ml-2 grad-coral rounded-full" style="width:32px;height:32px;display:inline-block"></span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- BREADCRUMB -->
+  <div class="mx-auto max-w-[1280px] px-8 pt-6 flex items-center gap-2 text-[12px]" style="color:var(--ink-500)">
+    <a href="#" class="hover:underline">Decide</a>
+    <span>/</span>
+    <span style="color:var(--ink)">Capacity intake</span>
+    <span class="ml-auto" style="color:var(--ink-500)">Auto-saved · numbers and ranges only · no patient details</span>
+  </div>
+
+  <!-- SPLIT LAYOUT -->
+  <main class="mx-auto max-w-[1280px] px-8 py-6 grid grid-cols-12 gap-8" data-component="IntakeLayout">
+
+    <!-- LEFT: stepper sidebar (3) -->
+    <aside class="col-span-12 lg:col-span-3" data-component="StepperSidebar">
+      <p class="label px-3" style="color:var(--coral)">Capacity · 5 steps</p>
+      <ol class="mt-3 space-y-1" aria-label="Intake progress">
+        <li class="step done"><span class="step-dot">1</span><div class="flex-1"><p class="text-[14px] font-semibold" style="color:var(--ink)">What's eating today</p><p class="text-[12px]" style="color:var(--ink-500)">42 patients · 15–25 sessions/wk</p></div></li>
+        <li class="step done"><span class="step-dot">2</span><div class="flex-1"><p class="text-[14px] font-semibold" style="color:var(--ink)">Available capacity</p><p class="text-[12px]" style="color:var(--ink-500)">~6 hr/wk you could add</p></div></li>
+        <li class="step active" aria-current="step"><span class="step-dot">3</span><div class="flex-1"><p class="text-[14px] font-semibold" style="color:var(--ink)">Hard constraints</p><p class="text-[12px]" style="color:var(--ink-500)">In progress</p></div></li>
+        <li class="step todo"><span class="step-dot">4</span><div class="flex-1"><p class="text-[14px]" style="color:var(--ink-700)">What success looks like</p></div></li>
+        <li class="step todo"><span class="step-dot">5</span><div class="flex-1"><p class="text-[14px]" style="color:var(--ink-700)">Anything else</p></div></li>
+      </ol>
+      <div class="mt-6 px-3">
+        <p class="text-[12px]" style="color:var(--ink-500)">Estimated time left</p>
+        <p class="mt-1 text-[18px] font-semibold tabular-nums" style="color:var(--ink)">~2 min</p>
+      </div>
+    </aside>
+
+    <!-- RIGHT: question content (9) -->
+    <section class="col-span-12 lg:col-span-9" data-component="QuestionPanel">
+      <div class="rounded-3xl bg-white p-8" style="border:1px solid var(--rule); box-shadow: 0 8px 32px rgba(255,107,74,.04)">
+
+        <p class="label" style="color:var(--coral)">Step 3 of 5 · hard constraints</p>
+        <h1 class="mt-3 text-[30px] leading-tight font-semibold tracking-tight" style="color:var(--ink)">
+          What's off-limits — what won't you change?
+        </h1>
+        <p class="mt-2 text-[15px]" style="color:var(--ink-700)">We only consider options that respect these. Nothing here is a "should" — it's what you're already certain about.</p>
+
+        <div class="mt-8 space-y-6 max-w-2xl">
+
+          <fieldset data-component="ConstraintToggles">
+            <legend class="text-[14px] font-medium" style="color:var(--ink)">Hard constraints (pick any)</legend>
+            <div class="mt-3 space-y-2">
+              <label class="flex items-start gap-3 p-3 rounded-xl bg-white" style="border:1px solid var(--rule)">
+                <input type="checkbox" checked class="mt-1 accent-[color:var(--coral)]" style="width:18px;height:18px"/>
+                <div class="flex-1"><p class="text-[15px]" style="color:var(--ink)">No new evening hours</p><p class="text-[12px]" style="color:var(--ink-500)">Sessions end by 6pm.</p></div>
+              </label>
+              <label class="flex items-start gap-3 p-3 rounded-xl bg-white" style="border:1px solid var(--rule)">
+                <input type="checkbox" class="mt-1 accent-[color:var(--coral)]" style="width:18px;height:18px"/>
+                <div class="flex-1"><p class="text-[15px]" style="color:var(--ink)">No more than 30 hr clinical/wk</p><p class="text-[12px]" style="color:var(--ink-500)">Across all patient-facing time.</p></div>
+              </label>
+              <label class="flex items-start gap-3 p-3 rounded-xl bg-white" style="border:1px solid var(--rule)">
+                <input type="checkbox" checked class="mt-1 accent-[color:var(--coral)]" style="width:18px;height:18px"/>
+                <div class="flex-1"><p class="text-[15px]" style="color:var(--ink)">Must keep Friday off</p><p class="text-[12px]" style="color:var(--ink-500)">Personal recovery day.</p></div>
+              </label>
+            </div>
+          </fieldset>
+
+          <div data-component="BurnoutScale">
+            <label class="text-[14px] font-medium" style="color:var(--ink)">Energy at end of typical day</label>
+            <div class="mt-3 grid grid-cols-5 gap-2 max-w-md">
+              <button class="min-h-[48px] rounded-xl bg-white text-[14px] font-semibold" style="border:1px solid var(--rule); color:var(--ink-700)">1</button>
+              <button class="min-h-[48px] rounded-xl bg-white text-[14px] font-semibold" style="border:1px solid var(--rule); color:var(--ink-700)">2</button>
+              <button class="min-h-[48px] rounded-xl text-[14px] font-semibold chip-active">3</button>
+              <button class="min-h-[48px] rounded-xl bg-white text-[14px] font-semibold" style="border:1px solid var(--rule); color:var(--ink-700)">4</button>
+              <button class="min-h-[48px] rounded-xl bg-white text-[14px] font-semibold" style="border:1px solid var(--rule); color:var(--ink-700)">5</button>
+            </div>
+            <p class="mt-1 text-[12px]" style="color:var(--ink-500)">1 = depleted · 5 = fine</p>
+          </div>
+
+        </div>
+
+        <div class="mt-10 pt-6 flex items-center justify-between" style="border-top:1px solid var(--rule)">
+          <button class="text-[14px] font-medium px-3 py-2 rounded-xl min-h-[44px]" style="color:var(--ink-500)">← Back</button>
+          <div class="flex items-center gap-3">
+            <button class="text-[14px] font-medium px-4 py-2.5 rounded-xl bg-white min-h-[44px]" style="color:var(--ink); border:1px solid var(--rule)">Save & finish later</button>
+            <button class="grad-coral text-white text-[15px] font-semibold px-6 py-3 rounded-2xl min-h-[48px]" style="box-shadow:0 8px 24px rgba(255,107,74,.30)">
+              Next step →
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+</body>
+</html>
