@@ -158,6 +158,27 @@ export default function SignInPage() {
 
         {msg && <p className="text-sm status-ok">{msg}</p>}
         {err && <p className="text-sm status-error">{err}</p>}
+
+        {/* Guest mode for previewing UI */}
+        <div className="relative mt-6">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-ink-200" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-2 text-ink-500">Or preview without account</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            document.cookie = "dd_guest=true; path=/; max-age=3600";
+            router.push("/app/decisions");
+          }}
+          className="mt-4 w-full min-h-11 rounded-md border border-ink-300 py-3 text-sm font-medium text-ink-700 transition-all duration-200 hover:bg-ink-50 hover:border-ink-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2"
+        >
+          Continue as Guest
+        </button>
       </form>
 
       <p className="mt-6 text-xs text-ink-500">

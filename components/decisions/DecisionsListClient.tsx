@@ -32,6 +32,7 @@ export interface ListSummary {
 interface Props {
   rows: DecisionRow[];
   summary: ListSummary;
+  isGuest?: boolean;
 }
 
 type FilterKey = "all" | DecisionCategory | "this-week" | "this-month";
@@ -39,7 +40,7 @@ type FilterKey = "all" | DecisionCategory | "this-week" | "this-month";
 const DAYS_7 = 7 * 24 * 60 * 60 * 1000;
 const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
 
-export function DecisionsListClient({ rows, summary }: Props) {
+export function DecisionsListClient({ rows, summary, isGuest }: Props) {
   const [filter, setFilter] = useState<FilterKey>("all");
 
   const counts = useMemo(() => {
@@ -76,6 +77,17 @@ export function DecisionsListClient({ rows, summary }: Props) {
 
   return (
     <section className="space-y-5">
+      {/* GUEST MODE BANNER */}
+      {isGuest && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">
+          <span className="font-medium">Preview Mode</span> — Viewing demo data.{" "}
+          <a href="/sign-in" className="font-semibold underline hover:no-underline">
+            Sign in
+          </a>{" "}
+          to use your own decisions.
+        </div>
+      )}
+
       {/* COMPACT HERO — focused on key metric */}
       <article className="grad-coral relative overflow-hidden rounded-2xl p-5 text-white">
         <div
@@ -154,7 +166,7 @@ export function DecisionsListClient({ rows, summary }: Props) {
       ) : (
         <ul className="space-y-3">
           {filtered.map((row) => (
-            <DecisionCard key={row.id} row={row} />
+            <DecisionCard key={row.id} row={row} isGuest={isGuest} />
           ))}
         </ul>
       )}
@@ -257,16 +269,19 @@ function FilterChip({
   );
 }
 
-function DecisionCard({ row }: { row: DecisionRow }) {
+function DecisionCard({ row, isGuest }: { row: DecisionRow; isGuest?: boolean }) {
   const cat = categoryFor(row.templateId);
   const band = confidenceBand(row.recommendationConfidence ?? 0);
   const title = row.title ?? row.recommendationOption ?? "Untitled";
   const hoursSaved = row.hoursSaved > 0 ? formatHrs(row.hoursSaved) : null;
 
+  const href = isGuest ? "#" : `/app/decisions/${row.id}`;
+
   return (
     <li>
       <Link
-        href={`/app/decisions/${row.id}`}
+        href={href}
+        onClick={isGuest ? (e) => e.preventDefault() : undefined}
         className="group relative block rounded-xl border border-rule bg-white p-4 transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-coral"
       >
         {/* Category stripe */}

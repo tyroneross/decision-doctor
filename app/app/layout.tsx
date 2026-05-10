@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { decisions } from "@/lib/db/schema";
@@ -10,22 +10,36 @@ import { SignOutButton } from "./_components/sign-out";
 import { ServiceWorkerRegister } from "./_components/sw-register";
 
 // Auth gate for everything under /app/*. SSR redirect — no client flash.
+// Guest mode: dd_guest cookie bypasses auth for UI preview (demo data shown).
 //
 // V2 sunrise nav: Logo (sun mark on coral gradient) → New decision (primary
 // coral CTA, leftmost so it dominates) → History (ghost) → Account avatar.
 // Per user feedback: "New decision" is the dominant action; "Chat" was
 // removed from nav because chat IS the new-decision flow now.
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) redirect("/sign-in");
-
-  const email = session.user.email ?? "";
-  const initials = email
-    .split("@")[0]!
-    .split(/[._-]/)
-    .map((p) => p[0]?.toUpperCase() ?? "")
-    .join("")
-    .slice(0, 2) || "?";
+export default async function AppLayout({ 
+  children,
+}: { 
+  children: React.ReactNode;
+}) {
+  const cookieStore = await cookies();
+  const isGuest = cookieStore.get("dd_guest")?.value === "true";
+  
+  let session = null;
+  let email = "guest@demo.local";
+  let initials = "G";
+  
+  if (!isGuest) {
+    const hdrs = await headers();
+    session = await auth.api.getSession({ headers: hdrs });
+    if (!session?.user) redirect("/sign-in");
+    email = session.user.email ?? "";
+    initials = email
+      .split("@")[0]!
+      .split(/[._-]/)
+      .map((p) => p[0]?.toUpperCase() ?? "")
+      .join("")
+      .slice(0, 2) || "?";
+  }
 
   // Compute the cumulative time-back metric for the nav ledger chip.
   // Best-effort: failure here must NOT block layout render (auth gate
