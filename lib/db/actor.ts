@@ -58,6 +58,10 @@ export async function withActor<T>(
     );
   }
   return db.transaction(async (tx) => {
+    // Switch to a non-BYPASSRLS role for the duration of the txn so RLS
+    // policies are actually enforced. neondb_owner has BYPASSRLS=true and
+    // would otherwise see everything regardless of FORCE ROW LEVEL SECURITY.
+    await tx.execute(sql`SET LOCAL ROLE app_user`);
     await tx.execute(sql`
       SELECT
         set_config('app.current_user_id', ${actor.userId}, true),

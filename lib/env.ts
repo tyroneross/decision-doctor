@@ -19,6 +19,12 @@ const envSchema = z.object({
   GROQ_API_KEY: z.string().min(10),
   GROQ_MODEL: z.string().default("openai/gpt-oss-120b"),
 
+  // Per-user rate limit (T-10) — decisions per 24h window
+  GROQ_RATE_LIMIT_PER_DAY: z.coerce.number().int().positive().default(20),
+
+  // Share URL signing — defaults to BETTER_AUTH_SECRET if absent
+  SHARE_URL_SECRET: z.string().min(32).optional(),
+
   // Observability (optional)
   SENTRY_DSN: z.string().optional(),
   LOG_LEVEL: z
@@ -28,6 +34,9 @@ const envSchema = z.object({
   // Rate limiter (optional in dev)
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+
+  // Node env (next sets this)
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });
 
 const parsed = envSchema.safeParse(process.env);

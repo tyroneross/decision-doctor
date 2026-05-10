@@ -19,13 +19,12 @@ ALTER TABLE tenants FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenants_owner_only ON tenants;
 CREATE POLICY tenants_owner_only ON tenants
   FOR ALL
-  USING (owner_user_id::text = current_setting('app.current_user_id', true))
-  WITH CHECK (owner_user_id::text = current_setting('app.current_user_id', true));
+  USING (owner_user_id = current_setting('app.current_user_id', true))
+  WITH CHECK (owner_user_id = current_setting('app.current_user_id', true));
 
 ALTER TABLE audit_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_events FORCE ROW LEVEL SECURITY;
 
--- Audit events: insert OK for the actor; SELECT only own tenant's events; never UPDATE/DELETE
 DROP POLICY IF EXISTS audit_insert ON audit_events;
 CREATE POLICY audit_insert ON audit_events
   FOR INSERT
@@ -45,7 +44,7 @@ CREATE POLICY audit_select ON audit_events
 --     tenant_id::text = current_setting('app.current_tenant_id', true)
 --     OR tenant_id IN (
 --       SELECT tenant_id FROM memberships
---       WHERE user_id::text = current_setting('app.current_user_id', true)
+--       WHERE user_id = current_setting('app.current_user_id', true)
 --     )
 --   )
 --   WITH CHECK (tenant_id::text = current_setting('app.current_tenant_id', true));
