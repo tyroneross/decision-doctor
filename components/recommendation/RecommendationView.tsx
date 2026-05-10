@@ -205,8 +205,10 @@ export function RecommendationView({ row }: { row: Decision }) {
               {topReducer.artifact?.promptText && (
                 <CopyPromptButton text={topReducer.artifact.promptText} />
               )}
-              {/* F-09: open the scaffold drawer for skill/plugin reducers. */}
-              {topReducer.scaffold && (
+              {/* F-09: open the scaffold drawer for skill/plugin reducers.
+                  E2: CTA hidden when scaffold is null OR has zero files —
+                  no broken "open empty drawer" affordance. */}
+              {topReducer.scaffold && topReducer.scaffold.files.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setScaffoldOpenIndex(0)}
@@ -367,6 +369,18 @@ export function RecommendationView({ row }: { row: Decision }) {
                       ))}
                     </ol>
                   </details>
+                ) : r.scaffold && r.scaffold.files.length > 0 ? (
+                  /* E2: bento-card scaffold CTA — only when scaffold present
+                     AND has at least one file. Same hide-when-empty contract
+                     as the hero card above. */
+                  <button
+                    type="button"
+                    onClick={() => setScaffoldOpenIndex(i)}
+                    className="ease-soft mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-rule bg-white text-[13px] font-semibold hover:border-cat-skill focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                    aria-label={`Open scaffold for ${r.title}`}
+                  >
+                    Open scaffold →
+                  </button>
                 ) : null}
               </li>
             ))}
@@ -436,13 +450,18 @@ export function RecommendationView({ row }: { row: Decision }) {
         trace={trace}
       />
 
-      {/* F-09: scaffold drawer for the currently-selected reducer */}
+      {/* F-09: scaffold drawer for the currently-selected reducer.
+          E2: pass `empty` + `category` so the drawer can render an
+          explicit empty-state when files.length === 0 instead of a
+          blank two-column body. */}
       {scaffoldOpenIndex !== null && reducers[scaffoldOpenIndex]?.scaffold && (
         <ScaffoldViewer
           scaffold={reducers[scaffoldOpenIndex]!.scaffold!}
           title={reducers[scaffoldOpenIndex]!.title}
           open
           onClose={() => setScaffoldOpenIndex(null)}
+          empty={reducers[scaffoldOpenIndex]!.scaffold!.files.length === 0}
+          category={cat.label}
         />
       )}
 

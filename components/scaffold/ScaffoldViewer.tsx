@@ -12,10 +12,22 @@
 //   • "Copied ✓" is teal TEXT only (not a green pill).
 //   • >70% of content area is the code preview.
 //   • Max 6 files (F-09 hard cap from lib/scaffold-generator.ts).
+//
+// E4 — Interaction-state matrix (`resolveScaffoldViewerState()` in
+// lib/component-state.ts is the test-covered resolver):
+//
+//   default   — drawer closed (`open=false`).
+//   populated — `scaffold.files.length > 0` AND no loading/error/explicit empty.
+//   loading   — `loading=true` (e.g. template fetch in flight).
+//   success   — populated + after a "Copy all" succeeded (transient).
+//   error     — `error` truthy (string message rendered in error variant).
+//   empty     — `scaffold.files.length === 0` OR `empty=true` (template
+//               not yet authored for `category`).
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { Scaffold } from "@/shared/schema";
 import { CodeBlock } from "@/components/scaffold/CodeBlock";
+import { resolveScaffoldViewerState } from "@/lib/component-state";
 
 interface Props {
   scaffold: Scaffold;
@@ -23,9 +35,33 @@ interface Props {
   title: string;
   open: boolean;
   onClose: () => void;
+  /** E4: forces the loading variant — covers async template fetch UX. */
+  loading?: boolean;
+  /** E4: forces the error variant — pass a user-friendly message. */
+  error?: string | null;
+  /**
+   * E4: explicit empty-state hint. Overrides files-length detection. Use
+   * when scaffold is non-null but the template is not yet authored for
+   * this drain category — pass the human-readable category for messaging.
+   */
+  empty?: boolean;
+  /** E2: drain category surfaced in the empty-state message. */
+  category?: string;
+  /** E4: error retry callback. Shown next to the error message when set. */
+  onRetry?: () => void;
 }
 
-export function ScaffoldViewer({ scaffold, title, open, onClose }: Props) {
+export function ScaffoldViewer({
+  scaffold,
+  title,
+  open,
+  onClose,
+  loading = false,
+  error = null,
+  empty = false,
+  category,
+  onRetry,
+}: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const headingId = useId();
@@ -56,7 +92,21 @@ export function ScaffoldViewer({ scaffold, title, open, onClose }: Props) {
 
   if (!open) return null;
 
-  const file = scaffold.files[activeFile] ?? scaffold.files[0]!;
+  // E4: single source of truth for the rendered state.
+  const viewState = resolveScaffoldViewerState({
+    open,
+    loading,
+    error,
+    empty,
+    filesCount: scaffold.files.length,
+    copiedAll,
+  });
+
+  // Files-array safety: empty/error/loading variants never index into files[].
+  const file =
+    scaffold.files.length > 0
+      ? scaffold.files[activeFile] ?? scaffold.files[0]!
+      : null;
   const targetLabel = scaffold.targets.includes("claude-code-skill") || scaffold.targets.includes("claude-code-plugin")
     ? "Claude Code + Codex"
     : "Codex";
@@ -100,8 +150,18 @@ export function ScaffoldViewer({ scaffold, title, open, onClose }: Props) {
               Scaffold · {title}
             </h2>
             <p className="mt-0.5 text-[12px] text-ink-500">
-              {scaffold.files.length} file
-              {scaffold.files.length === 1 ? "" : "s"} · paste-ready · {targetLabel}
+              {viewState === "populated" || viewState === "success" ? (
+                <>
+                  {scaffold.files.length} file
+                  {scaffold.files.length === 1 ? "" : "s"} · paste-ready · {targetLabel}
+                </>
+              ) : viewState === "loading" ? (
+                "Preparing files…"
+              ) : viewState === "error" ? (
+                "Something went wrong"
+              ) : (
+                /* empty */ "No files yet"
+              )}
             </p>
           </div>
           <button
@@ -115,67 +175,124 @@ export function ScaffoldViewer({ scaffold, title, open, onClose }: Props) {
           </button>
         </header>
 
-        {/* TWO-COLUMN BODY: file list + preview */}
-        <div className="grid min-h-0 flex-1 grid-cols-[160px_1fr] sm:grid-cols-[180px_1fr]">
-          <nav
-            aria-label="Files in scaffold"
-            className="border-r border-rule bg-cream"
+        {/* BODY — branches on viewState */}
+        {viewState === "loading" && (
+          <div
+            className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-8"
+            role="status"
+            aria-live="polite"
+            aria-label="Loading scaffold"
           >
-            <p className="px-3 pb-2 pt-4 text-[10.5px] font-semibold uppercase tracking-[.14em] text-ink-500">
-              📁 Files
-            </p>
-            <ul>
-              {scaffold.files.map((f, i) => (
-                <li key={f.path}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveFile(i)}
-                    aria-pressed={i === activeFile}
-                    className={`ease-soft block w-full px-3 py-2 text-left text-[13px] ${
-                      i === activeFile
-                        ? "bg-white font-semibold text-ink-900 shadow-[0_1px_0_var(--rule)]"
-                        : "text-ink-700 hover:bg-cream-2"
-                    }`}
-                  >
-                    <span className="mr-1.5 opacity-60" aria-hidden>
-                      📄
-                    </span>
-                    {f.path}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
-          <div className="min-h-0 overflow-auto p-4 sm:p-5">
-            <CodeBlock
-              code={file.content}
-              language={file.language}
-              filename={file.path}
-            />
+            <span className="skeleton block h-3 w-48 rounded-full" />
+            <span className="skeleton block h-3 w-64 rounded-full" />
+            <span className="skeleton block h-3 w-32 rounded-full" />
+            <p className="mt-2 text-[12.5px] text-ink-500">Generating files…</p>
           </div>
-        </div>
+        )}
 
-        {/* FOOTER — primary actions */}
-        <footer className="flex flex-wrap items-center gap-2 border-t border-rule bg-cream px-5 py-3 sm:px-6">
-          <button
-            type="button"
-            onClick={copyAll}
-            className={`ease-soft inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 ${
-              copiedAll
-                ? "border border-cat-skill bg-white text-cat-skill-deep"
-                : "grad-coral text-white"
-            }`}
+        {viewState === "error" && (
+          <div
+            className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center"
+            role="alert"
           >
-            {copiedAll ? "✓ Copied all" : "📥 Copy all"}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="ease-soft inline-flex h-10 items-center gap-1.5 rounded-full border border-rule bg-white px-4 text-[13.5px] font-semibold text-ink-700 hover:border-coral focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+            <p className="text-[15px] font-semibold text-ink-900">
+              Couldn't load this scaffold.
+            </p>
+            <p className="max-w-sm text-[13px] text-ink-500">{error}</p>
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="ease-soft mt-2 inline-flex h-10 items-center gap-1.5 rounded-full border border-rule bg-white px-4 text-[13.5px] font-semibold text-ink-700 hover:border-coral focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+              >
+                Try again
+              </button>
+            )}
+          </div>
+        )}
+
+        {viewState === "empty" && (
+          <div
+            className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center"
+            role="status"
           >
-            Close
-          </button>
-        </footer>
+            <p className="text-[15px] font-semibold text-ink-900">
+              Template not yet available
+              {category ? ` for ${category}` : ""}.
+            </p>
+            <p className="max-w-sm text-[13px] text-ink-500">
+              We don't have a paste-ready scaffold for this drain category
+              yet. The skill description and steps are still in the
+              recommendation above — copy that to get started.
+            </p>
+          </div>
+        )}
+
+        {(viewState === "populated" || viewState === "success") && file && (
+          <>
+            {/* TWO-COLUMN BODY: file list + preview */}
+            <div className="grid min-h-0 flex-1 grid-cols-[160px_1fr] sm:grid-cols-[180px_1fr]">
+              <nav
+                aria-label="Files in scaffold"
+                className="border-r border-rule bg-cream"
+              >
+                <p className="px-3 pb-2 pt-4 text-[10.5px] font-semibold uppercase tracking-[.14em] text-ink-500">
+                  📁 Files
+                </p>
+                <ul>
+                  {scaffold.files.map((f, i) => (
+                    <li key={f.path}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveFile(i)}
+                        aria-pressed={i === activeFile}
+                        className={`ease-soft block w-full px-3 py-2 text-left text-[13px] ${
+                          i === activeFile
+                            ? "bg-white font-semibold text-ink-900 shadow-[0_1px_0_var(--rule)]"
+                            : "text-ink-700 hover:bg-cream-2"
+                        }`}
+                      >
+                        <span className="mr-1.5 opacity-60" aria-hidden>
+                          📄
+                        </span>
+                        {f.path}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+              <div className="min-h-0 overflow-auto p-4 sm:p-5">
+                <CodeBlock
+                  code={file.content}
+                  language={file.language}
+                  filename={file.path}
+                />
+              </div>
+            </div>
+
+            {/* FOOTER — primary actions */}
+            <footer className="flex flex-wrap items-center gap-2 border-t border-rule bg-cream px-5 py-3 sm:px-6">
+              <button
+                type="button"
+                onClick={copyAll}
+                className={`ease-soft inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 ${
+                  copiedAll
+                    ? "border border-cat-skill bg-white text-cat-skill-deep"
+                    : "grad-coral text-white"
+                }`}
+              >
+                {copiedAll ? "✓ Copied all" : "📥 Copy all"}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="ease-soft inline-flex h-10 items-center gap-1.5 rounded-full border border-rule bg-white px-4 text-[13.5px] font-semibold text-ink-700 hover:border-coral focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+              >
+                Close
+              </button>
+            </footer>
+          </>
+        )}
       </div>
     </>
   );
