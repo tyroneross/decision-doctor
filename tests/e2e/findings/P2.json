@@ -1,0 +1,321 @@
+{
+  "persona": {
+    "id": "P2",
+    "name": "Marcus",
+    "scenario": "Cash-pay private practice, rates frozen 3 yrs, well below market. Full panel + 12-week waitlist. Considering rate increase."
+  },
+  "template": "pricing",
+  "expected": {
+    "recommendation": "raise to ~$200-225 (close gap with benchmark); 95% fill + waitlist + 3yr static = strong signal",
+    "confidenceRange": "80-95 (clear right answer)"
+  },
+  "latencyMs": 3585,
+  "error": null,
+  "output": {
+    "recommendation": {
+      "option": "Raise rates 12–20% to match benchmark",
+      "confidence": 53,
+      "rationale": "A modest 12–20% increase brings your fees up to the local benchmark, directly boosting revenue and signaling higher value, while the limited rise keeps patient‑retention risk manageable."
+    },
+    "alternatives": [
+      {
+        "option": "Hold current rates",
+        "eliminatedAtStage": 4,
+        "reason": "Outranked by \"Raise rates 5–8% across the board\" — better on 79% of weighted criteria with no large gaps."
+      },
+      {
+        "option": "Raise rates 5–8% across the board",
+        "eliminatedAtStage": 4,
+        "reason": "Outranked by \"Add a tiered or premium service line\" — better on 100% of weighted criteria with no large gaps."
+      }
+    ],
+    "robustAlternative": {
+      "option": "Raise rates 12–20% to match benchmark",
+      "why": "Smallest worst-case regret across criteria; biggest gap is on \"retention\"."
+    },
+    "methodTrace": [
+      {
+        "stage": 1,
+        "name": "values",
+        "output": {
+          "values": [
+            "revenue boost",
+            "patient retention",
+            "value signaling"
+          ],
+          "adjustedWeights": {
+            "revenue": 0.3846153846153846,
+            "retention": 0.20512820512820512,
+            "sustainability": 0.17094017094017097,
+            "signaling": 0.2393162393162393
+          },
+          "rationale": "User hasn't raised rates in 3 years, high cash‑only demand, so revenue and signaling matter more while retention is slightly less critical.",
+          "reasoning": "We need to produce JSON with values (1-3 short statements), weightAdjustments mapping criterion ids to numbers between 0.5 and 2.0, and rationale sentence.\n\nWe must analyze intake: solo practitioner, current rate $175, last increase 36 months ago (3 years), insurance share 0, cash share 100% (all cash patients). Avg fill rate 95% (high utilization). Competitor benchmark $225 (higher). Risk tolerance medium.\n\nDecision: pricing. Criteria: revenue, retention, sustainability, signaling.\n\nUser likely wants to raise rates (since competitor higher, hasn't increased in 3 years, high fill rate, cash only). Medium risk tolerance suggests moderate willingness to adjust.\n\nConsider each criterion:\n\n- Revenue impact: raising price could increase revenue; likely important.\n- Patient retention: cash patients may be price-sensitive; but high fill rate suggests demand; still retention matters but maybe less than revenue.\n- Sustainability: need pricing model workable long-term; raising too high could affect sustainability; but they have high demand, so sustainability moderate.\n- Signaling: raising price signals higher value; could attract new patients; important given competitor higher price.\n\nThus weight adjustments: increase revenue weight, increase signaling weight, maybe slightly decrease retention weight, keep sustainability near default.\n\nDefault weights: revenue 0.3, retention 0.3, sustainability 0.2, signaling 0.2.\n\nWe can set adjustments: revenue 1.5 (increase weight 0.45), signaling 1.4 (0.28), retention 0.8 (0.24), sustainability 1.0 (unchanged). All within 0.5-2.0.\n\nValues: short statements: \"revenue boost\", \"patient retention\", \"market signaling\". Or maybe \"cash flow\", \"patient retention\", \"value signaling\". Need 1-3 statements. Choose \"revenue boost\", \"patient retention\", \"value signaling\". Each ≤6 words.\n\nRationale: \"User hasn't raised rates in 3 years, high cash‑only demand, so revenue and signaling matter more while retention is slightly less critical.\" Provide one sentence.\n\nNow produce JSON compact.\n\nCheck JSON: {\"values\":[\"revenue boost\",\"patient retention\",\"value signaling\"],\"weightAdjustments\":{\"revenue\":1.5,\"retention\":0.8,\"sustainability\":1.0,\"signaling\":1.4},\"rationale\":\"User hasn't raised rates in 3 years, high cash‑only demand, so revenue and signaling matter more while retention is slightly less critical.\"}\n\nAll numbers within range. Good."
+        }
+      },
+      {
+        "stage": 2,
+        "name": "constraints",
+        "output": {
+          "triggeredConstraints": [],
+          "eliminated": [],
+          "remaining": [
+            "raise-modest",
+            "raise-aggressive",
+            "hold-rates",
+            "tiered-services",
+            "shift-cash-mix"
+          ]
+        }
+      },
+      {
+        "stage": 3,
+        "name": "weights",
+        "output": {
+          "weights": {
+            "revenue": 0.3846153846153846,
+            "retention": 0.20512820512820512,
+            "sustainability": 0.17094017094017097,
+            "signaling": 0.2393162393162393
+          },
+          "notes": "Weights normalized across 4 criteria."
+        }
+      },
+      {
+        "stage": 4,
+        "name": "outranking",
+        "output": {
+          "dominant": [
+            "raise-aggressive",
+            "tiered-services",
+            "shift-cash-mix"
+          ],
+          "eliminated": [
+            {
+              "candidateId": "hold-rates",
+              "dominatedById": "raise-modest",
+              "concordance": 0.7948717948717949,
+              "discordance": 0.19999999999999996,
+              "reason": "Outranked by \"Raise rates 5–8% across the board\" — better on 79% of weighted criteria with no large gaps."
+            },
+            {
+              "candidateId": "raise-modest",
+              "dominatedById": "tiered-services",
+              "concordance": 1,
+              "discordance": 0,
+              "reason": "Outranked by \"Add a tiered or premium service line\" — better on 100% of weighted criteria with no large gaps."
+            }
+          ],
+          "pairwise": [
+            {
+              "aId": "raise-modest",
+              "bId": "raise-aggressive",
+              "concordance": 0.20512820512820512,
+              "discordance": 0.29999999999999993
+            },
+            {
+              "aId": "raise-modest",
+              "bId": "hold-rates",
+              "concordance": 0.7948717948717949,
+              "discordance": 0.19999999999999996
+            },
+            {
+              "aId": "raise-modest",
+              "bId": "tiered-services",
+              "concordance": 0,
+              "discordance": 0.1499999999999999
+            },
+            {
+              "aId": "raise-modest",
+              "bId": "shift-cash-mix",
+              "concordance": 0.20512820512820512,
+              "discordance": 0.15000000000000002
+            },
+            {
+              "aId": "raise-aggressive",
+              "bId": "raise-modest",
+              "concordance": 0.7948717948717949,
+              "discordance": 0.3
+            },
+            {
+              "aId": "raise-aggressive",
+              "bId": "hold-rates",
+              "concordance": 0.7948717948717949,
+              "discordance": 0.49999999999999994
+            },
+            {
+              "aId": "raise-aggressive",
+              "bId": "tiered-services",
+              "concordance": 0.7948717948717949,
+              "discordance": 0.35000000000000003
+            },
+            {
+              "aId": "raise-aggressive",
+              "bId": "shift-cash-mix",
+              "concordance": 0.6239316239316239,
+              "discordance": 0.10000000000000003
+            },
+            {
+              "aId": "hold-rates",
+              "bId": "raise-modest",
+              "concordance": 0.20512820512820512,
+              "discordance": 0.30000000000000004
+            },
+            {
+              "aId": "hold-rates",
+              "bId": "raise-aggressive",
+              "concordance": 0.20512820512820512,
+              "discordance": 0.6
+            },
+            {
+              "aId": "hold-rates",
+              "bId": "tiered-services",
+              "concordance": 0.20512820512820512,
+              "discordance": 0.35
+            },
+            {
+              "aId": "hold-rates",
+              "bId": "shift-cash-mix",
+              "concordance": 0.20512820512820512,
+              "discordance": 0.4
+            },
+            {
+              "aId": "tiered-services",
+              "bId": "raise-modest",
+              "concordance": 1,
+              "discordance": 0
+            },
+            {
+              "aId": "tiered-services",
+              "bId": "raise-aggressive",
+              "concordance": 0.20512820512820512,
+              "discordance": 0.25
+            },
+            {
+              "aId": "tiered-services",
+              "bId": "hold-rates",
+              "concordance": 0.7948717948717949,
+              "discordance": 0.1499999999999999
+            },
+            {
+              "aId": "tiered-services",
+              "bId": "shift-cash-mix",
+              "concordance": 0.4444444444444444,
+              "discordance": 0.09999999999999998
+            },
+            {
+              "aId": "shift-cash-mix",
+              "bId": "raise-modest",
+              "concordance": 0.7948717948717949,
+              "discordance": 0.19999999999999996
+            },
+            {
+              "aId": "shift-cash-mix",
+              "bId": "raise-aggressive",
+              "concordance": 0.37606837606837606,
+              "discordance": 0.19999999999999996
+            },
+            {
+              "aId": "shift-cash-mix",
+              "bId": "hold-rates",
+              "concordance": 0.7948717948717949,
+              "discordance": 0.3999999999999999
+            },
+            {
+              "aId": "shift-cash-mix",
+              "bId": "tiered-services",
+              "concordance": 0.7948717948717949,
+              "discordance": 0.25
+            }
+          ]
+        }
+      },
+      {
+        "stage": 5,
+        "name": "ranking",
+        "output": {
+          "ranked": [
+            {
+              "id": "raise-aggressive",
+              "label": "Raise rates 12–20% to match benchmark",
+              "closeness": 0.5245
+            },
+            {
+              "id": "tiered-services",
+              "label": "Add a tiered or premium service line",
+              "closeness": 0.4709
+            },
+            {
+              "id": "shift-cash-mix",
+              "label": "Drop one insurance panel, shift toward cash",
+              "closeness": 0.2605
+            }
+          ],
+          "confidence": 53,
+          "robustCandidateId": "raise-aggressive",
+          "reasoning": "We need to produce JSON with rationale and 3 workload reducers. The chosen option: Raise rates 12–20% to match benchmark. Values: revenue boost, patient retention, value signaling. Confidence moderate 53.\n\nRationale: explain why this option ranks first referencing values: it directly boosts revenue by aligning with benchmark, signals higher value, but retains patients if increase modest.\n\nNow create 3 reducers: one prompt, one playbook, one skill.\n\nPrompt: e.g., \"Generate a communication script to announce rate increase to patients\". Title: \"Patient rate increase announcement script\". Description: \"Create a clear, empathetic message to inform patients about the new pricing, supporting retention.\" artifact.promptText: the prompt text.\n\nPlaybook: steps to implement rate increase: e.g., \"Review current fee schedule\", \"Calculate new rates (12-20% increase)\", \"Update billing system\", \"Notify patients\", \"Monitor retention\". Title: \"Rate increase implementation checklist\". Description: \"Step-by-step guide to adjust fees and communicate changes.\" artifact.playbookSteps: list of 3-5 imperatives.\n\nSkill: maybe \"rate-analysis\" skill to compute new rates. Title: \"Rate analysis calculator\". Description: \"Tool to compute new rates based on percentage increase and benchmark.\" artifact.skillName: \"rate-analysis\". automationLevel user_executes, coverage partial_task? This is a tool to compute rates, maybe task_setup. Use coverage \"task_setup\". permission_tier maybe T0.\n\nAll three different types. Ensure each artifact contains only the appropriate field.\n\nNow produce JSON compact.\n\nCheck schema: each workloadReducer has fields: type, title, description, artifact, automationLevel, coverage, permission_tier.\n\nMake sure artifact only includes correct field.\n\nLet's craft.\n\nRationale: \"Because a modest 12–20% increase aligns your fees with the local benchmark, it directly lifts revenue while still signaling higher value to patients, and the limited rise helps keep retention risk manageable.\"\n\nNow reducers:\n\n1. type prompt\ntitle: \"Patient rate increase announcement script\"\ndescription: \"Generate a clear, empathetic message to inform patients about the new pricing and preserve retention.\"\nartifact.promptText: something like \"Write a concise email to my patients announcing a 15% rate increase effective next month, emphasizing continued quality care and offering a brief FAQ.\"\n\n2. type playbook\ntitle: \"Rate increase implementation checklist\"\ndescription: \"Step-by-step guide to adjust fees, update systems, and communicate changes.\"\nartifact.playbookSteps: list of 5 steps.\n\n3. type skill\ntitle: \"Rate analysis calculator\"\ndescription: \"Compute new service rates based on a chosen percentage increase and benchmark.\"\nartifact.skillName: \"rate-analysis\"\n\nSet automationLevel \"user_executes\" for all. coverage: for prompt maybe \"partial_task\" (generating script). For playbook maybe \"full_task\". For skill maybe \"task_setup\". permission_tier: T0 for all.\n\nNow produce JSON compact, no extra spaces? It can have spaces but valid.\n\nLet's craft final JSON."
+        }
+      }
+    ],
+    "workloadReducers": [
+      {
+        "type": "prompt",
+        "title": "Patient rate increase announcement script",
+        "description": "Generate a clear, empathetic message to inform patients about the new pricing and preserve retention.",
+        "artifact": {
+          "promptText": "Write a concise email to my patients announcing a 15% rate increase effective next month. Emphasize continued quality care, explain why the change aligns with market rates, and include a brief FAQ addressing cost concerns and payment options."
+        },
+        "automationLevel": "user_executes",
+        "coverage": "partial_task",
+        "permission_tier": "T0"
+      },
+      {
+        "type": "playbook",
+        "title": "Rate increase implementation checklist",
+        "description": "Step-by-step guide to adjust fees, update systems, and communicate changes.",
+        "artifact": {
+          "playbookSteps": [
+            "Calculate new rates using a 12–20% increase over the current $175 fee",
+            "Update the practice’s billing software and fee schedule with the new amounts",
+            "Draft and send the patient announcement script (or use the generated prompt)",
+            "Train front‑desk staff on how to address patient questions",
+            "Monitor appointment fill‑rate and patient feedback for 60 days"
+          ]
+        },
+        "automationLevel": "user_executes",
+        "coverage": "full_task",
+        "permission_tier": "T0"
+      },
+      {
+        "type": "skill",
+        "title": "Rate analysis calculator",
+        "description": "Compute new service rates based on a chosen percentage increase and benchmark.",
+        "artifact": {
+          "skillName": "rate-analysis"
+        },
+        "automationLevel": "user_executes",
+        "coverage": "task_setup",
+        "permission_tier": "T0"
+      }
+    ],
+    "destinations": [
+      {
+        "type": "user_ui",
+        "delivered": true,
+        "deliveredAt": "2026-05-10T09:36:38.754Z"
+      }
+    ]
+  },
+  "llmCalls": [
+    {
+      "stage": 1,
+      "tokensIn": 530,
+      "tokensOut": 622
+    },
+    {
+      "stage": 5,
+      "tokensIn": 655,
+      "tokensOut": 964
+    }
+  ]
+}

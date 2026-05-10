@@ -1,0 +1,271 @@
+{
+  "persona": {
+    "id": "P3",
+    "name": "Priya",
+    "scenario": "Just opened practice 6 months ago, 20 patients, 30 hr clinical, no waitlist yet, energized but uncertain demand."
+  },
+  "template": "capacity",
+  "expected": {
+    "recommendation": "add visits OR hold steady; capping/waitlist is wrong (no demand signal yet)",
+    "confidenceRange": "40-65 (genuine uncertainty; P3 doesn't yet have demand data)"
+  },
+  "latencyMs": 2425,
+  "error": null,
+  "output": {
+    "recommendation": {
+      "option": "Build a structured waitlist + tiered intake",
+      "confidence": 53,
+      "rationale": "A structured waitlist with intake tiers lets you capture more revenue without adding clinical hours, aligning with your goals of growth while preserving your energized state."
+    },
+    "alternatives": [
+      {
+        "option": "Cap new intakes for 60–90 days",
+        "eliminatedAtStage": 2,
+        "reason": "If the waitlist is essentially empty, capping intakes adds no protection."
+      },
+      {
+        "option": "Hold current capacity",
+        "eliminatedAtStage": 4,
+        "reason": "Outranked by \"Build a structured waitlist + tiered intake\" — better on 100% of weighted criteria with no large gaps."
+      }
+    ],
+    "robustAlternative": {
+      "option": "Build a structured waitlist + tiered intake",
+      "why": "Smallest worst-case regret across criteria; biggest gap is on \"revenue\"."
+    },
+    "methodTrace": [
+      {
+        "stage": 1,
+        "name": "values",
+        "output": {
+          "values": [
+            "revenue growth",
+            "energy preservation"
+          ],
+          "adjustedWeights": {
+            "revenue": 0.3348214285714286,
+            "sustainability": 0.375,
+            "access": 0.15625,
+            "flexibility": 0.13392857142857142
+          },
+          "rationale": "User is a new, energized practitioner with no waitlist, so revenue and burnout protection are prioritized while patient access is less critical.",
+          "reasoning": "We need to produce JSON with values (1-3 short value statements) and weightAdjustments mapping criterion ids to numbers between 0.5 and 2.0, plus rationale sentence.\n\nWe have intake: weeklyClinicalHours 30, currentWeeklyPatients 20, waitlistLength 0, avgRevenuePerVisitUSD 180, energyLevel \"energized\", practiceStage \"new\", horizonMonths 12.\n\nInterpretation: New practice, energized, no waitlist, moderate hours, revenue per visit decent. Likely they care about revenue growth and sustainability but maybe less about patient access (no waitlist). Flexibility maybe moderate.\n\nThus weight adjustments: revenue maybe increase (e.g., 1.5), sustainability maybe moderate (1.2), access maybe lower (0.7), flexibility maybe neutral (1.0). Must be between 0.5 and 2.0.\n\nValues: \"revenue growth\", \"energy preservation\", \"patient access\"? But waitlist zero, maybe \"growth\" and \"sustainability\". Provide 2 values: \"revenue growth\", \"energy preservation\". Could also include \"flexibility\". Up to 3.\n\nLet's craft JSON:\n\n{\n \"values\":[\"revenue growth\",\"energy preservation\"],\n \"weightAdjustments\":{\"revenue\":1.5,\"sustainability\":1.2,\"access\":0.7,\"flexibility\":1.0},\n \"rationale\":\"User is a new, energized practitioner with no waitlist, so revenue and burnout protection are prioritized while patient access is less critical.\"\n}\n\nCheck JSON compact, no extra spaces? It's okay.\n\nMake sure numbers are within range. Yes.\n\nReturn only JSON."
+        }
+      },
+      {
+        "stage": 2,
+        "name": "constraints",
+        "output": {
+          "triggeredConstraints": [
+            "no-waitlist-vetoes-cap"
+          ],
+          "eliminated": [
+            {
+              "candidateId": "cap-intakes",
+              "constraintId": "no-waitlist-vetoes-cap",
+              "reason": "If the waitlist is essentially empty, capping intakes adds no protection."
+            }
+          ],
+          "remaining": [
+            "expand-hours",
+            "hold-steady",
+            "build-waitlist",
+            "reduce-hours"
+          ]
+        }
+      },
+      {
+        "stage": 3,
+        "name": "weights",
+        "output": {
+          "weights": {
+            "revenue": 0.3348214285714286,
+            "sustainability": 0.375,
+            "access": 0.15625,
+            "flexibility": 0.13392857142857142
+          },
+          "notes": "Weights normalized across 4 criteria."
+        }
+      },
+      {
+        "stage": 4,
+        "name": "outranking",
+        "output": {
+          "dominant": [
+            "expand-hours",
+            "build-waitlist",
+            "reduce-hours"
+          ],
+          "eliminated": [
+            {
+              "candidateId": "hold-steady",
+              "dominatedById": "build-waitlist",
+              "concordance": 1,
+              "discordance": 0,
+              "reason": "Outranked by \"Build a structured waitlist + tiered intake\" — better on 100% of weighted criteria with no large gaps."
+            }
+          ],
+          "pairwise": [
+            {
+              "aId": "expand-hours",
+              "bId": "hold-steady",
+              "concordance": 0.4910714285714286,
+              "discordance": 0.39999999999999997
+            },
+            {
+              "aId": "expand-hours",
+              "bId": "build-waitlist",
+              "concordance": 0.4910714285714286,
+              "discordance": 0.45
+            },
+            {
+              "aId": "expand-hours",
+              "bId": "reduce-hours",
+              "concordance": 0.4910714285714286,
+              "discordance": 0.6499999999999999
+            },
+            {
+              "aId": "hold-steady",
+              "bId": "expand-hours",
+              "concordance": 0.5089285714285714,
+              "discordance": 0.44999999999999996
+            },
+            {
+              "aId": "hold-steady",
+              "bId": "build-waitlist",
+              "concordance": 0,
+              "discordance": 0.29999999999999993
+            },
+            {
+              "aId": "hold-steady",
+              "bId": "reduce-hours",
+              "concordance": 0.4910714285714286,
+              "discordance": 0.25
+            },
+            {
+              "aId": "build-waitlist",
+              "bId": "expand-hours",
+              "concordance": 0.5089285714285714,
+              "discordance": 0.35
+            },
+            {
+              "aId": "build-waitlist",
+              "bId": "hold-steady",
+              "concordance": 1,
+              "discordance": 0
+            },
+            {
+              "aId": "build-waitlist",
+              "bId": "reduce-hours",
+              "concordance": 0.4910714285714286,
+              "discordance": 0.19999999999999996
+            },
+            {
+              "aId": "reduce-hours",
+              "bId": "expand-hours",
+              "concordance": 0.5089285714285714,
+              "discordance": 0.65
+            },
+            {
+              "aId": "reduce-hours",
+              "bId": "hold-steady",
+              "concordance": 0.5089285714285714,
+              "discordance": 0.25
+            },
+            {
+              "aId": "reduce-hours",
+              "bId": "build-waitlist",
+              "concordance": 0.5089285714285714,
+              "discordance": 0.49999999999999994
+            }
+          ]
+        }
+      },
+      {
+        "stage": 5,
+        "name": "ranking",
+        "output": {
+          "ranked": [
+            {
+              "id": "build-waitlist",
+              "label": "Build a structured waitlist + tiered intake",
+              "closeness": 0.589
+            },
+            {
+              "id": "expand-hours",
+              "label": "Add 4–8 weekly clinical hours",
+              "closeness": 0.5215
+            },
+            {
+              "id": "reduce-hours",
+              "label": "Reduce 4–8 weekly clinical hours",
+              "closeness": 0.4785
+            }
+          ],
+          "confidence": 53,
+          "robustCandidateId": "build-waitlist",
+          "reasoning": "We need to produce JSON with rationale and 3 workloadReducers (different types). Use user values: revenue growth, energy preservation. Chosen option: Build a structured waitlist + tiered intake. Rationale: It supports revenue growth modestly while preserving energy by improving efficiency, less burnout.\n\nNow create 3 reducers:\n\n1. type prompt: maybe \"Generate tiered intake questionnaire\". Title short. Description: Create a questionnaire to classify patients into tiers, saving time. artifact.promptText: a prompt to ChatGPT.\n\n2. type playbook: \"Implement waitlist communication workflow\". Steps: set up spreadsheet, draft email templates, schedule weekly review, etc.\n\n3. type skill: maybe \"waitlist-manager\" skill name. Title: \"Automate waitlist tracking\". Description: Use a low-code tool to track tiers. skillName: \"waitlist-manager\".\n\nAll automationLevel user_executes, coverage full_task maybe for playbook partial? Let's assign: prompt coverage task_setup (since it's a prompt to generate something). playbook coverage full_task. skill coverage partial_task maybe. permission_tier T0 for all.\n\nMake sure artifact only includes correct field.\n\nNow produce JSON compact.\n\nCheck schema: each workloadReducer must have fields: type, title, description, artifact, automationLevel, coverage, permission_tier.\n\nartifact: for type=prompt includes promptText only. For playbook includes playbookSteps array. For skill includes skillName only.\n\nNow produce.\n\nRationale: 1-2 sentences.\n\nLet's craft.\n\nNow output JSON only."
+        }
+      }
+    ],
+    "workloadReducers": [
+      {
+        "type": "prompt",
+        "title": "Create tiered intake questionnaire",
+        "description": "Generate a ready‑to‑use questionnaire that sorts new patients into priority tiers, saving screening time.",
+        "artifact": {
+          "promptText": "You are a healthcare operations consultant. Draft a concise intake questionnaire that categorizes new patients into three tiers (high, medium, low priority) based on urgency, insurance type, and preferred appointment window. Provide the questions and a scoring rubric."
+        },
+        "automationLevel": "user_executes",
+        "coverage": "task_setup",
+        "permission_tier": "T0"
+      },
+      {
+        "type": "playbook",
+        "title": "Set up waitlist communication workflow",
+        "description": "Implement a repeatable process for notifying patients about their tier status and expected wait times.",
+        "artifact": {
+          "playbookSteps": [
+            "Create a master spreadsheet with columns: patient name, tier, contact, last‑update date",
+            "Copy the email template for each tier and personalize placeholders",
+            "Schedule a 15‑minute weekly review to update tier assignments and send batch emails",
+            "Log sent communications in the spreadsheet for audit"
+          ]
+        },
+        "automationLevel": "user_executes",
+        "coverage": "full_task",
+        "permission_tier": "T0"
+      },
+      {
+        "type": "skill",
+        "title": "Automate waitlist tracking",
+        "description": "Use a low‑code skill to keep the tiered waitlist up‑to‑date with minimal manual effort.",
+        "artifact": {
+          "skillName": "waitlist-manager"
+        },
+        "automationLevel": "user_executes",
+        "coverage": "partial_task",
+        "permission_tier": "T0"
+      }
+    ],
+    "destinations": [
+      {
+        "type": "user_ui",
+        "delivered": true,
+        "deliveredAt": "2026-05-10T09:36:41.180Z"
+      }
+    ]
+  },
+  "llmCalls": [
+    {
+      "stage": 1,
+      "tokensIn": 547,
+      "tokensOut": 425
+    },
+    {
+      "stage": 5,
+      "tokensIn": 656,
+      "tokensOut": 652
+    }
+  ]
+}

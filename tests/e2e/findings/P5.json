@@ -1,0 +1,316 @@
+{
+  "persona": {
+    "id": "P5",
+    "name": "Diane",
+    "scenario": "Winding down, 25 hr/wk clinical, waitlist of 18, depleted, wants to cap intakes vs hire scheduler. 5-yr horizon to retirement."
+  },
+  "template": "admin-hire",
+  "expected": {
+    "recommendation": "outsource scheduling (virtual contractor) OR DIY-with-tooling; full hire wrong (winding down + low delegation comfort)",
+    "confidenceRange": "55-75"
+  },
+  "latencyMs": 3226,
+  "error": null,
+  "output": {
+    "recommendation": {
+      "option": "Hire a part-time virtual assistant (10–15 hrs/wk)",
+      "confidence": 50,
+      "rationale": "Because you need to protect clinical time while staying within a tight budget and prefer limited delegation, a part‑time virtual assistant offers the most time back for scheduling at a modest cost, even though you’ll have some oversight responsibilities."
+    },
+    "alternatives": [
+      {
+        "option": "Stay DIY with better tooling",
+        "eliminatedAtStage": 4,
+        "reason": "Lower TOPSIS closeness (0.60) than the recommendation."
+      },
+      {
+        "option": "Defer for 60 days; revisit with more data",
+        "eliminatedAtStage": 4,
+        "reason": "Lower TOPSIS closeness (0.53) than the recommendation."
+      }
+    ],
+    "robustAlternative": {
+      "option": "Stay DIY with better tooling",
+      "why": "Smallest worst-case regret across criteria; biggest gap is on \"timeRecovered\"."
+    },
+    "methodTrace": [
+      {
+        "stage": 1,
+        "name": "values",
+        "output": {
+          "values": [
+            "budget constraints",
+            "low delegation comfort",
+            "clinical time"
+          ],
+          "adjustedWeights": {
+            "timeRecovered": 0.21491228070175433,
+            "cost": 0.3289473684210526,
+            "quality": 0.14035087719298248,
+            "risk": 0.3157894736842105
+          },
+          "rationale": "User has limited budget, low comfort delegating, and modest admin load, so cost and risk matter most while time recovery and quality are secondary.",
+          "reasoning": "We need to produce JSON with fields: values (1-3 short value statements <=6 words each), weightAdjustments mapping criterion id to number between 0.5 and 2.0, and rationale sentence.\n\nWe must analyze intake to see which criteria matter most.\n\nTemplate criteria: timeRecovered, cost, quality, risk.\n\nIntake details:\n- weeklyAdminHours: 6 (admin tasks per week)\n- monthlyBudgetUSD: 1200\n- monthsSavingsRunway: 24 (they have 2 years runway)\n- growthExpectation: shrinking\n- adminTaskMix: scheduling-only (low complexity)\n- delegationComfort: low\n- horizonMonths: 60 (5 years planning horizon)\n\nInterpretation: Solo practitioner, low admin tasks (6 hrs/week), only scheduling, low comfort delegating, shrinking growth expectation (maybe want to maintain, not expand). Budget 1200 per month, runway 24 months (they can survive 2 years without profit). Horizon 60 months (long term planning). They likely prioritize risk (low regret) and cost efficiency, because budget limited and low comfort delegating. Time recovered may be less important because only 6 hrs/week; but still some value. Quality maybe less critical because tasks are simple scheduling; but still want no errors.\n\nThus weight adjustments: increase risk and cost, maybe decrease timeRecovered and quality slightly.\n\nDefault weights: timeRecovered 0.35, cost 0.25, quality 0.2, risk 0.2.\n\nWe can adjust: risk 1.8 (increase weight), cost 1.5, timeRecovered 0.7, quality 0.8.\n\nAll within 0.5-2.0.\n\nValues: maybe \"budget constraints\", \"low delegation risk\", \"time recovery\". Need 1-3 short statements <=6 words each. Could be [\"budget constraints\",\"low delegation comfort\",\"clinical time\"].\n\nBut values should be phrases user would recognize. Let's pick \"budget constraints\", \"low delegation comfort\", \"clinical time\". Each <=3 words.\n\nReturn JSON.\n\nCheck JSON formatting: {\"values\":[\"budget constraints\",\"low delegation comfort\",\"clinical time\"],\"weightAdjustments\":{\"risk\":1.8,\"cost\":1.5,\"timeRecovered\":0.7,\"quality\":0.8},\"rationale\":\"User has limited budget, low comfort delegating, and modest admin load, so cost and risk matter most while time recovery and quality are secondary.\"}\n\nMake sure numbers are within range. Yes.\n\nReturn only JSON."
+        }
+      },
+      {
+        "stage": 2,
+        "name": "constraints",
+        "output": {
+          "triggeredConstraints": [],
+          "eliminated": [],
+          "remaining": [
+            "hire-pt-virtual-assistant",
+            "hire-billing-service",
+            "hire-pt-onsite",
+            "diy-better-tooling",
+            "wait-and-revisit"
+          ]
+        }
+      },
+      {
+        "stage": 3,
+        "name": "weights",
+        "output": {
+          "weights": {
+            "timeRecovered": 0.21491228070175436,
+            "cost": 0.32894736842105265,
+            "quality": 0.1403508771929825,
+            "risk": 0.31578947368421056
+          },
+          "notes": "Weights normalized across 4 criteria."
+        }
+      },
+      {
+        "stage": 4,
+        "name": "outranking",
+        "output": {
+          "dominant": [
+            "hire-pt-virtual-assistant",
+            "hire-billing-service",
+            "hire-pt-onsite",
+            "diy-better-tooling",
+            "wait-and-revisit"
+          ],
+          "eliminated": [],
+          "pairwise": [
+            {
+              "aId": "hire-pt-virtual-assistant",
+              "bId": "hire-billing-service",
+              "concordance": 0.5438596491228069,
+              "discordance": 0.19999999999999996
+            },
+            {
+              "aId": "hire-pt-virtual-assistant",
+              "bId": "hire-pt-onsite",
+              "concordance": 0.6447368421052632,
+              "discordance": 0.15000000000000002
+            },
+            {
+              "aId": "hire-pt-virtual-assistant",
+              "bId": "diy-better-tooling",
+              "concordance": 0.3552631578947368,
+              "discordance": 0.19999999999999996
+            },
+            {
+              "aId": "hire-pt-virtual-assistant",
+              "bId": "wait-and-revisit",
+              "concordance": 0.3552631578947368,
+              "discordance": 0.29999999999999993
+            },
+            {
+              "aId": "hire-billing-service",
+              "bId": "hire-pt-virtual-assistant",
+              "concordance": 0.45614035087719296,
+              "discordance": 0.15000000000000002
+            },
+            {
+              "aId": "hire-billing-service",
+              "bId": "hire-pt-onsite",
+              "concordance": 0.7850877192982455,
+              "discordance": 0.25
+            },
+            {
+              "aId": "hire-billing-service",
+              "bId": "diy-better-tooling",
+              "concordance": 0.3552631578947368,
+              "discordance": 0.29999999999999993
+            },
+            {
+              "aId": "hire-billing-service",
+              "bId": "wait-and-revisit",
+              "concordance": 0.3552631578947368,
+              "discordance": 0.3999999999999999
+            },
+            {
+              "aId": "hire-pt-onsite",
+              "bId": "hire-pt-virtual-assistant",
+              "concordance": 0.3552631578947368,
+              "discordance": 0.25
+            },
+            {
+              "aId": "hire-pt-onsite",
+              "bId": "hire-billing-service",
+              "concordance": 0.2149122807017543,
+              "discordance": 0.25
+            },
+            {
+              "aId": "hire-pt-onsite",
+              "bId": "diy-better-tooling",
+              "concordance": 0.3552631578947368,
+              "discordance": 0.44999999999999996
+            },
+            {
+              "aId": "hire-pt-onsite",
+              "bId": "wait-and-revisit",
+              "concordance": 0.3552631578947368,
+              "discordance": 0.5499999999999999
+            },
+            {
+              "aId": "diy-better-tooling",
+              "bId": "hire-pt-virtual-assistant",
+              "concordance": 0.6447368421052632,
+              "discordance": 0.35
+            },
+            {
+              "aId": "diy-better-tooling",
+              "bId": "hire-billing-service",
+              "concordance": 0.6447368421052632,
+              "discordance": 0.25
+            },
+            {
+              "aId": "diy-better-tooling",
+              "bId": "hire-pt-onsite",
+              "concordance": 0.6447368421052632,
+              "discordance": 0.44999999999999996
+            },
+            {
+              "aId": "diy-better-tooling",
+              "bId": "wait-and-revisit",
+              "concordance": 0.3552631578947368,
+              "discordance": 0.09999999999999998
+            },
+            {
+              "aId": "wait-and-revisit",
+              "bId": "hire-pt-virtual-assistant",
+              "concordance": 0.6447368421052632,
+              "discordance": 0.6
+            },
+            {
+              "aId": "wait-and-revisit",
+              "bId": "hire-billing-service",
+              "concordance": 0.6447368421052632,
+              "discordance": 0.44999999999999996
+            },
+            {
+              "aId": "wait-and-revisit",
+              "bId": "hire-pt-onsite",
+              "concordance": 0.6447368421052632,
+              "discordance": 0.7
+            },
+            {
+              "aId": "wait-and-revisit",
+              "bId": "diy-better-tooling",
+              "concordance": 0.6447368421052632,
+              "discordance": 0.25
+            }
+          ]
+        }
+      },
+      {
+        "stage": 5,
+        "name": "ranking",
+        "output": {
+          "ranked": [
+            {
+              "id": "hire-pt-virtual-assistant",
+              "label": "Hire a part-time virtual assistant (10–15 hrs/wk)",
+              "closeness": 0.5969
+            },
+            {
+              "id": "diy-better-tooling",
+              "label": "Stay DIY with better tooling",
+              "closeness": 0.5964
+            },
+            {
+              "id": "wait-and-revisit",
+              "label": "Defer for 60 days; revisit with more data",
+              "closeness": 0.531
+            },
+            {
+              "id": "hire-billing-service",
+              "label": "Outsource billing to a service",
+              "closeness": 0.5053
+            },
+            {
+              "id": "hire-pt-onsite",
+              "label": "Hire a part-time onsite admin (20 hrs/wk)",
+              "closeness": 0.4664
+            }
+          ],
+          "confidence": 50,
+          "robustCandidateId": "diy-better-tooling",
+          "reasoning": "We need to produce JSON with rationale and 3 workloadReducers (different types). Use given data: decisionTopic \"Decide an admin hire\". Chosen option: Hire a part-time virtual assistant (10–15 hrs/wk). Values: budget constraints, low delegation comfort, clinical time. Confidence 50 (moderate). Need rationale 1-2 sentences explaining why this option ranked first, referencing values, plain language, confident but qualified.\n\nWorkload reducers: Provide actionable items to reduce workload for this recommendation.\n\nThree types: prompt, playbook, skill.\n\nEach must have title (<10 words), description, artifact appropriate field, automationLevel \"user_executes\", coverage maybe \"full_task\" etc, permission_tier T0 or T1.\n\nMake sure each artifact contains only the correct field.\n\nLet's craft:\n\n1. Type prompt: maybe \"Draft VA onboarding checklist\". Title: \"VA onboarding checklist prompt\". Description: \"Generate a concise onboarding checklist for your virtual assistant to ensure coverage of scheduling tasks.\" Artifact: promptText: a prompt user can give to ChatGPT to produce checklist.\n\n2. Type playbook: \"Set up virtual assistant workflow\". Title: \"VA workflow playbook\". Description: \"Outline steps to integrate the VA into your scheduling process.\" Artifact: playbookSteps array of 3-5 imperatives.\n\n3. Type skill: maybe \"schedule-sync skill\" but skillName must be short identifier. Title: \"Sync calendar skill\". Description: \"Use a low-code skill to automatically sync patient appointments to the VA's calendar.\" Artifact: skillName: \"calendar-sync\".\n\nMake sure coverage: maybe \"task_setup\" for prompt, \"full_task\" for playbook, \"partial_task\" for skill. Permission tier: T0 for all (no sensitive data). automationLevel \"user_executes\".\n\nNow produce JSON compact (no whitespace newlines optional but okay). Ensure correct fields.\n\nLet's craft.\n\nRationale: \"Because you need to protect clinical time while staying within a tight budget and prefer limited delegation, a part‑time virtual assistant offers the most time back for scheduling at a modest cost, even though you’ll have some oversight responsibilities.\"\n\nNow JSON.\n\n"
+        }
+      }
+    ],
+    "workloadReducers": [
+      {
+        "type": "prompt",
+        "title": "VA onboarding checklist prompt",
+        "description": "Generate a concise onboarding checklist for your virtual assistant to cover all scheduling duties.",
+        "artifact": {
+          "promptText": "Create a short onboarding checklist for a part‑time virtual assistant who will handle patient scheduling, appointment confirmations, and basic communication. Include required access (calendar, scheduling software), key daily tasks, and hand‑off points for you to review."
+        },
+        "automationLevel": "user_executes",
+        "coverage": "task_setup",
+        "permission_tier": "T0"
+      },
+      {
+        "type": "playbook",
+        "title": "VA workflow playbook",
+        "description": "Outline the steps to integrate the virtual assistant into your scheduling process.",
+        "artifact": {
+          "playbookSteps": [
+            "Grant the VA read‑only access to your practice calendar",
+            "Define daily time‑blocks for the VA to confirm and reschedule appointments",
+            "Set a brief end‑of‑day check‑in where you review any exceptions"
+          ]
+        },
+        "automationLevel": "user_executes",
+        "coverage": "full_task",
+        "permission_tier": "T0"
+      },
+      {
+        "type": "skill",
+        "title": "Sync calendar skill",
+        "description": "Use a low‑code skill to automatically sync patient appointments to the VA’s calendar.",
+        "artifact": {
+          "skillName": "calendar-sync"
+        },
+        "automationLevel": "user_executes",
+        "coverage": "partial_task",
+        "permission_tier": "T0"
+      }
+    ],
+    "destinations": [
+      {
+        "type": "user_ui",
+        "delivered": true,
+        "deliveredAt": "2026-05-10T09:36:47.667Z"
+      }
+    ]
+  },
+  "llmCalls": [
+    {
+      "stage": 1,
+      "tokensIn": 548,
+      "tokensOut": 604
+    },
+    {
+      "stage": 5,
+      "tokensIn": 670,
+      "tokensOut": 762
+    }
+  ]
+}

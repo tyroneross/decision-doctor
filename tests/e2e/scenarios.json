@@ -1,0 +1,114 @@
+{
+  "personas": [
+    {
+      "id": "P1",
+      "name": "Sarah",
+      "specialty": "solo psychiatrist",
+      "ageBracket": "30s",
+      "yearsInPractice": 2,
+      "aiMaturity": "low",
+      "techComfort": "EHR-comfortable, never used ChatGPT",
+      "scenario": "Full panel of 65 patients, growing waitlist, considering admin help. Wants 4-6 hr/wk back for clinical work without burning savings.",
+      "templateId": "admin-hire",
+      "intake": {
+        "weeklyAdminHours": 8,
+        "monthlyBudgetUSD": 2500,
+        "monthsSavingsRunway": 6,
+        "growthExpectation": "growing",
+        "adminTaskMix": "scheduling-billing",
+        "delegationComfort": "medium",
+        "horizonMonths": 12
+      },
+      "humanExpectedRecommendation": "hire-pt-virtual OR contractor; full-time hire is overkill at $2.5k/mo budget for 8 hr/wk admin",
+      "humanExpectedConfidence": "60-80 (multiple OK options, depends on growth confidence)"
+    },
+    {
+      "id": "P2",
+      "name": "Marcus",
+      "specialty": "LCSW (psychotherapy)",
+      "ageBracket": "40s",
+      "yearsInPractice": 8,
+      "aiMaturity": "high",
+      "techComfort": "Uses Claude weekly, comfortable with developer tools",
+      "scenario": "Cash-pay private practice, rates frozen 3 yrs, well below market. Full panel + 12-week waitlist. Considering rate increase.",
+      "templateId": "pricing",
+      "intake": {
+        "currentRateUSD": 175,
+        "monthsSinceLastIncrease": 36,
+        "insuranceShare": 0,
+        "cashShare": 100,
+        "avgFillRate": 95,
+        "competitorBenchmarkUSD": 225,
+        "riskTolerance": "medium"
+      },
+      "humanExpectedRecommendation": "raise to ~$200-225 (close gap with benchmark); 95% fill + waitlist + 3yr static = strong signal",
+      "humanExpectedConfidence": "80-95 (clear right answer)"
+    },
+    {
+      "id": "P3",
+      "name": "Priya",
+      "specialty": "solo primary-care DO",
+      "ageBracket": "30s",
+      "yearsInPractice": 0.5,
+      "aiMaturity": "medium",
+      "techComfort": "ChatGPT for clinical notes occasionally",
+      "scenario": "Just opened practice 6 months ago, 20 patients, 30 hr clinical, no waitlist yet, energized but uncertain demand.",
+      "templateId": "capacity",
+      "intake": {
+        "weeklyClinicalHours": 30,
+        "currentWeeklyPatients": 20,
+        "waitlistLength": 0,
+        "avgRevenuePerVisitUSD": 180,
+        "energyLevel": "energized",
+        "practiceStage": "new",
+        "horizonMonths": 12
+      },
+      "humanExpectedRecommendation": "add visits OR hold steady; capping/waitlist is wrong (no demand signal yet)",
+      "humanExpectedConfidence": "40-65 (genuine uncertainty; P3 doesn't yet have demand data)"
+    },
+    {
+      "id": "P4",
+      "name": "Linda",
+      "specialty": "solo nutritionist (RD)",
+      "ageBracket": "50s",
+      "yearsInPractice": 5,
+      "aiMaturity": "very-low",
+      "techComfort": "Barely uses email beyond basics",
+      "scenario": "Cash-pay, fill rate dropped from 85% to 55% over 12 months. Considering cutting rates vs accepting insurance vs holding.",
+      "templateId": "pricing",
+      "intake": {
+        "currentRateUSD": 140,
+        "monthsSinceLastIncrease": 18,
+        "insuranceShare": 0,
+        "cashShare": 100,
+        "avgFillRate": 55,
+        "competitorBenchmarkUSD": 130,
+        "riskTolerance": "low"
+      },
+      "humanExpectedRecommendation": "shift mix (accept insurance) OR restructure pricing (sliding scale / packages); cutting cash rate alone unlikely to fix demand",
+      "humanExpectedConfidence": "55-75"
+    },
+    {
+      "id": "P5",
+      "name": "Diane",
+      "specialty": "solo PT",
+      "ageBracket": "60s",
+      "yearsInPractice": 30,
+      "aiMaturity": "very-low",
+      "techComfort": "Very low — clinic uses paper schedule",
+      "scenario": "Winding down, 25 hr/wk clinical, waitlist of 18, depleted, wants to cap intakes vs hire scheduler. 5-yr horizon to retirement.",
+      "templateId": "admin-hire",
+      "intake": {
+        "weeklyAdminHours": 6,
+        "monthlyBudgetUSD": 1200,
+        "monthsSavingsRunway": 24,
+        "growthExpectation": "shrinking",
+        "adminTaskMix": "scheduling-only",
+        "delegationComfort": "low",
+        "horizonMonths": 60
+      },
+      "humanExpectedRecommendation": "outsource scheduling (virtual contractor) OR DIY-with-tooling; full hire wrong (winding down + low delegation comfort)",
+      "humanExpectedConfidence": "55-75"
+    }
+  ]
+}

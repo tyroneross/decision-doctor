@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-05-10T09:36:32.812Z",
+  "total": 5,
+  "results": [
+    {
+      "id": "P1",
+      "template": "admin-hire",
+      "latencyMs": 2353,
+      "confidence": 51,
+      "recommendation": "Hire a part-time virtual assistant (10–15 hrs/wk)",
+      "error": null
+    },
+    {
+      "id": "P2",
+      "template": "pricing",
+      "latencyMs": 3585,
+      "confidence": 53,
+      "recommendation": "Raise rates 12–20% to match benchmark",
+      "error": null
+    },
+    {
+      "id": "P3",
+      "template": "capacity",
+      "latencyMs": 2425,
+      "confidence": 53,
+      "recommendation": "Build a structured waitlist + tiered intake",
+      "error": null
+    },
+    {
+      "id": "P4",
+      "template": "pricing",
+      "latencyMs": 3260,
+      "confidence": 59,
+      "recommendation": "Add a tiered or premium service line",
+      "error": null
+    },
+    {
+      "id": "P5",
+      "template": "admin-hire",
+      "latencyMs": 3226,
+      "confidence": 50,
+      "recommendation": "Hire a part-time virtual assistant (10–15 hrs/wk)",
+      "error": null
+    }
+  ]
+}
