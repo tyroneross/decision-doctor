@@ -127,9 +127,12 @@ describe("T-08 — RLS tenant isolation", () => {
 
   it("tenant B cannot insert a decision claiming tenant A's tenant_id (WITH CHECK)", async () => {
     // The RLS policy WITH CHECK clause should reject any INSERT whose tenant_id
-    // doesn't match the actor's GUC. Driver throws on policy violation.
-    await expect(
-      runWithActor(
+    // doesn't match the actor's GUC. Drizzle wraps the underlying RLS error
+    // with a "Failed query:" prefix; assert on the error chain (cause) so a
+    // generic insert failure (e.g. column type) doesn't masquerade as a pass.
+    let caught: unknown = null;
+    try {
+      await runWithActor(
         { userId: userBId, tenantId: tenantBId },
         async () =>
           withActor(async (tx) => {
@@ -141,7 +144,18 @@ describe("T-08 — RLS tenant isolation", () => {
               status: "complete",
             });
           }),
-      ),
-    ).rejects.toThrow(/row[- ]level security|policy/i);
+      );
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeTruthy();
+    // Walk the cause chain — Postgres RLS violation message lives there.
+    let msg = caught instanceof Error ? caught.message : String(caught);
+    let cur = caught as { cause?: unknown } | undefined;
+    while (cur && (cur as { cause?: unknown }).cause) {
+      cur = (cur as { cause?: unknown }).cause as { cause?: unknown };
+      if (cur instanceof Error) msg += " | " + cur.message;
+    }
+    expect(msg).toMatch(/row[- ]level security|policy|violates/i);
   });
 });
