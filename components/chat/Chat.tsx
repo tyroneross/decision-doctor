@@ -143,43 +143,119 @@ export function Chat() {
     }
   };
 
+  // Show suggested-topic chips ONLY in the empty state (just the opening
+  // greeting + no user reply yet). Calm Precision: invite, don't overwhelm.
+  const isEmptyState = thread.messages.length === 1 && thread.messages[0]?.role === "assistant";
+
+  const sendQuick = (text: string) => {
+    setInput(text);
+    // Defer until next tick so the input is set before submit.
+    queueMicrotask(() => {
+      // Programmatically trigger the same path as a manual send.
+      const fakeEvent = new SubmitEvent("submit");
+      Object.defineProperty(fakeEvent, "preventDefault", { value: () => {} });
+      // Inline send with the override text — input state may not have flushed yet.
+      void (async () => {
+        const t = text.trim();
+        if (!t || busy) return;
+        setErr(null);
+        setBusy(true);
+        setInput("");
+        const next: ChatMessage[] = [
+          ...thread.messages,
+          { role: "user", content: t },
+        ];
+        setThread((th) => ({ ...th, messages: next, decision: undefined }));
+        try {
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ messages: next }),
+          });
+          if (!res.ok) throw new Error(`Request failed (${res.status})`);
+          const data = (await res.json()) as
+            | { status: "asking"; reply: string }
+            | {
+                status: "ready";
+                reply: string;
+                decision: DecisionPayload;
+                painPoints?: string[];
+              };
+          setThread((th) => ({
+            ...th,
+            messages: [
+              ...th.messages,
+              { role: "assistant", content: data.reply },
+            ],
+            decision: data.status === "ready" ? data.decision : undefined,
+            painPoints: data.status === "ready" ? data.painPoints : undefined,
+          }));
+        } catch (e) {
+          setErr(e instanceof Error ? e.message : String(e));
+        } finally {
+          setBusy(false);
+        }
+      })();
+    });
+  };
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-4 py-6">
-      <header className="flex items-baseline justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-ink-900">
-            Decision Doctor — chat
-          </h1>
-          <p className="text-sm text-ink-500">
-            Think it through out loud. I'll do the math when we're ready.
-          </p>
+    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-4 py-6 sm:py-8">
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-50 text-accent-600"
+          >
+            {/* Stylized DD mark — keeps the brand calm but the page isn't bare */}
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </span>
+          <div>
+            <h1 className="text-lg font-semibold text-ink-900 sm:text-xl">
+              Decision Doctor
+            </h1>
+            <p className="text-sm text-ink-500">
+              Think it through out loud. I'll run the math when we're ready.
+            </p>
+          </div>
         </div>
         <button
           type="button"
           onClick={reset}
-          className="text-xs text-ink-500 underline-offset-2 hover:text-ink-900 hover:underline"
+          className="min-h-11 rounded px-2 text-xs text-ink-500 hover:text-ink-900"
         >
           New chat
         </button>
       </header>
 
       <ul
-        className="mt-6 flex-1 space-y-3 overflow-y-auto pb-4"
+        className="mt-6 flex-1 space-y-4 overflow-y-auto pb-4"
         aria-live="polite"
       >
         {thread.messages.map((m, i) => (
           <li
             key={i}
             className={
-              "flex " + (m.role === "user" ? "justify-end" : "justify-start")
+              "flex items-end gap-2 " +
+              (m.role === "user" ? "justify-end" : "justify-start")
             }
           >
+            {m.role === "assistant" && (
+              <span
+                aria-hidden
+                className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-50 text-[11px] font-medium text-accent-600 sm:flex"
+              >
+                DD
+              </span>
+            )}
             <div
               className={
-                "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed " +
+                "max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed shadow-sm " +
                 (m.role === "user"
-                  ? "bg-ink-900 text-white"
-                  : "bg-ink-100 text-ink-900")
+                  ? "rounded-br-md bg-ink-900 text-white"
+                  : "rounded-bl-md bg-ink-100 text-ink-900")
               }
             >
               {m.content}
@@ -187,10 +263,39 @@ export function Chat() {
           </li>
         ))}
 
+        {isEmptyState && !busy && (
+          <li className="ml-9 mt-2 flex flex-wrap gap-2">
+            {[
+              "I'm thinking about hiring admin help",
+              "Considering raising my rates",
+              "Wondering if I should add capacity",
+            ].map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => sendQuick(t)}
+                className="min-h-11 rounded-full border border-ink-300 bg-white px-4 text-sm text-ink-700 transition hover:border-ink-700 hover:text-ink-900"
+              >
+                {t}
+              </button>
+            ))}
+          </li>
+        )}
+
         {busy && (
-          <li className="flex justify-start">
-            <div className="rounded-2xl bg-ink-100 px-4 py-2.5 text-sm text-ink-500">
-              Thinking…
+          <li className="flex items-end gap-2">
+            <span
+              aria-hidden
+              className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-50 text-[11px] font-medium text-accent-600 sm:flex"
+            >
+              DD
+            </span>
+            <div className="rounded-2xl rounded-bl-md bg-ink-100 px-4 py-3 shadow-sm">
+              <span className="flex gap-1" aria-label="Thinking">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-ink-500 [animation-delay:-0.3s]" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-ink-500 [animation-delay:-0.15s]" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-ink-500" />
+              </span>
             </div>
           </li>
         )}
@@ -228,22 +333,49 @@ export function Chat() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message…"
+          placeholder="Tell me what's on your mind…"
           disabled={busy}
           autoComplete="off"
-          className="block min-h-11 w-full rounded border-ink-300 px-3 focus:border-accent-600 focus:ring-accent-600"
+          className="block min-h-11 w-full rounded-full border-ink-300 px-4 focus:border-accent-600 focus:ring-accent-600"
         />
         <button
           type="submit"
           disabled={!input.trim() || busy}
+          aria-label="Send message"
           className={
-            "min-h-11 rounded-md px-4 text-sm font-medium transition " +
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition " +
             (input.trim() && !busy
               ? "bg-ink-900 text-white hover:bg-ink-700"
-              : "bg-ink-100 text-ink-700 cursor-not-allowed")
+              : "bg-ink-100 text-ink-500 cursor-not-allowed")
           }
         >
-          Send
+          {busy ? (
+            <svg
+              className="h-4 w-4 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden
+            >
+              <circle cx="12" cy="12" r="10" strokeOpacity=".25" />
+              <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          )}
         </button>
       </form>
     </main>

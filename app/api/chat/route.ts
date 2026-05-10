@@ -84,17 +84,30 @@ export async function POST(req: Request) {
   }
 
   // 4. Ask Groq for next message OR ready directive.
-  const completion = await groq.chat.completions.create({
-    model: GROQ_MODEL,
-    temperature: 0.4,
-    messages: [
-      { role: "system", content: CHAT_SYSTEM_PROMPT },
-      ...parsed.data.messages.map((m) => ({ role: m.role, content: m.content })),
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  const raw = completion.choices[0]?.message?.content ?? "{}";
+  let raw = "{}";
+  try {
+    const completion = await groq.chat.completions.create({
+      model: GROQ_MODEL,
+      temperature: 0.4,
+      messages: [
+        { role: "system", content: CHAT_SYSTEM_PROMPT },
+        ...parsed.data.messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      ],
+      response_format: { type: "json_object" },
+    });
+    raw = completion.choices[0]?.message?.content ?? "{}";
+  } catch (e) {
+    console.error("[/api/chat] groq failure:", e);
+    // Don't 500 the user — surface a friendly message and let them retry.
+    return NextResponse.json({
+      status: "asking",
+      reply:
+        "I'm having trouble reaching my reasoning model right now. Could you try sending that again in a moment?",
+    });
+  }
   let parsedAssistant: z.infer<typeof AssistantPayloadSchema>;
   try {
     parsedAssistant = AssistantPayloadSchema.parse(JSON.parse(raw));
