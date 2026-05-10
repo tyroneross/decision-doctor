@@ -96,14 +96,16 @@ describe("F-09 / T-12 — Scaffold generator round-trip", () => {
     expect(lines).toBeLessThanOrEqual(200);
   });
 
-  it("AGENTS.md shares the SKILL.md frontmatter shape (Codex spec compat)", () => {
+  it("AGENTS.md is plain markdown with no frontmatter (Codex spec)", () => {
     const scaffold = generateScaffold(SKILL_REDUCER);
-    const skillFile = scaffold!.files.find((f) => f.path === "SKILL.md")!;
     const agentsFile = scaffold!.files.find((f) => f.path === "AGENTS.md")!;
-    const skillFm = matter(skillFile.content).data;
-    const agentsFm = matter(agentsFile.content).data;
-    expect(agentsFm.name).toBe(skillFm.name);
-    expect(agentsFm.description).toBe(skillFm.description);
+    // Codex CLI's AGENTS.md is plain markdown — no required frontmatter.
+    // Source: github.com/openai/codex codex-rs/core/gpt_5_1_prompt.md.
+    // gray-matter on plain markdown returns { data: {}, content: <whole-file> }.
+    const parsed = matter(agentsFile.content);
+    expect(parsed.data).toEqual({});
+    expect(parsed.content).toMatch(/^# /); // starts with an H1 heading
+    expect(parsed.content.split("\n").length).toBeLessThanOrEqual(200);
   });
 
   it("skill reducer claims both claude-code-skill and codex-skill targets", () => {

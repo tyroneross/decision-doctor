@@ -1,94 +1,71 @@
-# Codex `AGENTS.md` format — cached spec
+# Codex `AGENTS.md` format — authoritative spec
 
-**Source-fetched-at:** 2026-05-10
-**Source-status:** TAG:INFERRED — re-tried 2026-05-10 during round-1 polish dispatch. Context7 MCP server (`plugin:context7:context7`) was confirmed connected on the host (`claude mcp list` → ✓ Connected) but is not directly invocable from the build-loop orchestrator subagent session — only the parent Claude Code agent can dispatch MCP tool calls. Reconciliation deferred to a separate interactive session or operator-driven verification. Until then, F-09's scaffold templates remain pinned to **the conservative spec below**.
-
-**Why this spec is still trustworthy without a fresh fetch:**
-- The frontmatter shape (`name` + `description` + optional `version`/`model`/`tools`/`tags`) is the union convention shared by Claude Code's SKILL.md system, OpenAI's published AGENTS.md examples, and every working plugin shipped under `~/.claude/plugins/cache/`. Drift on this surface is rare.
-- Decision Doctor's scaffold generator emits both `SKILL.md` and `AGENTS.md` with the same frontmatter and body. If Codex tightens its spec later, the operator just regenerates from the templates — no schema migration needed.
-- `tests/scaffold.test.ts` T-12 (13 tests, all green as of 2026-05-10) validates: gray-matter parses both files, frontmatter has required keys, body ≤ 200 lines, plugin.json validates against the inline Zod schema. The tests catch any drift that breaks the file structure.
-
-The conservative intersection sources:
-- the public `agents.md` convention used by OpenAI Codex and several agent runtimes,
-- the Claude Code `SKILL.md` format (frontmatter + markdown body), and
-- the working examples shipped in `~/.claude/plugins/cache/` (this user's installed plugins).
-
-When the operator runs an interactive session, re-fetch `openai/codex` docs via Context7 and reconcile any drift. Steps preserved below in "Next steps when Context7 is back".
+**Source-fetched-at:** 2026-05-10 (Context7 MCP, library `/openai/codex`)
+**Source-status:** ✅ Verified — authoritative excerpt below cites `github.com/openai/codex` directly.
 
 ---
 
-## Canonical structure
+## What Codex CLI actually says about `AGENTS.md`
 
-`AGENTS.md` is a single markdown file shipped at the root of an agent / skill bundle. It carries:
+From `codex-rs/core/gpt_5_1_prompt.md` and `codex-rs/protocol/src/prompts/base_instructions/default.md`:
 
-1. **Frontmatter (YAML)** between two `---` fences. Required keys:
-   - `name` — short identifier, lowercase-hyphenated.
-   - `description` — one-sentence purpose. Used by the runtime to decide when to load the agent.
-2. **Body (markdown)** — instructions the runtime injects into the agent's system prompt when loaded. Should be self-contained; no external links required to be usable.
+> Repositories often contain `AGENTS.md` files, which can be located anywhere within the repository. These files serve as a mechanism for humans to provide instructions or tips to the agent for working within the container, such as coding conventions, information about code organization, or instructions on how to run or test code. The scope of an `AGENTS.md` file encompasses the entire directory tree rooted at the folder containing it. For every file modified in the final patch, the agent must adhere to instructions in any `AGENTS.md` file whose scope includes that file. Instructions regarding code style, structure, or naming apply only within the `AGENTS.md` file's scope, unless explicitly stated otherwise. In cases of conflicting instructions, more-deeply-nested `AGENTS.md` files take precedence, while direct system, developer, or user instructions (as part of a prompt) override `AGENTS.md` instructions. The contents of the `AGENTS.md` file at the root of the repo and any directories from the Current Working Directory (CWD) up to the root are automatically included with the developer message, eliminating the need for re-reading.
 
-Optional frontmatter keys (commonly supported):
-- `version` — semver string.
-- `model` — preferred model tier (`opus` / `sonnet` / `haiku` / `inherit`).
-- `tools` — array of tool names the agent is allowed to use.
-- `tags` — array of free-form tags.
+### Key facts
 
----
+| Aspect | What Codex actually does |
+|---|---|
+| **File format** | Plain markdown. **No required frontmatter.** |
+| **Location** | Anywhere in the repo — root, subdirectory, even `/` or `~`. Not version-controlled-only. |
+| **Scope** | The directory tree rooted at the file's parent folder. |
+| **Loading** | Codex auto-loads the root `AGENTS.md` plus any ancestors of CWD. No manual loading. |
+| **Conflict resolution** | More-deeply-nested wins. Direct user/system prompt overrides everything. |
+| **Purpose** | Coding conventions, code organization notes, run/test instructions. |
 
-## Minimum-valid example
+## How `AGENTS.md` differs from `SKILL.md`
 
-```markdown
----
-name: pre-auth-letter
-description: Drafts a calm, plain-language insurance pre-authorization letter from a 4-line clinical summary.
----
+These are **two different formats** that this project happens to emit together.
 
-# Pre-auth letter agent
+| | `AGENTS.md` (Codex) | `SKILL.md` (Claude Code skills) |
+|---|---|---|
+| Format | Plain markdown | YAML frontmatter + markdown body |
+| Frontmatter | None | Required: `name`, `description` |
+| Discovery | Auto-loaded by Codex from path hierarchy | Loaded by Claude Code when user invokes via `Skill` tool or matching trigger |
+| Scope | Directory tree from file's parent | The skill bundle's directory |
+| Bundle structure | Single file | Required: `SKILL.md`. Optional: `scripts/`, `templates/`, `examples/` subdirs |
 
-When the user asks for a pre-authorization letter, ask for these four
-fields if missing:
-- Diagnosis (ICD-10 if known)
-- Procedure / medication being requested
-- Clinical justification (one sentence)
-- Payer / plan
-
-Then produce a letter ≤ 350 words in the standard format: header, patient
-identifier line, clinical summary, requested service, justification,
-sign-off block.
-
-Never include PHI in worked examples. Use placeholders.
-```
+Source for SKILL.md spec, same Context7 fetch:
+> A skill is a reusable 'slash-command' package, consisting of a directory with a required SKILL.md entrypoint (YAML frontmatter + instructions) and optional supporting files.
 
 ---
 
-## What Decision Doctor's F-09 scaffold emits
+## What Decision Doctor's F-09 scaffold emits (corrected)
 
 For each `WorkloadReducer` whose `aiFeasibility ∈ {"skill", "plugin"}`, the engine emits:
 
-- **`SKILL.md`** — frontmatter (`name`, `description`) + markdown body. Compatible with Claude Code's skills system AND with the AGENTS.md format above (they share the frontmatter shape).
-- **`AGENTS.md`** — the same content as `SKILL.md`, with the body re-headed for Codex consumption. (Decision: emit two files rather than one so the user can paste each into the runtime that expects it. Both files are identical in spirit; the second is a 1-line shim that references the first.)
-- **`plugin.json`** — only for `aiFeasibility === "plugin"`. Minimal valid plugin manifest with `name`, `version`, `description`, and a `commands` array with one entry.
+- **`SKILL.md`** — YAML frontmatter (`name`, `description`) + markdown body. Claude Code's skill format.
+- **`AGENTS.md`** — plain markdown, no frontmatter. Codex CLI's agent-guidance format.
+- **`plugin.json`** — only for `aiFeasibility === "plugin"`. Claude Code plugin manifest with `name`, `version`, `description`, `commands[]`.
 
-Total file count is capped at **6** per scaffold (F-09 hard limit). The viewer caps at the same number so the user can't accidentally lose track of which files they've copied.
+The user pastes whichever file matches the runtime they're using. `SKILL.md` goes into `<plugin>/skills/<name>/`. `AGENTS.md` goes at the relevant directory level of their Codex-CLI-driven repo (typically root). `plugin.json` goes at the plugin root for Claude Code.
+
+Hard cap: **6 files per scaffold**. Currently emits 2 (skill) or 3 (plugin).
 
 ---
 
 ## Validation contract
 
-The scaffold generator validates emitted files against:
-
-| File | Validator | Source |
+| File | Validator | Where |
 |---|---|---|
-| `SKILL.md` | `gray-matter` parses frontmatter + body non-empty + body ≤ 200 lines | `tests/scaffold.test.ts` T-12 |
-| `AGENTS.md` | Same as SKILL.md (shared frontmatter shape) | T-12 |
-| `plugin.json` | Validates against the Zod schema defined inline in `lib/scaffold-generator.ts` (mirrors Claude Code's published `plugin.json` shape) | T-12 |
+| `SKILL.md` | `gray-matter` parses frontmatter (with `name` + `description`); body non-empty; body ≤ 200 lines | `tests/scaffold.test.ts` T-12 |
+| `AGENTS.md` | Plain markdown; has at least one `#` heading; body ≤ 200 lines; no required frontmatter | `tests/scaffold.test.ts` T-12 |
+| `plugin.json` | Validates against `PluginJsonSchema` (`lib/scaffold-generator.ts`); mirrors Claude Code's published `plugin.json` shape | T-12 |
 
 ---
 
-## Next steps when Context7 is back
+## History
 
-1. `resolve-library-id` for `openai/codex` (or whichever Codex umbrella name resolves).
-2. `query-docs` for `agents-md-format`, `skill-frontmatter`, `plugin-manifest`.
-3. Compare returned shape to this doc; if drift, update the templates and bump `version:` in `AGENTS.md` frontmatter.
-4. Re-run `tests/scaffold.test.ts` T-12.
+- **2026-05-10 (cached, conservative)** — initial cache pinned to a conservative intersection of SKILL.md + AGENTS.md frontmatter conventions. TAG:INFERRED because Context7 wasn't reachable from the build-loop subagent session.
+- **2026-05-10 (this revision)** — Context7 re-fetched from the parent Claude Code session; the authoritative Codex spec was retrieved (`/openai/codex` at `codex-rs/core/gpt_5_1_prompt.md`). Found drift: AGENTS.md does NOT take frontmatter. Templates corrected; T-12 assertion updated.
 
-Until then, the conservative spec above keeps F-09 shippable without misrepresenting what we know vs. what we inferred.
+If the Codex CLI repo updates its `AGENTS.md` semantics again, re-run `mcp__plugin_context7_context7__resolve-library-id` for "Codex CLI" then `query-docs` for "AGENTS.md format" and reconcile this file + the template.
