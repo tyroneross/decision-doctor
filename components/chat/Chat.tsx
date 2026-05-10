@@ -474,13 +474,7 @@ function DecisionCard({
 
           {topReducer.artifact.promptText && (
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => copyToClipboard(topReducer.artifact.promptText ?? "")}
-                className="ease-soft grad-skill inline-flex h-10 items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-white hover:-translate-y-0.5"
-              >
-                📋 Copy prompt
-              </button>
+              <CopyButton text={topReducer.artifact.promptText} />
               <Link
                 href={`/app/decisions/${decision.decisionId}`}
                 className="ease-soft inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-rule bg-white text-[13px] font-semibold text-ink-900 hover:border-cat-skill"
@@ -635,10 +629,54 @@ function DecisionCard({
   );
 }
 
-// Best-effort clipboard write — silently no-ops in non-secure contexts.
-function copyToClipboard(text: string) {
-  if (!text || typeof navigator === "undefined") return;
-  navigator.clipboard?.writeText(text).catch(() => {
-    /* user can long-press the <pre> and copy manually */
-  });
+// Width-stable copy button with brief success choreography.
+// Mirrors the RecommendationView's CopyPromptButton — kept inline here so
+// the chat bundle doesn't pull the heavier RecommendationView graph.
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const onClick = () => {
+    if (!text || typeof navigator === "undefined") return;
+    navigator.clipboard
+      ?.writeText(text)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      })
+      .catch(() => {
+        /* user can long-press the <pre> and copy manually */
+      });
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={copied ? "Prompt copied to clipboard" : "Copy prompt"}
+      className={
+        "ease-soft inline-flex h-10 items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-white hover:-translate-y-0.5 " +
+        (copied ? "bg-conf-strong" : "grad-skill")
+      }
+    >
+      <span className="inline-flex w-[110px] items-center justify-center">
+        {copied ? (
+          <span className="dd-fade-up inline-flex items-center gap-1.5">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Copied
+          </span>
+        ) : (
+          <span>📋 Copy prompt</span>
+        )}
+      </span>
+    </button>
+  );
 }

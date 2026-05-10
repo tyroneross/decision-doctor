@@ -486,15 +486,30 @@ function CopyPromptButton({
         /* ignore */
       });
   };
+  // Width-stable label slot so the button doesn't twitch between states.
+  const compactLabel = (
+    <span className="inline-flex w-[88px] items-center justify-center">
+      {copied ? (
+        <span className="dd-fade-up inline-flex items-center gap-1">
+          <CheckIcon /> Copied
+        </span>
+      ) : (
+        <span>Copy prompt</span>
+      )}
+    </span>
+  );
   if (variant === "compact") {
     return (
       <button
         type="button"
         onClick={onClick}
-        aria-live="polite"
-        className="ease-soft grad-coral mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-white hover:-translate-y-0.5"
+        aria-label={copied ? "Prompt copied to clipboard" : "Copy prompt"}
+        className={
+          "ease-soft mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-white hover:-translate-y-0.5 " +
+          (copied ? "bg-conf-strong" : "grad-coral")
+        }
       >
-        {copied ? "✓ Copied" : "Copy prompt"}
+        {compactLabel}
       </button>
     );
   }
@@ -503,10 +518,21 @@ function CopyPromptButton({
       <button
         type="button"
         onClick={onClick}
-        aria-live="polite"
-        className="ease-soft grad-skill inline-flex h-10 items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-white hover:-translate-y-0.5"
+        aria-label={copied ? "Prompt copied to clipboard" : "Copy prompt"}
+        className={
+          "ease-soft inline-flex h-10 items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-white hover:-translate-y-0.5 " +
+          (copied ? "bg-conf-strong" : "grad-skill")
+        }
       >
-        {copied ? "✓ Copied" : "📋 Copy prompt"}
+        <span className="inline-flex w-[120px] items-center justify-center">
+          {copied ? (
+            <span className="dd-fade-up inline-flex items-center gap-1.5">
+              <CheckIcon /> Copied to clipboard
+            </span>
+          ) : (
+            <span>📋 Copy prompt</span>
+          )}
+        </span>
       </button>
       <button
         type="button"
@@ -526,6 +552,23 @@ function CopyPromptButton({
         ▶️ Try it
       </button>
     </div>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
   );
 }
 
