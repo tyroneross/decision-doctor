@@ -121,12 +121,20 @@ export function RecommendationView({ row }: { row: Decision }) {
             <p className="text-[11px] font-semibold uppercase tracking-[.14em] opacity-80 sm:text-[12px]">
               What we built · primary outcome
             </p>
-            <p className="mt-3 text-[44px] font-semibold leading-[.95] tracking-tight sm:text-[56px] md:text-[64px]">
-              🕐 {formatHrs(hoursBack)}/wk back
-            </p>
-            <p className="mt-3 max-w-xl text-[16px] leading-snug opacity-95 sm:text-[18px]">
-              {rec.option}
-            </p>
+            {hoursBack > 0 ? (
+              <>
+                <p className="mt-3 text-[44px] font-semibold leading-[.95] tracking-tight sm:text-[56px] md:text-[64px]">
+                  🕐 {formatHrs(hoursBack)}/wk back
+                </p>
+                <p className="mt-3 max-w-xl text-[16px] leading-snug opacity-95 sm:text-[18px]">
+                  {rec.option}
+                </p>
+              </>
+            ) : (
+              <p className="mt-3 text-[32px] font-semibold leading-tight tracking-tight sm:text-[40px]">
+                {rec.option}
+              </p>
+            )}
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-white/20 px-2.5 text-[12px] font-semibold backdrop-blur">
                 {band.icon} {band.label} · {rec.confidence}%
@@ -216,7 +224,7 @@ export function RecommendationView({ row }: { row: Decision }) {
                 className={`mt-1.5 h-1 w-1 shrink-0 rounded-full ${cat.stripe}`}
               />
               <span>
-                Time saved: <strong>{formatHrs(hoursBack)}/week</strong>
+                {reducers.length} {reducers.length === 1 ? "skill" : "skills"} to ship this week
               </span>
             </li>
             <li className="flex items-start gap-2">
@@ -224,14 +232,18 @@ export function RecommendationView({ row }: { row: Decision }) {
                 aria-hidden
                 className={`mt-1.5 h-1 w-1 shrink-0 rounded-full ${cat.stripe}`}
               />
-              <span>{reducers.length} workload reducer{reducers.length === 1 ? "" : "s"} ready to ship</span>
+              <span>
+                {alternatives.filter((a) => a.eliminatedAtStage === 2).length > 0
+                  ? `${alternatives.filter((a) => a.eliminatedAtStage === 2).length} path${alternatives.filter((a) => a.eliminatedAtStage === 2).length === 1 ? "" : "s"} ruled out by your hard constraints`
+                  : `Compared against ${alternatives.length} alternative${alternatives.length === 1 ? "" : "s"}`}
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span
                 aria-hidden
                 className={`mt-1.5 h-1 w-1 shrink-0 rounded-full ${cat.stripe}`}
               />
-              <span>Confidence: {rec.confidence}/100 ({band.label.toLowerCase()})</span>
+              <span>Robust fallback queued — see card 3</span>
             </li>
           </ul>
         </article>

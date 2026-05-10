@@ -422,12 +422,20 @@ function DecisionCard({
         <p className="text-[11px] font-semibold uppercase tracking-[.14em] opacity-80">
           What we built · primary outcome
         </p>
-        <p className="mt-2 text-[40px] font-semibold leading-[.95] tracking-tight sm:text-[48px]">
-          🕐 {formatHrs(hoursBack)}/wk back
-        </p>
-        <p className="mt-2 max-w-xl text-[15px] leading-snug opacity-95 sm:text-[16px]">
-          {decision.recommendation.option}
-        </p>
+        {hoursBack > 0 ? (
+          <p className="mt-2 text-[40px] font-semibold leading-[.95] tracking-tight sm:text-[48px]">
+            🕐 {formatHrs(hoursBack)}/wk back
+          </p>
+        ) : (
+          <p className="mt-2 text-[28px] font-semibold leading-tight tracking-tight sm:text-[34px]">
+            {decision.recommendation.option}
+          </p>
+        )}
+        {hoursBack > 0 && (
+          <p className="mt-2 max-w-xl text-[15px] leading-snug opacity-95 sm:text-[16px]">
+            {decision.recommendation.option}
+          </p>
+        )}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-white/20 px-2.5 text-[12px] font-semibold backdrop-blur">
             {band.icon} {band.label} · {conf}%
