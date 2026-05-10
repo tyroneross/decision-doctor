@@ -175,6 +175,7 @@ P0 features ship for Round 1. Each feature: ID + size + needs satisfied + data p
 | **F-06** | Auth + decision history | S | U-06 | reads D-08; writes D-07 | T-06 |
 | **F-08** | **AI-feasibility scoring** — every `workloadReducer` carries `aiFeasibility: "skill" \| "plugin" \| "agent" \| "human"`; engine ranks reducers by impact × feasibility; UI surfaces feasibility chip on every reducer card | M | U-02, U-04 | writes D-03 (feasibility field) | T-11 |
 | **F-09** | **Skill/plugin scaffold generator** — for any reducer scored `"skill"` or `"plugin"`, engine emits paste-ready artifact compatible with Claude Code (`SKILL.md` w/ frontmatter, or `plugin.json` + dir layout) AND Codex (`AGENTS.md` block / matching plugin scaffold) | M | U-02, U-04 | writes D-03 (artifact field) | T-12 |
+| **F-10** | **AHP elicitation mode (opt-in alternative to Stage 1 LLM weights)** — pairwise comparison UI lets users set criterion weights themselves using Saaty 1–9 or coarsened 5-point scale; eigenvector math computes weights; Consistency Ratio (CR) flags contradictions and lets user revise. Best fit for high-trust SED/VDD decisions (e.g., "sell vs keep practice," "take insurance or not"). Routes into existing Stages 2–5; no downstream pipeline change. | S–M | U-01, U-02 | writes D-03 (`methodTrace.weightSource: "ahp"`) | T-13 |
 
 ### P0+ — Next step after core (was F-07)
 
@@ -216,6 +217,7 @@ P0 features ship for Round 1. Each feature: ID + size + needs satisfied + data p
 | T-10 | Per-user rate limit: 21st Groq call in 24h window from same user_id returns 429 | F-criteria, cost |
 | **T-11** | **AI-feasibility on every reducer.** Decision JSON has ≥3 `workloadReducers`; each has `aiFeasibility ∈ {"skill","plugin","agent","human"}`; rank order matches impact × feasibility (engine asserts deterministic tiebreaks); UI renders the feasibility chip on every reducer card. | **F-criteria** (F-08) |
 | **T-12** | **Scaffold generator round-trip.** For ≥1 reducer scored `"skill"`, engine emits a valid `SKILL.md` (frontmatter parses, body non-empty, ≤200 lines) AND a Codex-compatible `AGENTS.md` block referencing it. For ≥1 reducer scored `"plugin"`, engine emits a valid `plugin.json` + at least one component file (command/agent/skill/hook). Both formats validate against the official Claude Code plugin schema (`plugin.json` Zod) and load without errors when copied into a real plugin directory. | **F-criteria** (F-09) |
+| **T-13** | **AHP elicitation round-trip.** With user-supplied pairwise comparisons of n criteria (n ∈ [3, 8]), engine computes weights via principal eigenvector method; weights sum to 1 (±1e-6); textbook fixture (Saaty's 4-criteria example) produces the documented eigenvector within tolerance; Consistency Ratio (CR) computed correctly per Saaty (CR = CI / RI where CI = (λ_max − n)/(n−1)); CR > 0.10 surfaces a "your answers conflict" prompt with the most-inconsistent pair flagged. | **F-criteria** (F-10) |
 
 ### Data Points
 
