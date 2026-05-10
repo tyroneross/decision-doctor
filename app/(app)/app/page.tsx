@@ -13,10 +13,28 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { DecisionGuide } from "@/components/decision-guide";
 
-const TEMPLATE_LINKS = [
-  { label: "Capacity", href: "/app/decisions/new/capacity", active: true },
-  { label: "Pricing", href: "/app/decisions/new/pricing" },
-  { label: "Admin hire", href: "/app/decisions/new/admin-hire" },
+const ACCELERATORS = [
+  {
+    label: "Any decision",
+    href: "#chat",
+    active: true,
+    note: "Start in chat",
+  },
+  {
+    label: "Capacity",
+    href: "/app/decisions/new/capacity",
+    note: "Demand and panel load",
+  },
+  {
+    label: "Pricing",
+    href: "/app/decisions/new/pricing",
+    note: "Fees, access, retention",
+  },
+  {
+    label: "Admin help",
+    href: "/app/decisions/new/admin-hire",
+    note: "Delegation and automation",
+  },
 ];
 
 export default function AppPage() {
@@ -38,46 +56,57 @@ export default function AppPage() {
             <span>No PHI in v1</span>
           </div>
           <div className="simple-title">
-            <p className="eyebrow">Solo psychiatry practice</p>
-            <h1>Make one practice decision with visible math.</h1>
+            <p className="eyebrow">Chat-first decision support</p>
+            <h1>Ask about any practice decision.</h1>
             <p>
-              Ask the question, confirm the path, and review one recommendation
-              with alternatives and next actions.
+              Decision Doctor turns free-text questions into a structured
+              recommendation, visible math, and AI workflow ideas that free
+              capacity.
             </p>
           </div>
           <div className="simple-actions">
-            <Link className="primary-button" href="/app/decisions/new/capacity">
-              <span>Start intake</span>
+            <a className="primary-button" href="#chat">
+              <span>Start chat</span>
               <ArrowRight size={18} aria-hidden="true" />
-            </Link>
-            <a className="secondary-button" href="#recommendation">
-              Preview result
+            </a>
+            <a className="secondary-button" href="#automation">
+              Find AI leverage
             </a>
           </div>
         </header>
 
-        <nav className="template-strip" aria-label="Decision templates">
-          {TEMPLATE_LINKS.map((template) => (
-            <Link
-              className={
-                template.active ? "template-pill active" : "template-pill"
-              }
-              href={template.href}
-              key={template.label}
-            >
-              {template.label}
-            </Link>
-          ))}
-        </nav>
+        <section className="accelerator-bar" aria-label="Decision accelerators">
+          <div>
+            <p className="eyebrow">Researched accelerators</p>
+            <p>
+              Capacity, pricing, and admin help are fast paths. Chat still
+              handles a decision that does not fit a template.
+            </p>
+          </div>
+          <nav className="template-strip" aria-label="Decision accelerators">
+            {ACCELERATORS.map((template) => (
+              <Link
+                className={
+                  template.active ? "template-pill active" : "template-pill"
+                }
+                href={template.href}
+                key={template.label}
+              >
+                <strong>{template.label}</strong>
+                <small>{template.note}</small>
+              </Link>
+            ))}
+          </nav>
+        </section>
 
         <div className="decision-grid">
-          <section className="panel entry-panel" id="new-decision">
+          <section className="panel entry-panel" id="chat">
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Step 1</p>
-                <h3>Ask the decision question.</h3>
+                <h3>Chat through the decision.</h3>
               </div>
-              <span className="quiet-badge">1 step</span>
+              <span className="quiet-badge">Any type</span>
             </div>
             <DecisionGuide />
           </section>
@@ -97,8 +126,8 @@ export default function AppPage() {
               </div>
               <h2>Recommended: cap new intakes for 14 days.</h2>
               <p>
-                This protects clinician capacity while preserving access
-                through scheduled consult review slots.
+                The chat routed this to the capacity model because the question
+                touches demand, access, clinician hours, and reversibility.
               </p>
             </div>
             <div className="recommendation-bottom">
@@ -111,7 +140,7 @@ export default function AppPage() {
                 </div>
               </div>
               <Link className="primary-button" href="/app/decisions/new/capacity">
-                <span>Run this decision</span>
+                <span>Run guided intake</span>
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
             </div>
@@ -122,7 +151,7 @@ export default function AppPage() {
           <div className="method-header">
             <div>
               <p className="eyebrow">Step 2</p>
-              <h2>Check the work before saving.</h2>
+              <h2>Check the math and capacity gains.</h2>
             </div>
             <span className="status-pill success">
               <CheckCircle2 size={15} aria-hidden="true" />
@@ -166,28 +195,31 @@ export default function AppPage() {
               </div>
             </details>
 
-            <div className="reducer-section">
+            <div className="reducer-section" id="automation">
               <div className="panel-heading compact">
                 <div>
-                  <p className="eyebrow">Action support</p>
-                  <h3>Use only the reducers that save work.</h3>
+                  <p className="eyebrow">AI leverage scan</p>
+                  <h3>Free capacity without adding clinical hours.</h3>
                 </div>
               </div>
-              <div className="reducer-list" aria-label="Workload reducers">
+              <div className="reducer-list" aria-label="AI workflow ideas">
                 <ReducerCard
                   icon={<Mail size={20} aria-hidden="true" />}
                   label="Prompt"
-                  title="Waitlist message"
+                  title="Waitlist reply draft"
+                  body="Explain the pause, review window, and next check-in."
                 />
                 <ReducerCard
                   icon={<ClipboardCheck size={20} aria-hidden="true" />}
                   label="Playbook"
-                  title="Two-week playbook"
+                  title="Two-week triage script"
+                  body="Sort consults by fit, urgency, and referral source."
                 />
                 <ReducerCard
                   icon={<CalendarClock size={20} aria-hidden="true" />}
-                  label="Calendar"
+                  label="MCP hook"
                   title="Review block"
+                  body="Create a calendar block to reopen capacity if assumptions shift."
                 />
               </div>
             </div>
@@ -239,10 +271,12 @@ function ReducerCard({
   icon,
   label,
   title,
+  body,
 }: {
   icon: ReactNode;
   label: string;
   title: string;
+  body: string;
 }) {
   return (
     <article className="reducer-card">
@@ -251,7 +285,7 @@ function ReducerCard({
         <span>{label}</span>
       </div>
       <h4>{title}</h4>
-      <p>Paste-ready support for the selected recommendation.</p>
+      <p>{body}</p>
     </article>
   );
 }

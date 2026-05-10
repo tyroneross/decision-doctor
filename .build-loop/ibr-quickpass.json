@@ -5,7 +5,8 @@
   "fail": [],
   "skipped_for_scope": [],
   "untested_surfaces": [
-    "app/(app)/app/page.tsx"
+    "app/(app)/app/page.tsx",
+    "components/decision-guide.tsx"
   ],
-  "duration_s": 2.53
+  "duration_s": 4.56
 }

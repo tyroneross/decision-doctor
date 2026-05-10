@@ -1,13 +1,18 @@
 {
-  "app-guide": {
+  "app-guide-capacity": {
     "target": "app/(app)/app/page.tsx",
-    "url": "http://127.0.0.1:3100/app",
+    "url": "http://127.0.0.1:3101/app",
     "tests": [
       {
         "name": "Guide a messy capacity question into the structured intake.",
         "steps": [
           {
             "screenshot": "app-guide-start"
+          },
+          {
+            "assert": {
+              "text": "Ask about any practice decision."
+            }
           },
           {
             "assert": {
@@ -39,6 +44,55 @@
           },
           {
             "screenshot": "app-guide-capacity-intake"
+          }
+        ]
+      }
+    ]
+  },
+  "app-guide-ai-workflow": {
+    "target": "app/(app)/app/page.tsx",
+    "url": "http://127.0.0.1:3101/app",
+    "tests": [
+      {
+        "name": "Guide a non-template AI workflow question without forcing a template.",
+        "steps": [
+          {
+            "screenshot": "app-guide-any-decision-start"
+          },
+          {
+            "assert": {
+              "text": "Chat still handles a decision that does not fit a template."
+            }
+          },
+          {
+            "fill": {
+              "target": "Decision question",
+              "value": "Where should I start using AI to reduce follow-up work and free two hours each week?"
+            }
+          },
+          {
+            "click": "Guide me"
+          },
+          {
+            "wait": 800
+          },
+          {
+            "assert": {
+              "text": "AI workflow opportunity framework"
+            }
+          },
+          {
+            "assert": {
+              "text": "Workflow triage prompt"
+            }
+          },
+          {
+            "assert": {
+              "text": "No PHI is needed"
+            }
+          },
+          {
+            "screenshot": "app-guide-ai-workflow"
           }
         ]
       }

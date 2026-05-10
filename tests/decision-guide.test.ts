@@ -16,6 +16,10 @@ describe("decision question guide", () => {
     expect(result.nextQuestions.map((item) => item.fieldId)).toContain(
       "weeklyVisitCount",
     );
+    expect(result.primaryQuestion?.chips).toContain("24-32");
+    expect(result.inferredAssumptions[0]?.topic).toBe("Primary risk");
+    expect(result.framework.methods.join(" ")).toMatch(/minimax-regret/i);
+    expect(result.framework.aiWorkflowIdeas[0]?.title).toMatch(/Waitlist/i);
   });
 
   it("guides a comfortable user with pricing language into pricing", () => {
@@ -31,6 +35,10 @@ describe("decision question guide", () => {
     expect(result.nextQuestions.map((item) => item.fieldId)).toContain(
       "currentFee",
     );
+    expect(result.progressLabel).toBe("1 of 3 intake anchors");
+    expect(result.framework.criteria.map((item) => item.id)).toContain(
+      "retention_risk",
+    );
   });
 
   it("guides an advanced user with delegation language into admin hire", () => {
@@ -44,20 +52,45 @@ describe("decision question guide", () => {
     expect(result.templateId).toBe("admin-hire");
     expect(result.plainAnswer).toMatch(/decision model/i);
     expect(result.simpleSteps.join(" ")).toMatch(/method trace/i);
+    expect(result.framework.decisionType).toBe("GDD");
+    expect(result.framework.aiWorkflowIdeas.map((item) => item.title)).toContain(
+      "Admin SOP generator",
+    );
   });
 
-  it("asks for clarification when the decision area is unclear", () => {
+  it("builds a custom framework when the decision area is unclear", () => {
     const result = guideDecisionQuestion({
       aiMaturity: "new_to_ai",
       question: "I need help deciding what to do next this week.",
     });
 
-    expect(result.status).toBe("needs_clarification");
+    expect(result.status).toBe("ready");
+    expect(result.templateId).toBeUndefined();
+    expect(result.framework.name).toBe("Custom practice decision framework");
+    expect(result.primaryQuestion?.chips).toContain("Capacity returned");
+    expect(result.chat.quickReplies.length).toBeGreaterThanOrEqual(3);
     expect(result.alternatives.map((item) => item.templateId).sort()).toEqual([
       "admin-hire",
       "capacity",
       "pricing",
     ]);
+  });
+
+  it("creates an AI workflow framework for non-template automation questions", () => {
+    const result = guideDecisionQuestion({
+      aiMaturity: "comfortable",
+      question:
+        "Where should I start using AI to reduce follow-up work and free two hours each week?",
+    });
+
+    expect(result.status).toBe("ready");
+    expect(result.templateId).toBeUndefined();
+    expect(result.framework.name).toBe("AI workflow opportunity framework");
+    expect(result.framework.decisionType).toBe("EDD");
+    expect(result.framework.methods.join(" ")).toMatch(/RGT-style/i);
+    expect(result.framework.aiWorkflowIdeas.map((item) => item.title)).toContain(
+      "Workflow triage prompt",
+    );
   });
 
   it("rejects PHI-shaped questions before template guidance", () => {

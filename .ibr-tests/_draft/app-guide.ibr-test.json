@@ -1,7 +1,7 @@
 {
   "app-guide-pricing": {
     "target": "app/(app)/app/page.tsx",
-    "url": "http://127.0.0.1:3100/app",
+    "url": "http://127.0.0.1:3101/app",
     "tests": [
       {
         "name": "Draft: guide pricing question to pricing intake.",
@@ -38,7 +38,7 @@
   },
   "app-guide-admin": {
     "target": "app/(app)/app/page.tsx",
-    "url": "http://127.0.0.1:3100/app",
+    "url": "http://127.0.0.1:3101/app",
     "tests": [
       {
         "name": "Draft: guide admin question to admin-hire intake.",

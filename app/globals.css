@@ -1241,7 +1241,12 @@ button {
 .guide-question,
 .guide-result,
 .guide-next,
-.guide-steps {
+.guide-steps,
+.guide-primary-question,
+.guide-assumptions,
+.guide-chat,
+.guide-framework,
+.guide-ai-ideas {
   display: grid;
   gap: 12px;
 }
@@ -1261,7 +1266,11 @@ button {
 .guide-heading h3,
 .guide-result h4,
 .guide-message strong,
-.guide-next strong {
+.guide-next strong,
+.guide-primary-question strong,
+.guide-assumptions strong,
+.guide-framework strong,
+.guide-chat-message span {
   margin: 0;
 }
 
@@ -1317,8 +1326,32 @@ button {
   font-weight: 760;
 }
 
+.guide-example {
+  align-items: flex-start;
+  cursor: pointer;
+  text-align: left;
+}
+
+.guide-example input {
+  margin-top: 3px;
+  accent-color: var(--mockup-teal, #167467);
+}
+
+.guide-example span {
+  display: grid;
+  gap: 2px;
+}
+
+.guide-example small {
+  color: inherit;
+  font-size: 0.72rem;
+  font-weight: 620;
+}
+
 .guide-example,
-.guide-submit {
+.guide-answer-chip,
+.guide-assumption button,
+.guide-chat button {
   cursor: pointer;
 }
 
@@ -1341,11 +1374,92 @@ button {
 
 .guide-submit {
   width: 100%;
+  text-align: center;
 }
 
 .guide-submit:disabled {
   cursor: not-allowed;
   opacity: 0.62;
+}
+
+.guide-primary-question {
+  border: 1px solid var(--mockup-strong-border, #bdd2cb);
+  border-radius: 8px;
+  background: var(--mockup-muted-surface, #edf4f1);
+  padding: 12px;
+}
+
+.guide-primary-question textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--mockup-border, #d9e4df);
+  border-radius: 8px;
+  background: var(--mockup-surface, #ffffff);
+  color: var(--mockup-text, #13201d);
+  padding: 10px;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.guide-progress {
+  color: var(--mockup-teal-dark, #0d544b);
+  font-size: 0.76rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.guide-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.guide-answer-chip {
+  min-height: 32px;
+  border: 1px solid var(--mockup-border, #d9e4df);
+  border-radius: 8px;
+  background: var(--mockup-surface, #ffffff);
+  color: var(--mockup-muted, #5b6d67);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 760;
+}
+
+.guide-answer-chip.active {
+  border-color: #badbd3;
+  background: var(--mockup-teal-soft, #dff2ed);
+  color: var(--mockup-teal-dark, #0d544b);
+}
+
+.guide-chat {
+  border-top: 1px solid var(--mockup-border, #d9e4df);
+  border-bottom: 1px solid var(--mockup-border, #d9e4df);
+  padding: 12px 0;
+}
+
+.guide-chat-message {
+  display: grid;
+  gap: 4px;
+  max-width: 92%;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.guide-chat-message.user {
+  justify-self: end;
+  background: #fff8df;
+}
+
+.guide-chat-message.assistant {
+  justify-self: start;
+  background: var(--mockup-muted-surface, #edf4f1);
+}
+
+.guide-chat-message span {
+  color: var(--mockup-teal-dark, #0d544b);
+  font-size: 0.75rem;
+  font-weight: 820;
 }
 
 .guide-result,
@@ -1375,7 +1489,12 @@ button {
 .guide-next span,
 .guide-next small,
 .guide-steps,
-.guide-safety {
+.guide-safety,
+.guide-assumption p,
+.guide-assumption small,
+.guide-chat-message p,
+.guide-framework p,
+.guide-method-list {
   color: var(--mockup-muted, #5b6d67);
   line-height: 1.45;
 }
@@ -1384,21 +1503,95 @@ button {
   margin: 0;
 }
 
-.guide-next {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.guide-chat-message p {
+  margin: 0;
 }
 
-.guide-next div {
+.guide-framework {
+  border-top: 1px solid var(--mockup-border, #d9e4df);
+  padding-top: 12px;
+}
+
+.guide-framework-grid {
   display: grid;
-  gap: 5px;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.guide-method-list {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.guide-ai-ideas {
+  margin-top: 8px;
+}
+
+.guide-ai-ideas article {
+  border: 1px solid var(--mockup-border, #d9e4df);
   border-radius: 8px;
-  background: var(--mockup-muted-surface, #edf4f1);
   padding: 10px;
+}
+
+.guide-ai-ideas article span {
+  display: inline-flex;
+  margin-bottom: 5px;
+  color: #72530a;
+  font-size: 0.72rem;
+  font-weight: 820;
+}
+
+.guide-ai-ideas article strong {
+  display: block;
+}
+
+.guide-next {
+  border-top: 1px solid var(--mockup-border, #d9e4df);
+  grid-template-columns: 1fr;
+  padding-top: 12px;
+}
+
+.guide-next > .guide-chip-row {
+  display: flex;
+  background: transparent;
+  padding: 0;
 }
 
 .guide-steps {
   margin: 0;
   padding-left: 20px;
+}
+
+.guide-assumption {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--mockup-border, #d9e4df);
+  border-radius: 8px;
+  background: var(--mockup-surface, #ffffff);
+  padding: 10px;
+}
+
+.guide-assumption span {
+  color: var(--mockup-text, #13201d);
+  font-weight: 820;
+}
+
+.guide-assumption p {
+  margin: 3px 0;
+}
+
+.guide-assumption button {
+  min-height: 32px;
+  border: 1px solid #e1c36d;
+  border-radius: 8px;
+  background: #fff8df;
+  color: #72530a;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 780;
 }
 
 .guide-safety {
@@ -1416,6 +1609,10 @@ button {
 
 @media (max-width: 760px) {
   .guide-next {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-framework-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1473,7 +1670,7 @@ button {
 .mockup-shell .simple-title h1 {
   max-width: 760px;
   margin: 0;
-  font-size: clamp(2.2rem, 5vw, 4.4rem);
+  font-size: 4.25rem;
   line-height: 0.98;
 }
 
@@ -1495,23 +1692,52 @@ button {
   width: 100%;
 }
 
+.mockup-shell .accelerator-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(420px, 1fr);
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.mockup-shell .accelerator-bar p:not(.eyebrow) {
+  max-width: 560px;
+  margin: 0;
+  color: var(--mockup-muted);
+  line-height: 1.45;
+}
+
 .mockup-shell .template-strip {
   gap: 8px;
-  margin-bottom: 16px;
   overflow-x: auto;
   padding-bottom: 2px;
 }
 
 .mockup-shell .template-pill {
-  min-height: 44px;
+  min-height: 58px;
+  min-width: 124px;
+  align-items: flex-start;
+  flex-direction: column;
   justify-content: center;
+  gap: 2px;
   border: 1px solid var(--mockup-border);
   border-radius: 8px;
   background: var(--mockup-surface);
   color: #3f514b;
-  padding: 0 14px;
+  padding: 9px 12px;
   font-weight: 760;
   white-space: nowrap;
+}
+
+.mockup-shell .template-pill strong,
+.mockup-shell .template-pill small {
+  display: block;
+}
+
+.mockup-shell .template-pill small {
+  color: var(--mockup-muted);
+  font-size: 0.72rem;
+  font-weight: 680;
 }
 
 .mockup-shell .template-pill.active {
@@ -1538,6 +1764,51 @@ button {
   gap: 14px;
 }
 
+.mockup-shell .decision-chat,
+.mockup-shell .chat-thread {
+  display: grid;
+  gap: 12px;
+}
+
+.mockup-shell .chat-bubble {
+  width: min(92%, 520px);
+  border: 1px solid var(--mockup-border);
+  border-radius: 8px;
+  background: var(--mockup-surface);
+  padding: 12px;
+}
+
+.mockup-shell .chat-bubble.user {
+  justify-self: end;
+  border-color: #badbd3;
+  background: var(--mockup-teal-soft);
+}
+
+.mockup-shell .chat-bubble strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--mockup-teal-dark);
+  font-size: 0.82rem;
+}
+
+.mockup-shell .chat-bubble p,
+.mockup-shell .route-note span {
+  margin: 0;
+  color: var(--mockup-muted);
+  line-height: 1.45;
+}
+
+.mockup-shell .route-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid #c9ded7;
+  border-radius: 8px;
+  background: var(--mockup-teal-soft);
+  color: var(--mockup-teal-dark);
+  padding: 10px;
+}
+
 .mockup-shell .method-panel {
   border: 1px solid var(--mockup-border);
   border-radius: 8px;
@@ -1555,7 +1826,12 @@ button {
 
 .mockup-shell .method-header h2 {
   margin: 0;
-  font-size: clamp(1.4rem, 2.4vw, 2rem);
+  font-size: 2rem;
+}
+
+.mockup-shell .recommendation-main h2 {
+  font-size: 3.65rem;
+  line-height: 1.05;
 }
 
 .mockup-shell .method-grid {
@@ -1582,20 +1858,18 @@ button {
   line-height: 1.45;
 }
 
-.guide-examples .guide-example {
+.mockup-shell .guide-examples .guide-example {
   align-items: flex-start;
-  flex-direction: column;
   justify-content: center;
   min-height: 58px;
-  cursor: default;
 }
 
-.guide-example strong,
-.guide-example small {
+.mockup-shell .guide-example strong,
+.mockup-shell .guide-example small {
   display: block;
 }
 
-.guide-example small {
+.mockup-shell .guide-example small {
   margin-top: 2px;
   color: var(--mockup-muted, #5b6d67);
   font-size: 0.75rem;
@@ -1604,15 +1878,28 @@ button {
 }
 
 @media (max-width: 1040px) {
+  .mockup-shell .accelerator-bar,
   .mockup-shell .decision-grid,
   .mockup-shell .method-grid {
     grid-template-columns: 1fr;
   }
+
+  .mockup-shell .simple-title h1 {
+    font-size: 3.35rem;
+  }
+
+  .mockup-shell .recommendation-main h2 {
+    font-size: 3.05rem;
+  }
 }
 
 @media (max-width: 760px) {
+  .mockup-shell {
+    overflow-x: hidden;
+  }
+
   .mockup-shell .simple-workspace {
-    width: min(100% - 28px, 1180px);
+    width: calc(100% - 28px);
     padding: 18px 0;
   }
 
@@ -1627,15 +1914,78 @@ button {
 
   .mockup-shell .simple-actions {
     margin-top: 16px;
+    width: 100%;
+  }
+
+  .mockup-shell .template-strip {
+    align-items: stretch;
   }
 
   .mockup-shell .simple-title h1,
   .mockup-shell .recommendation-main h2 {
-    font-size: clamp(2rem, 12vw, 3rem);
+    max-width: 100%;
+    overflow-wrap: break-word;
+    font-size: 2.45rem;
+    line-height: 1.05;
+  }
+
+  .mockup-shell .decision-grid,
+  .mockup-shell .method-grid,
+  .mockup-shell .panel,
+  .mockup-shell .recommendation-main,
+  .mockup-shell .method-panel,
+  .mockup-shell .guide-question textarea {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .mockup-shell .simple-actions .primary-button,
+  .mockup-shell .simple-actions .secondary-button,
+  .mockup-shell .panel,
+  .mockup-shell .recommendation-main,
+  .mockup-shell .method-panel {
+    width: min(100%, calc(100vw - 28px));
+  }
+
+  .mockup-shell .guide-question textarea,
+  .mockup-shell .guide-submit,
+  .mockup-shell .guide-link,
+  .mockup-shell .route-note,
+  .mockup-shell .guide-safety,
+  .mockup-shell .guide-result {
+    width: min(100%, calc(100vw - 66px));
+  }
+
+  .mockup-shell .guide-question textarea,
+  .mockup-shell .guide-safety span,
+  .mockup-shell .guide-result p,
+  .mockup-shell .guide-result-topline {
+    overflow-wrap: break-word;
+  }
+
+  .mockup-shell .guide-examples {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .mockup-shell .guide-examples .guide-example {
+    width: 100%;
+  }
+
+  .mockup-shell .guide-result-topline {
+    flex-wrap: wrap;
+  }
+
+  .mockup-shell .chat-bubble {
+    width: 100%;
   }
 
   .mockup-shell .method-header {
     display: block;
+  }
+
+  .mockup-shell .method-header h2 {
+    font-size: 1.55rem;
   }
 
   .mockup-shell .method-header .status-pill {
