@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "database_url_kind": "unpooled",
+  "pgvector_available": true,
+  "pgvector_error": null,
+  "pgvector_version": "0.8.0",
+  "available_extensions": {
+    "pg_cron": {
+      "default_version": "1.6",
+      "installed_version": null
+    },
+    "pg_search": {
+      "default_version": "0.15.26",
+      "installed_version": null
+    },
+    "pg_trgm": {
+      "default_version": "1.6",
+      "installed_version": null
+    },
+    "vector": {
+      "default_version": "0.8.0",
+      "installed_version": null
+    }
+  },
+  "checked_at": "2026-05-10T23:24:10.235Z"
+}
