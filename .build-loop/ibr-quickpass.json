@@ -1,0 +1,7 @@
+{
+  "status": "no_tests",
+  "suggested_action": "generate_for_changed_routes",
+  "untested_surfaces": ["/app"],
+  "scope": "changed",
+  "route": "http://127.0.0.1:3000/app"
+}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Decision Doctor">
+  <rect width="192" height="192" fill="#155e63"/>
+  <circle cx="96" cy="96" r="64" fill="#dceceb"/>
+  <path d="M70 96h52M96 70v52" stroke="#155e63" stroke-width="15" stroke-linecap="round"/>
+</svg>
