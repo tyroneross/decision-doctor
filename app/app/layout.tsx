@@ -2,6 +2,10 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
+import { decisions } from "@/lib/db/schema";
+import { runWithActor, withActor } from "@/lib/db/actor";
+import { getSessionActor } from "@/lib/auth-session";
+import { totalHoursSaved, formatHrs } from "@/lib/decision-display";
 import { SignOutButton } from "./_components/sign-out";
 import { ServiceWorkerRegister } from "./_components/sw-register";
 
@@ -23,6 +27,32 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .join("")
     .slice(0, 2) || "?";
 
+  // Compute the cumulative time-back metric for the nav ledger chip.
+  // Best-effort: failure here must NOT block layout render (auth gate
+  // is the load-bearing piece). Wrap in try/catch to degrade silently.
+  let totalHrs = 0;
+  try {
+    const actor = await getSessionActor();
+    if (actor) {
+      const rows = await runWithActor(
+        { userId: actor.userId, tenantId: actor.tenantId },
+        async () =>
+          withActor(async (tx) =>
+            tx
+              .select({ workloadReducers: decisions.workloadReducers })
+              .from(decisions)
+              .limit(50),
+          ),
+      );
+      totalHrs = rows.reduce<number>(
+        (sum, r) => sum + totalHoursSaved(r.workloadReducers),
+        0,
+      );
+    }
+  } catch {
+    // Silent degrade. Nav still renders; chip just hides.
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-cream">
       <header className="no-print border-b border-rule bg-cream-2/60 backdrop-blur">
@@ -30,28 +60,41 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           aria-label="Primary"
           className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:max-w-4xl"
         >
-          {/* Brand mark + name */}
-          <Link
-            href="/app/decisions"
-            className="ease-soft inline-flex items-center gap-2.5 text-[16px] font-semibold text-ink-900 sm:text-[17px]"
-          >
-            <span
-              aria-hidden
-              className="grad-coral flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-coral-press"
+          {/* Brand mark + ledger chip */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/app/decisions"
+              className="ease-soft inline-flex items-center gap-2.5 text-[16px] font-semibold text-ink-900 sm:text-[17px]"
             >
-              <svg
-                viewBox="0 0 24 24"
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
+              <span
+                aria-hidden
+                className="grad-coral flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-coral-press"
               >
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-              </svg>
-            </span>
-            <span className="hidden sm:inline">Decision Doctor</span>
-          </Link>
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                </svg>
+              </span>
+              <span className="hidden sm:inline">Decision Doctor</span>
+            </Link>
+            {/* Time-back chip — only shows when there's something to celebrate */}
+            {totalHrs > 0 && (
+              <Link
+                href="/app/decisions"
+                title="Cumulative time saved across all your decisions"
+                className="ease-soft hidden h-8 items-center gap-1.5 rounded-full bg-cat-cap-bg px-3 text-[12.5px] font-semibold text-cat-cap-deep hover:shadow-sm sm:inline-flex"
+              >
+                <span aria-hidden>🕐</span>
+                {formatHrs(totalHrs)}/wk back
+              </Link>
+            )}
+          </div>
 
           <div className="flex items-center gap-1.5 text-sm sm:gap-2">
             {/* PRIMARY CTA — leftmost in the action cluster, dominant weight */}
