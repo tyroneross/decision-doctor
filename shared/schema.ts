@@ -120,3 +120,89 @@ export const DecisionOutputSchema = z.object({
   destinations: z.array(DestinationSchema),
 });
 export type DecisionOutput = z.infer<typeof DecisionOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// Chat-first additions (per .build-loop/decisions/2026-05-10-research-digest.md)
+// ---------------------------------------------------------------------------
+
+export const ChatMessageSchema = z.object({
+  role: z.enum(["user", "assistant", "system"]),
+  content: z.string().max(4000),
+  // Optional chip choices the assistant offered with this turn — surfaced
+  // in the transcript so the user's pick is auditable.
+  chips: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
+  // Optional structured intake-state delta this turn produced (e.g. router
+  // committed a mode, or a clarifier extracted a numeric anchor).
+  delta: z.record(z.string(), z.unknown()).optional(),
+  timestamp: z.coerce.date(),
+});
+export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+
+export const DecisionModeSchema = z.enum([
+  "structured_enumerable",
+  "generic_structured",
+  "generative_design",
+  "values_dominant",
+]);
+export type DecisionMode = z.infer<typeof DecisionModeSchema>;
+
+// Chat-state stored alongside the decision row so the next turn can pick
+// up where the last left off (and so the user can see the conversation in
+// their history).
+export const ChatTranscriptSchema = z.object({
+  messages: z.array(ChatMessageSchema),
+  routerOutput: z
+    .object({
+      mode: DecisionModeSchema,
+      confidence: z.number(),
+      templateMatch: z.enum(["capacity", "pricing", "admin-hire"]).nullable(),
+      rationale: z.string(),
+    })
+    .optional(),
+  // Working intake state — fields the chat has extracted so far. When this
+  // matches a template's required fields, we trigger the engine.
+  extractedFields: z.record(z.string(), z.unknown()).default({}),
+  // What the system still needs before it can run the engine for the chosen mode.
+  pendingClarifications: z.array(z.string()).default([]),
+});
+export type ChatTranscript = z.infer<typeof ChatTranscriptSchema>;
+
+// Output shapes for the two new modes (structured_enumerable + generic_structured
+// continue to use DecisionOutputSchema above).
+//
+// Design brief (generative_design) — no ranking; describes a recommended pilot.
+export const DesignBriefSchema = z.object({
+  decisionId: z.string().uuid(),
+  decidedAt: z.coerce.date(),
+  mode: z.literal("generative_design"),
+  fundamentalObjective: z.string(), // What success looks like
+  constraints: z.array(z.string()), // What can't change
+  recommendedPilot: z.string(), // The single first-step recommendation
+  implementationSequence: z.array(z.string()).min(3).max(5), // 3-step sequence
+  workloadReducers: z.array(WorkloadReducerSchema).min(2), // Tools to deploy first
+  measureIn30Days: z.array(z.string()).min(1).max(4), // Metrics to watch
+  fallbackIfPilotFails: z.string(), // What to try if this doesn't work
+});
+export type DesignBrief = z.infer<typeof DesignBriefSchema>;
+
+// Values map (values_dominant) — no recommendation; surfaces what's at stake.
+export const ValuesMapSchema = z.object({
+  decisionId: z.string().uuid(),
+  decidedAt: z.coerce.date(),
+  mode: z.literal("values_dominant"),
+  fundamentalObjectives: z.array(z.string()).min(1),
+  keyTensions: z
+    .array(
+      z.object({
+        between: z.tuple([z.string(), z.string()]),
+        explanation: z.string(),
+      }),
+    )
+    .min(1),
+  dominantConstructs: z.array(z.string()), // Things the user keeps coming back to
+  unresolvedDimensions: z.array(z.string()).min(1), // What still needs answers
+  recommendedNextConversations: z.array(z.string()).min(1), // Who/what to talk to next
+});
+export type ValuesMap = z.infer<typeof ValuesMapSchema>;

@@ -40,13 +40,13 @@ export default function LandingPage() {
 
       <div className="px-6 mt-auto pt-10 pb-10">
         <Link
-          href="/sign-up"
-          className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-ink text-white font-medium min-h-[48px] min-w-[160px]"
+          href="/sign-up?next=/app/chat"
+          className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-ink text-white font-medium min-h-[48px] min-w-[200px]"
         >
-          Get started — it's free
+          Start a decision
         </Link>
         <p className="mt-3 text-xs text-ink-muted">
-          Takes 30 seconds. We never ask for patient information.
+          Free. ~5 minutes. Describe your decision in your own words — we never ask for patient information.
         </p>
       </div>
     </main>

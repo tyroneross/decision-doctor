@@ -5,7 +5,10 @@ import { authClient } from "@/lib/auth-client";
 
 type Mode = "magic" | "password" | "signup";
 
-export function SignInClient({ initialMode = "magic" }: { initialMode?: Mode } = {}) {
+export function SignInClient({
+  initialMode = "magic",
+  nextPath = "/app/chat",
+}: { initialMode?: Mode; nextPath?: string } = {}) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,20 +20,20 @@ export function SignInClient({ initialMode = "magic" }: { initialMode?: Mode } =
     setStatus({ kind: "loading" });
     try {
       if (mode === "magic") {
-        const { error } = await authClient.signIn.magicLink({ email, callbackURL: "/app" });
+        const { error } = await authClient.signIn.magicLink({ email, callbackURL: nextPath });
         if (error) throw new Error(error.message);
         setStatus({
           kind: "success",
           msg: "Check your email for the magic link. (In dev, check the server console too.)",
         });
       } else if (mode === "password") {
-        const { error } = await authClient.signIn.email({ email, password, callbackURL: "/app" });
+        const { error } = await authClient.signIn.email({ email, password, callbackURL: nextPath });
         if (error) throw new Error(error.message);
-        window.location.href = "/app";
+        window.location.href = nextPath;
       } else {
-        const { error } = await authClient.signUp.email({ email, password, name: name || email.split("@")[0] || "User", callbackURL: "/app" });
+        const { error } = await authClient.signUp.email({ email, password, name: name || email.split("@")[0] || "User", callbackURL: nextPath });
         if (error) throw new Error(error.message);
-        window.location.href = "/app";
+        window.location.href = nextPath;
       }
     } catch (err) {
       setStatus({ kind: "error", msg: (err as Error).message });

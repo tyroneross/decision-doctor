@@ -9,11 +9,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen flex flex-col">
       <header className="px-4 sm:px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-canvas-raised no-print">
-        <Link href="/app" className="text-sm font-semibold text-ink">
+        <Link href="/app/chat" className="text-sm font-semibold text-ink">
           Decision Doctor
         </Link>
         <nav className="flex items-center gap-3 text-sm">
-          <Link href="/app/history" className="text-ink-subtle hover:text-ink">
+          <Link href="/app/chat" className="text-ink-subtle hover:text-ink min-h-[44px] inline-flex items-center">
+            New
+          </Link>
+          <Link href="/app/history" className="text-ink-subtle hover:text-ink min-h-[44px] inline-flex items-center">
             History
           </Link>
           <SignOutButton />

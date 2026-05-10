@@ -122,6 +122,15 @@ export const decisions = pgTable(
     methodTrace: jsonb("method_trace"),
     workloadReducers: jsonb("workload_reducers"),
     destinations: jsonb("destinations"),
+    // Chat-first additions (additive — Branch A's queries unaffected).
+    // mode: which decision-mode router classified this conversation into.
+    //   structured_enumerable | generic_structured | generative_design | values_dominant
+    // null on legacy template-form rows.
+    mode: text("mode"),
+    // transcript: ordered conversation turns the chat collected before producing
+    // the recommendation. Shape: { messages: [{role, content, timestamp}], state: {...} }
+    // Optional for non-chat decisions (legacy template-form path).
+    transcript: jsonb("transcript"),
     status: text("status", { enum: ["pending", "complete", "failed"] })
       .notNull()
       .default("pending"),
