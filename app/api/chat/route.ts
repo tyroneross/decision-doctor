@@ -37,6 +37,14 @@ const MessageSchema = z.object({
 
 const RequestSchema = z.object({
   messages: z.array(MessageSchema).min(1).max(40),
+  /**
+   * E5 — Stay-with-original-question fallback. When `true`, the Stage-0
+   * decline-and-reframe branch is skipped so the user's question runs
+   * through the closest-fit engine pipeline anyway. Recorded in the
+   * methodTrace so we can tell user-overridden runs from policy-aligned
+   * runs in evals.
+   */
+  userOverrode: z.boolean().optional(),
 });
 
 const FieldValueSchema = z.union([
@@ -149,7 +157,13 @@ export async function POST(req: Request) {
     classifierResult = null;
   }
 
-  if (classifierResult && shouldDeclineAndReframe(classifierResult.classification)) {
+  // E5: user explicitly requested "run it anyway" — skip decline-and-reframe.
+  const userOverrode = parsed.data.userOverrode === true;
+  if (
+    !userOverrode &&
+    classifierResult &&
+    shouldDeclineAndReframe(classifierResult.classification)
+  ) {
     const reframe = reframeMessageFor(classifierResult.classification);
     return NextResponse.json({
       status: "asking", // stay in conversation
@@ -179,6 +193,26 @@ export async function POST(req: Request) {
       },
       { status: 200 },
     );
+  }
+
+  // E5: when the user overrode the decline-and-reframe path, prepend a
+  // Stage-0 trace entry so the persisted decision row carries an audit
+  // trail. The original classification (when present) is included for
+  // eval visibility.
+  if (userOverrode) {
+    const classification = classifierResult?.classification ?? "unknown";
+    engineResult.output.methodTrace = [
+      {
+        stage: 0,
+        name: "classifier",
+        output: {
+          userOverrode: true,
+          classification,
+          note: `Stage-0 classifier flagged this as "${classification}" but the user chose "Stay with original question". Engine routed to the closest-fit template.`,
+        },
+      },
+      ...engineResult.output.methodTrace,
+    ];
   }
 
   // Persist + audit (best-effort)

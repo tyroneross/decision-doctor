@@ -68,6 +68,10 @@ export function Chat() {
   // question is out of scope (Type 2/3/5/etc). Two short canned reframes
   // the user can tap to redirect the conversation to a Type-4 decision.
   const [reframeChips, setReframeChips] = useState<string[] | null>(null);
+  // E5: remember the user's original question so the "Stay with original"
+  // chip can re-submit it with userOverrode=true and bypass the classifier
+  // decline path. Cleared whenever the chips are dismissed.
+  const [originalQuestion, setOriginalQuestion] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   // Restore prior thread on mount.
@@ -105,14 +109,20 @@ export function Chat() {
     setErr(null);
     setInput("");
     setReframeChips(null);
+    setOriginalQuestion(null);
     if (typeof window !== "undefined") window.localStorage.removeItem(STORAGE_KEY);
   };
 
   // SINGLE submit path — replaces the previous duplicate `send` + `sendQuick`
   // (audit item #9 in the goal). Accepts an optional override text so the
   // suggested-prompt chips can submit before React state has flushed.
+  //
+  // E5: `userOverrode` short-circuits the Stage-0 classifier on the server,
+  // letting the user's original out-of-scope question run through the
+  // closest-fit pipeline anyway. The methodTrace records this so evals can
+  // tell user-overridden from policy-aligned runs.
   const runQuery = useCallback(
-    async (overrideText?: string) => {
+    async (overrideText?: string, options?: { userOverrode?: boolean }) => {
       const text = (overrideText ?? input).trim();
       if (!text || busy) return;
       setErr(null);
@@ -129,7 +139,10 @@ export function Chat() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ messages: next }),
+          body: JSON.stringify({
+            messages: next,
+            ...(options?.userOverrode ? { userOverrode: true } : {}),
+          }),
         });
 
         if (res.status === 401) {
@@ -168,11 +181,20 @@ export function Chat() {
           templateId: data.status === "ready" ? data.templateId : undefined,
         }));
         // F-11: surface reframe chips when present (else clear stale ones).
-        setReframeChips(
-          data.status === "asking" && Array.isArray(data.reframeChips) && data.reframeChips.length > 0
-            ? data.reframeChips
-            : null,
-        );
+        const showingChips =
+          data.status === "asking" &&
+          Array.isArray(data.reframeChips) &&
+          data.reframeChips.length > 0;
+        setReframeChips(showingChips ? data.reframeChips! : null);
+        // E5: when chips appear, remember the user's original message so
+        // the "Stay with original question" chip can re-send it with the
+        // server-side classifier override. Clear once we move past the
+        // decline path (chips dismissed OR decision rendered).
+        if (showingChips) {
+          setOriginalQuestion(text);
+        } else {
+          setOriginalQuestion(null);
+        }
       } catch (e) {
         setErr(e instanceof Error ? e.message : String(e));
       } finally {
@@ -296,7 +318,14 @@ export function Chat() {
         {/* F-11 decline-and-reframe chips — surfaced when the classifier
             redirected an out-of-scope question (diagnostic / predictive /
             optimization / descriptive / sequential). Tapping one re-runs
-            the conversation with the reframed prompt as the next user msg. */}
+            the conversation with the reframed prompt as the next user msg.
+
+            E5 — Stay-with-original-question fallback: a third chip is
+            always present alongside the reframe options so the user
+            isn't trapped. Tapping it re-sends their ORIGINAL question
+            with userOverrode=true, which short-circuits the classifier
+            decline server-side and runs the closest-fit pipeline. The
+            override is recorded in methodTrace. */}
         {reframeChips && reframeChips.length > 0 && !busy && (
           <li className="ml-0 flex flex-wrap gap-2 sm:ml-11" aria-label="Reframe suggestions">
             {reframeChips.map((t) => (
@@ -312,6 +341,22 @@ export function Chat() {
                 {t}
               </button>
             ))}
+            {originalQuestion && (
+              <button
+                key="__user-override"
+                type="button"
+                onClick={() => {
+                  const q = originalQuestion;
+                  setReframeChips(null);
+                  setOriginalQuestion(null);
+                  runQuery(q, { userOverrode: true });
+                }}
+                aria-label="Run my original question anyway"
+                className="dd-fade-up ease-soft min-h-11 rounded-full border border-rule bg-white px-4 text-[13.5px] font-semibold text-ink-700 shadow-sm hover:-translate-y-0.5 hover:border-ink-200 hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+              >
+                Stay with my original question
+              </button>
+            )}
           </li>
         )}
 
