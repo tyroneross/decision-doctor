@@ -3,9 +3,20 @@
 
 import { z } from "zod";
 
+// Coerce empty strings to undefined so .optional() works for blank optional vars.
+const optionalUrl = z
+  .string()
+  .transform((v) => (v === "" ? undefined : v))
+  .pipe(z.string().url().optional());
+const optionalString = z
+  .string()
+  .transform((v) => (v === "" ? undefined : v))
+  .pipe(z.string().optional());
+
 const envSchema = z.object({
   // Database (Neon)
   DATABASE_URL: z.string().url(),
+  DATABASE_URL_UNPOOLED: optionalUrl,
 
   // Better Auth
   BETTER_AUTH_SECRET: z.string().min(32, "Generate with: openssl rand -base64 32"),
@@ -20,14 +31,14 @@ const envSchema = z.object({
   GROQ_MODEL: z.string().default("openai/gpt-oss-120b"),
 
   // Observability (optional)
-  SENTRY_DSN: z.string().optional(),
+  SENTRY_DSN: optionalString,
   LOG_LEVEL: z
     .enum(["trace", "debug", "info", "warn", "error", "fatal"])
     .default("info"),
 
   // Rate limiter (optional in dev)
-  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
-  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+  UPSTASH_REDIS_REST_URL: optionalUrl,
+  UPSTASH_REDIS_REST_TOKEN: optionalString,
 });
 
 const parsed = envSchema.safeParse(process.env);
