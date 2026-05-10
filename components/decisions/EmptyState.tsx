@@ -28,14 +28,15 @@ export function EmptyState() {
             an AI-feasibility score for each, and a paste-ready skill or
             playbook for the top one. Time comes back this week, not "someday."
           </p>
-          <div className="mt-5 flex flex-wrap gap-2.5">
+          <div className="mt-5">
+            {/* Single dominant CTA — Hick's law / NN/g first-run pattern */}
             <Link
               href="/app/chat"
-              className="ease-soft grad-coral inline-flex h-11 items-center gap-1.5 rounded-full px-5 text-[14px] font-medium text-white shadow-coral-press hover:-translate-y-0.5 hover:shadow-coral-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+              className="ease-soft grad-coral inline-flex h-12 items-center gap-2 rounded-full px-6 text-[15px] font-semibold text-white shadow-coral-press hover:-translate-y-0.5 hover:shadow-coral-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
             >
               <svg
                 viewBox="0 0 24 24"
-                className="h-4 w-4"
+                className="h-5 w-5"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2.5"
@@ -46,12 +47,15 @@ export function EmptyState() {
               </svg>
               Start a decision
             </Link>
-            <Link
-              href="/app/decisions/new"
-              className="ease-soft inline-flex h-11 items-center rounded-full border border-rule bg-white px-4 text-[14px] font-medium text-ink-700 hover:border-coral hover:text-coral"
-            >
-              Or pick a template
-            </Link>
+            <p className="mt-2.5 text-[12.5px] text-ink-500">
+              Already know the shape of it?{" "}
+              <Link
+                href="/app/decisions/new"
+                className="font-semibold text-ink-700 underline-offset-2 hover:text-coral hover:underline"
+              >
+                Pick a template instead →
+              </Link>
+            </p>
           </div>
         </div>
       </article>

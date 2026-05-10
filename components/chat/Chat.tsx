@@ -190,6 +190,15 @@ export function Chat() {
             AI-feasibility score for each, and a paste-ready skill or playbook for
             the top one — so the time comes back this week, not "someday."
           </p>
+          <p className="mt-3 text-[12.5px] text-ink-500">
+            Already know the shape of it?{" "}
+            <Link
+              href="/app/decisions/new"
+              className="font-semibold text-ink-700 underline-offset-2 hover:text-coral hover:underline"
+            >
+              Pick a template instead →
+            </Link>
+          </p>
         </article>
       )}
 
