@@ -37,7 +37,7 @@ export default async function HistoryPage() {
         Most recent first. Tap to re-read the math.
       </p>
       {rows.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-center text-ink-muted">
+        <div className="mt-6 rounded-2xl border border-dashed border-border-strong p-6 text-center text-ink-muted">
           You haven't made a decision yet.
           <div className="mt-3">
             <Link
@@ -49,14 +49,14 @@ export default async function HistoryPage() {
           </div>
         </div>
       ) : (
-        <ul className="mt-6 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-canvas-raised">
+        <ul className="mt-6 divide-y divide-border rounded-2xl border border-border bg-canvas-raised">
           {rows.map((d) => {
             const rec = d.recommendation as { option?: string } | null;
             return (
               <li key={d.id}>
                 <Link
                   href={`/app/decisions/${d.id}`}
-                  className="block p-4 hover:bg-slate-50"
+                  className="block p-4 hover:bg-canvas-sunken"
                 >
                   <div className="text-xs text-ink-muted uppercase tracking-wide">
                     {d.templateId}

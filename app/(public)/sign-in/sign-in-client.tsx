@@ -42,7 +42,7 @@ export function SignInClient({
 
   return (
     <div className="mt-6">
-      <div className="flex gap-1 text-xs mb-4 border-b border-slate-200">
+      <div className="flex gap-1 text-xs mb-4 border-b border-border">
         <Tab active={mode === "magic"} onClick={() => setMode("magic")}>Magic link</Tab>
         <Tab active={mode === "password"} onClick={() => setMode("password")}>Password</Tab>
         <Tab active={mode === "signup"} onClick={() => setMode("signup")}>Sign up</Tab>
@@ -54,7 +54,7 @@ export function SignInClient({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border-slate-300 focus:border-ink focus:ring-ink min-h-[44px]"
+              className="w-full rounded-lg border-border-strong focus:border-ink focus:ring-ink min-h-[44px]"
               autoComplete="name"
             />
           </Field>
@@ -65,7 +65,7 @@ export function SignInClient({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border-slate-300 focus:border-ink focus:ring-ink min-h-[44px]"
+            className="w-full rounded-lg border-border-strong focus:border-ink focus:ring-ink min-h-[44px]"
             autoComplete="email"
           />
         </Field>
@@ -77,7 +77,7 @@ export function SignInClient({
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border-slate-300 focus:border-ink focus:ring-ink min-h-[44px]"
+              className="w-full rounded-lg border-border-strong focus:border-ink focus:ring-ink min-h-[44px]"
               autoComplete={mode === "signup" ? "new-password" : "current-password"}
             />
             <div className="mt-1 text-xs text-ink-muted">8 characters minimum.</div>

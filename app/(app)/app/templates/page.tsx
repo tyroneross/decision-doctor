@@ -24,7 +24,7 @@ export default function TemplateSelectorPage() {
           <li key={t.id}>
             <Link
               href={`/app/decisions/new/${t.id}`}
-              className="block rounded-2xl border border-slate-200 bg-canvas-raised p-5 hover:border-ink min-h-[120px]"
+              className="block rounded-2xl border border-border bg-canvas-raised p-5 hover:border-ink min-h-[120px]"
             >
               <div className="text-base font-semibold">{t.title}</div>
               <div className="mt-1 text-sm text-ink-subtle">{t.oneLine}</div>

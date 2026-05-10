@@ -207,7 +207,7 @@ export function IntakeForm({ templateId, fields, title }: Props) {
   return (
     <form onSubmit={submit} className="mt-4 space-y-5">
       {showHint && (
-        <div className="rounded-xl bg-slate-100 px-4 py-3 text-sm text-ink-subtle flex items-start justify-between gap-3">
+        <div className="rounded-xl bg-canvas-sunken px-4 py-3 text-sm text-ink-subtle flex items-start justify-between gap-3">
           <div>
             This takes ~5 minutes. Your answers stay on this device until you submit.
             We never accept patient names or other identifying info.
@@ -274,7 +274,7 @@ export function IntakeForm({ templateId, fields, title }: Props) {
         );
       })}
 
-      <div className="sticky bottom-0 left-0 right-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-canvas-raised/95 backdrop-blur border-t border-slate-200 flex flex-col gap-2 no-print">
+      <div className="sticky bottom-0 left-0 right-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-canvas-raised/95 backdrop-blur border-t border-border flex flex-col gap-2 no-print">
         <button
           type="submit"
           disabled={status.kind === "submitting"}
@@ -311,7 +311,7 @@ function FieldInput({
   value: unknown;
   onChange: (v: unknown) => void;
 }) {
-  const baseInput = "w-full rounded-lg border-slate-300 focus:border-ink focus:ring-ink min-h-[44px]";
+  const baseInput = "w-full rounded-lg border-border-strong focus:border-ink focus:ring-ink min-h-[44px]";
 
   if (field.kind.type === "number") {
     return (
@@ -376,11 +376,11 @@ function FieldInput({
           onClick={dec}
           disabled={current <= k.min}
           aria-label="Decrease"
-          className="w-12 h-12 rounded-lg border border-slate-300 text-xl text-ink disabled:opacity-40"
+          className="w-12 h-12 rounded-lg border border-border-strong text-xl text-ink disabled:opacity-40"
         >
           −
         </button>
-        <div className="flex-1 flex items-center justify-center rounded-lg border border-slate-300 bg-canvas-raised">
+        <div className="flex-1 flex items-center justify-center rounded-lg border border-border-strong bg-canvas-raised">
           <span className="text-2xl font-semibold tabular-nums text-ink">
             {current}
             {k.unit && <span className="text-sm font-normal text-ink-muted ml-1">{k.unit}</span>}
@@ -391,7 +391,7 @@ function FieldInput({
           onClick={inc}
           disabled={current >= k.max}
           aria-label="Increase"
-          className="w-12 h-12 rounded-lg border border-slate-300 text-xl text-ink disabled:opacity-40"
+          className="w-12 h-12 rounded-lg border border-border-strong text-xl text-ink disabled:opacity-40"
         >
           +
         </button>
@@ -481,7 +481,7 @@ function FieldInput({
               key={o.value}
               type="button"
               className={`px-3 py-2 rounded-full border text-sm min-h-[36px] ${
-                on ? "bg-ink text-white border-ink" : "bg-canvas-raised border-slate-300 text-ink-subtle"
+                on ? "bg-ink text-white border-ink" : "bg-canvas-raised border-border-strong text-ink-subtle"
               }`}
               onClick={() => {
                 const next = on ? arr.filter((v) => v !== o.value) : [...arr, o.value];
@@ -507,7 +507,7 @@ function FieldInput({
             key={opt.v}
             type="button"
             className={`px-4 py-2 rounded-full border text-sm min-h-[44px] flex-1 ${
-              v === opt.v ? "bg-ink text-white border-ink" : "bg-canvas-raised border-slate-300 text-ink-subtle"
+              v === opt.v ? "bg-ink text-white border-ink" : "bg-canvas-raised border-border-strong text-ink-subtle"
             }`}
             onClick={() => onChange(opt.v === "yes")}
           >

@@ -56,7 +56,7 @@ export default function LandingPage() {
 
 function Card({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-canvas-raised p-4">
+    <div className="rounded-2xl border border-border bg-canvas-raised p-4">
       <div className="text-base font-semibold text-ink">{title}</div>
       <div className="mt-1 text-sm text-ink-subtle">{body}</div>
     </div>

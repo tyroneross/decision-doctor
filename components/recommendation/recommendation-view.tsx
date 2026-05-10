@@ -53,7 +53,7 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
   return (
     <div className="space-y-5">
       {/* Hero recommendation — owns the H1 (page-level H1 was removed). */}
-      <section className="rounded-2xl border border-slate-200 bg-canvas-raised p-5 sm:p-6">
+      <section className="rounded-2xl border border-border bg-canvas-raised p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <h1 className="text-2xl font-semibold leading-tight flex-1 min-w-[200px]">
             {decision.recommendation.option}
@@ -74,13 +74,13 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
 
       {/* Robust alternative — only render when distinct from recommendation */}
       {robustIsDistinct ? (
-        <section className="rounded-2xl border border-slate-200 bg-canvas-raised p-5">
+        <section className="rounded-2xl border border-border bg-canvas-raised p-5">
           <h3 className="text-base font-semibold">If your assumptions shift</h3>
           <div className="mt-2 text-base font-medium">{decision.robustAlternative.option}</div>
           <p className="mt-2 text-sm text-ink-subtle">{decision.robustAlternative.why}</p>
         </section>
       ) : (
-        <section className="rounded-2xl border border-slate-200 bg-canvas-raised p-5">
+        <section className="rounded-2xl border border-border bg-canvas-raised p-5">
           <h3 className="text-base font-semibold">If your assumptions shift</h3>
           <p className="mt-2 text-sm text-ink-subtle">
             Your inputs converge on one path. If your situation changes, run the
@@ -91,7 +91,7 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
 
       {/* First move (was: workload reducers — chips removed; verb-only context) */}
       {decision.workloadReducers.length > 0 && reducer && (
-        <section className="rounded-2xl border border-slate-200 bg-canvas-raised p-5">
+        <section className="rounded-2xl border border-border bg-canvas-raised p-5">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold">Do this first</h3>
             {decision.workloadReducers.length > 1 && (
@@ -114,7 +114,7 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
                 type="button"
                 onClick={() => setReducerIdx((i) => Math.max(0, i - 1))}
                 disabled={reducerIdx === 0}
-                className="px-3 py-2 rounded-lg border border-slate-300 disabled:opacity-40 min-h-[44px]"
+                className="px-3 py-2 rounded-lg border border-border-strong disabled:opacity-40 min-h-[44px]"
                 aria-label="Previous next step"
               >
                 ← Previous
@@ -123,7 +123,7 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
                 type="button"
                 onClick={() => setReducerIdx((i) => Math.min(decision.workloadReducers.length - 1, i + 1))}
                 disabled={reducerIdx === decision.workloadReducers.length - 1}
-                className="px-3 py-2 rounded-lg border border-slate-300 disabled:opacity-40 min-h-[44px]"
+                className="px-3 py-2 rounded-lg border border-border-strong disabled:opacity-40 min-h-[44px]"
                 aria-label="Next step"
               >
                 Next →
@@ -134,13 +134,13 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
       )}
 
       {/* Alternatives — collapsible by default; shown only on demand */}
-      <details className="rounded-2xl border border-slate-200 bg-canvas-raised p-5 group">
+      <details className="rounded-2xl border border-border bg-canvas-raised p-5 group">
         <summary className="cursor-pointer list-none flex items-center justify-between">
           <h3 className="text-base font-semibold">What about the other options?</h3>
           <span className="text-xs text-ink-muted group-open:hidden">Show {decision.alternatives.length}</span>
           <span className="text-xs text-ink-muted hidden group-open:inline">Hide</span>
         </summary>
-        <ul className="mt-3 divide-y divide-slate-200">
+        <ul className="mt-3 divide-y divide-border">
           {decision.alternatives.map((a, i) => (
             <li key={i} className="py-3">
               <div className="text-sm font-medium">{a.option}</div>
@@ -170,13 +170,13 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
                 A shared decision goes to accountants / partners / spouses who do
                 not need engine internals (UX critic 2026-05-10). */}
             {!publicView && (
-              <details className="rounded-xl border border-slate-200 bg-canvas-raised p-4">
+              <details className="rounded-xl border border-border bg-canvas-raised p-4">
                 <summary className="cursor-pointer text-sm text-ink-subtle">
                   Show raw reasoning data (for advanced users)
                 </summary>
                 <div className="mt-3 space-y-3">
                   {decision.methodTrace.map((entry, i) => (
-                    <details key={i} className="rounded-lg border border-slate-200 p-3">
+                    <details key={i} className="rounded-lg border border-border p-3">
                       <summary className="cursor-pointer text-xs font-medium text-ink-subtle">
                         {entry.name}
                       </summary>
@@ -194,7 +194,7 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
 
       {/* Sticky actions */}
       {!publicView && (
-        <div className="sticky bottom-0 left-0 right-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-canvas-raised/95 backdrop-blur border-t border-slate-200 flex flex-wrap items-center gap-2 no-print">
+        <div className="sticky bottom-0 left-0 right-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-canvas-raised/95 backdrop-blur border-t border-border flex flex-wrap items-center gap-2 no-print">
           <button
             type="button"
             onClick={() => window.print()}
@@ -206,7 +206,7 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
             <button
               type="button"
               onClick={() => copy(`${window.location.origin}/share/${shareToken}`, "share")}
-              className="inline-flex items-center justify-center px-4 py-3 rounded-xl border border-slate-300 text-ink min-h-[48px]"
+              className="inline-flex items-center justify-center px-4 py-3 rounded-xl border border-border-strong text-ink min-h-[48px]"
             >
               {copyState.id === "share" && copyState.ok ? "Link copied" : "Copy share link"}
             </button>
@@ -233,13 +233,13 @@ function ReducerArtifact({
     return (
       <div className="mt-3">
         <div className="text-xs text-ink-muted mb-1">Paste this into ChatGPT, Claude, or your AI assistant:</div>
-        <pre className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs leading-relaxed whitespace-pre-wrap text-ink">
+        <pre className="rounded-lg bg-canvas-sunken border border-border p-3 text-xs leading-relaxed whitespace-pre-wrap text-ink">
           {a.promptText}
         </pre>
         <button
           type="button"
           onClick={() => copy(a.promptText!, copyId)}
-          className="mt-2 inline-flex items-center px-3 py-2 rounded-lg border border-slate-300 text-sm text-ink min-h-[40px]"
+          className="mt-2 inline-flex items-center px-3 py-2 rounded-lg border border-border-strong text-sm text-ink min-h-[40px]"
         >
           {copied ? "Copied ✓" : "Copy this text"}
         </button>
@@ -283,7 +283,7 @@ function MethodTraceSummary({
     ranking: "Picked the top option and the safest fallback if assumptions shift.",
   };
   return (
-    <ol className="rounded-xl border border-slate-200 bg-canvas-raised p-4 space-y-2 text-sm text-ink-subtle">
+    <ol className="rounded-xl border border-border bg-canvas-raised p-4 space-y-2 text-sm text-ink-subtle">
       {trace.map((entry) => (
         <li key={entry.stage} className="flex gap-3">
           <span className="text-ink-muted text-xs mt-0.5">{entry.stage}.</span>

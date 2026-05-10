@@ -8,7 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!session) redirect("/sign-in");
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="px-4 sm:px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-canvas-raised no-print">
+      <header className="px-4 sm:px-6 py-3 border-b border-border flex items-center justify-between bg-canvas-raised no-print">
         <Link href="/app/chat" className="text-sm font-semibold text-ink">
           Decision Doctor
         </Link>

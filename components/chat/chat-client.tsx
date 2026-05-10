@@ -135,14 +135,14 @@ export function ChatClient() {
         ))}
         {status === "sending" && (
           <div className="flex justify-start">
-            <div className="px-4 py-3 rounded-2xl bg-canvas-raised border border-slate-200 max-w-[85%] text-sm text-ink-muted">
+            <div className="px-4 py-3 rounded-2xl bg-canvas-raised border border-border max-w-[85%] text-sm text-ink-muted">
               Thinking…
             </div>
           </div>
         )}
         {status === "running" && (
           <div className="flex justify-start">
-            <div className="px-4 py-3 rounded-2xl bg-canvas-raised border border-slate-200 max-w-[85%] text-sm text-ink-muted">
+            <div className="px-4 py-3 rounded-2xl bg-canvas-raised border border-border max-w-[85%] text-sm text-ink-muted">
               Building your recommendation — usually 8–12 seconds.
             </div>
           </div>
@@ -158,7 +158,7 @@ export function ChatClient() {
 
       {/* Quick-start template chips — visible only before the first user turn */}
       {isFirstUserTurn && (
-        <div className="border-t border-slate-200 pt-3 pb-2">
+        <div className="border-t border-border pt-3 pb-2">
           <div className="text-xs text-ink-muted mb-2">
             Or jump straight to one of these common decisions:
           </div>
@@ -168,7 +168,7 @@ export function ChatClient() {
                 key={c.label}
                 type="button"
                 onClick={() => startWithTemplate(c)}
-                className="px-3 py-2 rounded-full border border-slate-300 text-sm text-ink hover:border-ink min-h-[40px]"
+                className="px-3 py-2 rounded-full border border-border-strong text-sm text-ink hover:border-ink min-h-[40px]"
                 disabled={status !== "idle"}
               >
                 {c.label}
@@ -180,14 +180,14 @@ export function ChatClient() {
 
       {/* Pending assistant chips (e.g. clarifier mode picker) */}
       {pendingChips && pendingChips.length > 0 && (
-        <div className="border-t border-slate-200 pt-3 pb-2">
+        <div className="border-t border-border pt-3 pb-2">
           <div className="flex flex-wrap gap-2">
             {pendingChips.map((c) => (
               <button
                 key={c.value}
                 type="button"
                 onClick={() => clickChip(c)}
-                className="px-3 py-2 rounded-full border border-slate-300 text-sm text-ink hover:border-ink min-h-[40px]"
+                className="px-3 py-2 rounded-full border border-border-strong text-sm text-ink hover:border-ink min-h-[40px]"
                 disabled={status !== "idle"}
               >
                 {c.label}
@@ -198,7 +198,7 @@ export function ChatClient() {
       )}
 
       {/* Sticky input */}
-      <div className="sticky bottom-0 bg-canvas pt-2 pb-3 border-t border-slate-200 -mx-4 sm:-mx-6 px-4 sm:px-6">
+      <div className="sticky bottom-0 bg-canvas pt-2 pb-3 border-t border-border -mx-4 sm:-mx-6 px-4 sm:px-6">
         <div className="flex gap-2 items-end">
           <textarea
             value={input}
@@ -212,7 +212,7 @@ export function ChatClient() {
             rows={2}
             maxLength={2000}
             disabled={status === "sending" || status === "running"}
-            className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-base focus:border-ink focus:ring-ink min-h-[44px] resize-none"
+            className="flex-1 rounded-xl border border-border-strong px-3 py-2 text-base focus:border-ink focus:ring-ink min-h-[44px] resize-none"
             aria-label="Your message"
           />
           <button
@@ -242,7 +242,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         className={
           isUser
             ? "px-4 py-3 rounded-2xl bg-ink text-white max-w-[85%] text-sm whitespace-pre-wrap"
-            : "px-4 py-3 rounded-2xl bg-canvas-raised border border-slate-200 max-w-[85%] text-sm whitespace-pre-wrap text-ink"
+            : "px-4 py-3 rounded-2xl bg-canvas-raised border border-border max-w-[85%] text-sm whitespace-pre-wrap text-ink"
         }
       >
         {message.content}
