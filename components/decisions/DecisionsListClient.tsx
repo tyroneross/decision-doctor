@@ -89,21 +89,21 @@ export function DecisionsListClient({ rows, summary, isGuest }: Props) {
       )}
 
       {/* COMPACT HERO — focused on key metric */}
-      <article className="grad-coral relative overflow-hidden rounded-2xl p-5 text-white">
+      <article className="grad-coral relative overflow-hidden rounded-2xl p-4 text-white sm:p-5">
         <div
           aria-hidden
-          className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/20 blur-2xl"
+          className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/20 blur-2xl"
         />
-        <div className="relative flex items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-wider opacity-80">
+        <div className="relative grid grid-cols-1 items-center gap-3 sm:grid-cols-2 sm:gap-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-wider opacity-80 sm:text-[11px]">
               Time saved weekly
             </p>
-            <p className="mt-1 text-3xl font-bold tracking-tight">
+            <p className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
               {formatHrs(summary.totalHoursPerWeek)}/wk
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 sm:gap-2 sm:justify-end">
             <StatPill label="Decisions" value={summary.decisions} />
             <StatPill label="Skills" value={summary.skillsShipped} />
             {summary.streakWeeks > 0 && (
@@ -186,12 +186,12 @@ function StatPill({
   icon?: "fire";
 }) {
   return (
-    <div className="flex flex-col items-center rounded-xl bg-white/15 px-3 py-2 backdrop-blur-sm">
-      <span className="text-lg font-bold leading-none">
+    <div className="flex flex-col items-center rounded-lg bg-white/15 px-2 py-1.5 backdrop-blur-sm sm:px-2.5 sm:py-2">
+      <span className="text-base font-bold leading-none sm:text-lg">
         {value}
         {icon === "fire" && " 🔥"}
       </span>
-      <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wide opacity-80">
+      <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide opacity-80 sm:text-[10px]">
         {label}
       </span>
     </div>
