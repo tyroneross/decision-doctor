@@ -1,35 +1,21 @@
 {
   "app-guide-capacity": {
     "target": "app/(app)/app/page.tsx",
-    "url": "http://127.0.0.1:3101/app",
+    "url": "http://127.0.0.1:3101/app/guide?question=I%20am%20exhausted%20and%20my%20waitlist%20keeps%20growing.%20Should%20I%20keep%20accepting%20new%20intakes%3F&aiMaturity=new_to_ai&mockup=chat-guide-v18",
     "tests": [
       {
         "name": "Guide a messy capacity question into the structured intake.",
         "steps": [
           {
-            "screenshot": "app-guide-start"
+            "screenshot": "app-guide-capacity-result"
           },
           {
             "assert": {
-              "text": "Ask about any practice decision."
+              "text": "Capacity decision"
             }
           },
           {
-            "assert": {
-              "text": "Ask the practice decision."
-            }
-          },
-          {
-            "fill": {
-              "target": "Decision question",
-              "value": "I am exhausted and my waitlist keeps growing. Should I keep accepting new intakes?"
-            }
-          },
-          {
-            "click": "Guide me"
-          },
-          {
-            "wait": 800
+            "wait": "Start Capacity intake"
           },
           {
             "click": "Start Capacity intake"
@@ -49,50 +35,69 @@
       }
     ]
   },
-  "app-guide-ai-workflow": {
+  "app-guide-ai-start": {
     "target": "app/(app)/app/page.tsx",
-    "url": "http://127.0.0.1:3101/app",
+    "url": "http://127.0.0.1:3101/app?mockup=chat-guide-v18",
+    "tests": [
+      {
+        "name": "Show the AI insertion scan start state.",
+        "steps": [
+          {
+            "screenshot": "app-guide-ai-start"
+          },
+          {
+            "assert": {
+              "text": "Prioritize where AI should help."
+            }
+          },
+          {
+            "assert": {
+              "text": "List what wastes time."
+            }
+          },
+          {
+            "assert": {
+              "text": "Rank work"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "app-guide-ai-result": {
+    "target": "app/(app)/app/page.tsx",
+    "url": "http://127.0.0.1:3101/app/guide?question=Where%20should%20I%20start%20using%20AI%20to%20reduce%20follow-up%20work%20and%20free%20two%20hours%20each%20week%3F&aiMaturity=new_to_ai&mockup=chat-guide-v18",
     "tests": [
       {
         "name": "Guide a non-template AI workflow question without forcing a template.",
         "steps": [
           {
-            "screenshot": "app-guide-any-decision-start"
+            "screenshot": "app-guide-ai-result"
           },
           {
             "assert": {
-              "text": "Chat still handles a decision that does not fit a template."
-            }
-          },
-          {
-            "fill": {
-              "target": "Decision question",
-              "value": "Where should I start using AI to reduce follow-up work and free two hours each week?"
-            }
-          },
-          {
-            "click": "Guide me"
-          },
-          {
-            "wait": 800
-          },
-          {
-            "assert": {
-              "text": "AI workflow opportunity framework"
+              "text": "AI insertion priority framework"
             }
           },
           {
             "assert": {
-              "text": "Workflow triage prompt"
+              "text": "AI insertion scorer skill"
+            }
+          },
+          {
+            "assert": {
+              "text": "Starter prompt, skill, and plugin"
+            }
+          },
+          {
+            "assert": {
+              "text": "Plugin starter"
             }
           },
           {
             "assert": {
               "text": "No PHI is needed"
             }
-          },
-          {
-            "screenshot": "app-guide-ai-workflow"
           }
         ]
       }

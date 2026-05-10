@@ -5,6 +5,7 @@ import {
   DecisionGuideRequestSchema,
   guideDecisionQuestion,
   type AiMaturity,
+  type DecisionGuideWorkflowIdea,
 } from "@/lib/decision-guide";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -33,8 +34,8 @@ export default async function GuidePage({
           <ArrowLeft size={18} aria-hidden="true" />
           Back
         </Link>
-        <p className="eyebrow">Question guide</p>
-        <h1 className="page-title">Ask a practice decision first.</h1>
+        <p className="eyebrow">AI insertion guide</p>
+        <h1 className="page-title">Ask what AI should improve first.</h1>
         <p className="page-lede">
           Use a short business question without patient identifiers or clinical notes.
         </p>
@@ -53,7 +54,7 @@ export default async function GuidePage({
         <ArrowLeft size={18} aria-hidden="true" />
         Back
       </Link>
-      <p className="eyebrow">Question guide</p>
+      <p className="eyebrow">Decision framework</p>
       <h1 className="page-title">{heading}</h1>
       <p className="page-lede">{result.plainAnswer}</p>
 
@@ -81,13 +82,16 @@ export default async function GuidePage({
         </div>
 
         <div className="guide-assumptions">
-          <strong>AI workflow ideas</strong>
+          <strong>Starter prompt, skill, and plugin</strong>
           {result.framework.aiWorkflowIdeas.map((idea) => (
             <div className="guide-assumption" key={idea.title}>
               <div>
                 <span>{idea.title}</span>
                 <p>{idea.description}</p>
-                <small>{idea.permissionTier} permission boundary</small>
+                <small>
+                  {idea.type} / {idea.permission_tier} / {idea.automationLevel.replace("_", " ")}
+                </small>
+                <GuideArtifact idea={idea} />
               </div>
             </div>
           ))}
@@ -111,5 +115,39 @@ export default async function GuidePage({
         )}
       </section>
     </AppFrame>
+  );
+}
+
+function GuideArtifact({ idea }: { idea: DecisionGuideWorkflowIdea }) {
+  const steps = idea.artifact.playbookSteps;
+  const manifest = idea.artifact.pluginManifest;
+
+  return (
+    <div className="guide-artifact">
+      {idea.artifact.promptText ? <p>{idea.artifact.promptText}</p> : null}
+      {idea.artifact.skillName ? <p>Skill: {idea.artifact.skillName}</p> : null}
+      {idea.artifact.skillMarkdown ? (
+        <details>
+          <summary>Skill starter</summary>
+          <pre>{idea.artifact.skillMarkdown}</pre>
+        </details>
+      ) : null}
+      {idea.artifact.pluginUrl ? <p>{idea.artifact.pluginUrl}</p> : null}
+      {idea.artifact.pluginCommand ? <p>Command: {idea.artifact.pluginCommand}</p> : null}
+      {manifest ? (
+        <details>
+          <summary>Plugin starter</summary>
+          <pre>{JSON.stringify(manifest, null, 2)}</pre>
+        </details>
+      ) : null}
+      {idea.artifact.mcpServer ? <p>MCP: {idea.artifact.mcpServer}</p> : null}
+      {steps?.length ? (
+        <ol>
+          {steps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      ) : null}
+    </div>
   );
 }

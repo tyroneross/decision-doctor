@@ -36,6 +36,32 @@ export type DecisionGuideAssumption = {
 
 export type DecisionFrameworkType = "SED" | "GDD" | "VDD" | "EDD" | "TCLD";
 
+export type DecisionGuideWorkflowIdea = {
+  type: "prompt" | "skill" | "plugin" | "mcp_tool" | "playbook";
+  title: string;
+  description: string;
+  artifact: {
+    promptText?: string;
+    skillName?: string;
+    skillMarkdown?: string;
+    pluginUrl?: string;
+    pluginCommand?: string;
+    pluginManifest?: {
+      name: string;
+      description: string;
+      version: string;
+      commands: string[];
+      permissions: string[];
+      tests: string[];
+    };
+    mcpServer?: string;
+    playbookSteps?: string[];
+  };
+  automationLevel: "user_executes" | "ai_assisted" | "fully_automated";
+  coverage: "full_task" | "partial_task" | "task_setup";
+  permission_tier: "T0" | "T1" | "T2" | "T3" | "T4" | "T5";
+};
+
 export type DecisionGuideFramework = {
   id: string;
   name: string;
@@ -50,11 +76,7 @@ export type DecisionGuideFramework = {
   }>;
   candidateOptions: string[];
   constraintPrompts: string[];
-  aiWorkflowIdeas: Array<{
-    title: string;
-    description: string;
-    permissionTier: "T0" | "T1" | "T2";
-  }>;
+  aiWorkflowIdeas: DecisionGuideWorkflowIdea[];
   researchBasis: string[];
 };
 
@@ -310,6 +332,109 @@ const RESEARCH_BASIS = [
   "Rank only a small shortlist and keep a robust fallback visible.",
 ];
 
+function promptIdea(
+  title: string,
+  description: string,
+  promptText: string,
+): DecisionGuideWorkflowIdea {
+  return {
+    type: "prompt",
+    title,
+    description,
+    artifact: { promptText },
+    automationLevel: "user_executes",
+    coverage: "task_setup",
+    permission_tier: "T0",
+  };
+}
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function buildSkillMarkdown(
+  title: string,
+  description: string,
+  skillName: string,
+  playbookSteps: string[],
+): string {
+  return `---
+name: ${skillName}
+description: This skill should be used when a doctor asks to "${title.toLowerCase()}" or rank an AI workflow. It collects capacity constraints, applies no-PHI vetoes, and returns a first safe AI build recommendation.
+---
+
+# ${title}
+
+Use this skill to turn a repeated practice task into a small, reversible AI implementation plan. Keep the workflow user-executed until the doctor explicitly approves any connector or operational access.
+
+## Workflow
+
+${playbookSteps.map((step, index) => `${index + 1}. ${step}`).join("\n")}
+
+## Output
+
+- Top AI insertion point
+- Prompt, skill, or plugin recommendation
+- No-PHI safety notes
+- Two-week validation metric`;
+}
+
+function skillIdea(
+  title: string,
+  description: string,
+  skillName: string,
+  playbookSteps: string[],
+): DecisionGuideWorkflowIdea {
+  return {
+    type: "skill",
+    title,
+    description,
+    artifact: {
+      skillName,
+      skillMarkdown: buildSkillMarkdown(title, description, skillName, playbookSteps),
+      playbookSteps,
+    },
+    automationLevel: "user_executes",
+    coverage: "partial_task",
+    permission_tier: "T1",
+  };
+}
+
+function pluginIdea(
+  title: string,
+  description: string,
+  playbookSteps: string[],
+): DecisionGuideWorkflowIdea {
+  const pluginName = slugify(title);
+  return {
+    type: "plugin",
+    title,
+    description,
+    artifact: {
+      pluginCommand: `/${pluginName}:draft`,
+      pluginManifest: {
+        name: pluginName,
+        description,
+        version: "0.1.0",
+        commands: [`/${pluginName}:draft`],
+        permissions: ["user-approved input only", "no patient identifiers", "no external connectors in v1"],
+        tests: [
+          "rejects PHI-shaped input",
+          "returns one ranked workflow and one fallback",
+          "keeps every action user-executed",
+        ],
+      },
+      playbookSteps,
+    },
+    automationLevel: "user_executes",
+    coverage: "task_setup",
+    permission_tier: "T1",
+  };
+}
+
 function scoreQuestion(question: string): Array<{
   templateId: TemplateId;
   score: number;
@@ -388,21 +513,30 @@ function templateFramework(templateId: TemplateId): DecisionGuideFramework {
         "Which option would you reject if burnout risk stayed high?",
       ],
       aiWorkflowIdeas: [
-        {
-          title: "Waitlist update draft",
-          description: "Use AI to draft a non-PHI practice update for intake availability.",
-          permissionTier: "T0",
-        },
-        {
-          title: "Scheduling rules checklist",
-          description: "Turn the recommendation into a one-week calendar and intake-rule playbook.",
-          permissionTier: "T1",
-        },
-        {
-          title: "Demand review prompt",
-          description: "Summarize weekly inquiry counts and cancellations before changing capacity again.",
-          permissionTier: "T1",
-        },
+        promptIdea(
+          "Waitlist update prompt",
+          "Draft a non-PHI practice update for intake availability.",
+          "Draft a concise practice update for a temporary intake-capacity change. Use no patient details. Include who it affects, when it starts, when capacity will be reviewed, and how patients can ask scheduling questions.",
+        ),
+        skillIdea(
+          "Capacity review skill",
+          "Score weekly demand signals before changing intake rules.",
+          "capacity-review-skill",
+          [
+            "Collect weekly inquiry count, cancellation count, waitlist length, and owner-hours available.",
+            "Apply vetoes for burnout risk, access commitments, and reversibility.",
+            "Recommend keep, loosen, or tighten intake capacity for the next two weeks.",
+          ],
+        ),
+        pluginIdea(
+          "Review block plugin",
+          "Prepare the first plugin brief for a capacity-review reminder.",
+          [
+            "Trigger after the capacity recommendation is accepted.",
+            "Ask for calendar access only after user approval.",
+            "Create a review block with the metrics to check before reopening capacity.",
+          ],
+        ),
       ],
     });
   }
@@ -449,21 +583,30 @@ function templateFramework(templateId: TemplateId): DecisionGuideFramework {
         "What level of attrition or access friction would make the change unacceptable?",
       ],
       aiWorkflowIdeas: [
-        {
-          title: "Pricing notice draft",
-          description: "Use AI to draft clear, calm pricing language without patient details.",
-          permissionTier: "T0",
-        },
-        {
-          title: "FAQ response bank",
-          description: "Generate short answers for likely billing and continuity questions.",
-          permissionTier: "T0",
-        },
-        {
-          title: "30-day review checklist",
-          description: "Create a simple review ritual for volume, cancellations, and admin burden.",
-          permissionTier: "T1",
-        },
+        promptIdea(
+          "Pricing notice prompt",
+          "Draft clear pricing language without patient details.",
+          "Draft a short practice pricing notice. Include effective date, who it applies to, continuity language, and a calm explanation. Do not include patient identifiers.",
+        ),
+        skillIdea(
+          "Pricing impact skill",
+          "Track whether a fee change returns capacity or creates access friction.",
+          "pricing-impact-skill",
+          [
+            "Collect monthly income gap, recent cancellations, and admin follow-up hours.",
+            "Score income lift against retention risk and admin burden.",
+            "Recommend hold, stage, or adjust pricing with a 30-day review date.",
+          ],
+        ),
+        pluginIdea(
+          "Billing FAQ plugin",
+          "Prepare a plugin brief for reusable billing-response drafts.",
+          [
+            "Trigger when the user selects a pricing recommendation.",
+            "Use approved FAQ language only.",
+            "Keep all output as user-reviewed draft text with no automatic sending.",
+          ],
+        ),
       ],
     });
   }
@@ -509,21 +652,30 @@ function templateFramework(templateId: TemplateId): DecisionGuideFramework {
       "What is the smallest safe experiment for the next 14 days?",
     ],
     aiWorkflowIdeas: [
-      {
-        title: "Admin SOP generator",
-        description: "Turn a repeated task into a step-by-step SOP with approval boundaries.",
-        permissionTier: "T1",
-      },
-      {
-        title: "Inbox triage drafts",
-        description: "Draft non-PHI response templates for scheduling and routine admin messages.",
-        permissionTier: "T0",
-      },
-      {
-        title: "Automation shortlist",
-        description: "Compare low-risk tools or scripts before hiring recurring help.",
-        permissionTier: "T1",
-      },
+      promptIdea(
+        "Inbox triage prompt",
+        "Draft non-PHI response templates for scheduling and routine admin messages.",
+        "Create three reusable response drafts for scheduling, billing follow-up, and referral intake. Use placeholders, no patient details, and include when a human must review.",
+      ),
+      skillIdea(
+        "Admin SOP generator",
+        "Turn a repeated task into a step-by-step SOP with approval boundaries.",
+        "admin-sop-generator",
+        [
+          "Capture the repeated task, trigger, systems touched, and review owner.",
+          "Write the SOP with do, do-not-do, and escalation boundaries.",
+          "Return a 14-day test plan and time-saved metric.",
+        ],
+      ),
+      pluginIdea(
+        "Automation shortlist plugin",
+        "Prepare a plugin brief that compares tool options before hiring recurring help.",
+        [
+          "Input weekly admin tasks ranked by time cost and privacy risk.",
+          "Return a shortlist of no-PHI draft, checklist, or reminder automations.",
+          "Require user approval before any connector or tool access is suggested.",
+        ],
+      ),
     ],
   });
 }
@@ -556,41 +708,50 @@ function generalFramework(question: string): DecisionGuideFramework {
   const decisionType = classifyGeneralDecision(question);
   const isAiWorkflow = decisionType === "EDD" || /\b(ai|automate|workflow|save time|free up)\b/i.test(question);
   const name = isAiWorkflow
-    ? "AI workflow opportunity framework"
+    ? "AI insertion priority framework"
     : "Custom practice decision framework";
 
   return baseFramework({
-    id: isAiWorkflow ? "ai-workflow-opportunity" : `custom-${decisionType.toLowerCase()}`,
+    id: isAiWorkflow ? "ai-insertion-priority" : `custom-${decisionType.toLowerCase()}`,
     name,
     decisionType,
     lens:
       decisionType === "SED"
         ? "A finite option decision that should be filtered before ranking."
-        : "A custom practice decision that needs values, constraints, and candidate options defined before ranking.",
+        : isAiWorkflow
+          ? "A prioritization decision: choose the safest, highest-return place to implement AI first."
+          : "A custom practice decision that needs values, constraints, and candidate options defined before ranking.",
     why:
-      "The question does not need to force-fit into capacity, pricing, or admin hire. It can still use the same decision-science spine: values, constraints, tradeoffs, shortlist, fallback.",
+      isAiWorkflow
+        ? "The app should rank candidate AI insertion points before recommending tools. The best starting point returns capacity, avoids PHI, has repeatable inputs, and can be tested reversibly."
+        : "The question does not need to force-fit into capacity, pricing, or admin hire. It can still use the same decision-science spine: values, constraints, tradeoffs, shortlist, fallback.",
     methods: [
-      "VFT to define the outcome the doctor actually wants.",
-      "Fast-and-frugal vetoes for compliance, time, budget, and reversibility.",
-      "RGT-style discovery if the criteria are still unclear.",
-      "Pairwise tradeoff questions before any final recommendation.",
-      "Minimax-regret fallback when confidence is not high enough.",
+      "VFT to define the capacity outcome the doctor actually wants.",
+      "Fast-and-frugal vetoes for PHI exposure, clinical judgment, time, budget, and reversibility.",
+      "RGT-style discovery to separate repeated work from ambiguous work.",
+      "PAPRIKA-style tradeoffs across time returned, AI feasibility, privacy risk, setup burden, and review cost.",
+      "Minimax-regret fallback when the first AI implementation is uncertain.",
     ],
     criteria: [
       {
-        id: "capacity_return",
-        label: "Capacity returned",
-        why: "The app should favor options that free owner time or reduce avoidable work.",
+        id: "time_returned",
+        label: "Time returned",
+        why: "The best AI insertion point should free meaningful owner capacity.",
       },
       {
-        id: "risk_control",
-        label: "Risk control",
-        why: "Healthcare-adjacent workflows need bounded access and no PHI in v1.",
+        id: "ai_feasibility",
+        label: "AI feasibility",
+        why: "Repeatable inputs and clear review criteria make the first implementation more likely to work.",
+      },
+      {
+        id: "privacy_risk",
+        label: "Privacy risk",
+        why: "V1 should favor no-PHI drafts, summaries, SOPs, and checklists.",
       },
       {
         id: "setup_burden",
         label: "Setup burden",
-        why: "A useful workflow must fit between patient care and practice operations.",
+        why: "The first skill or plugin should be small enough to test quickly.",
       },
       {
         id: "reversibility",
@@ -600,10 +761,10 @@ function generalFramework(question: string): DecisionGuideFramework {
     ],
     candidateOptions: isAiWorkflow
       ? [
-          "Automate a repeated admin draft",
-          "Create an SOP and checklist",
-          "Use AI to summarize business counts",
-          "Defer automation until the workflow is clearer",
+          "Draft follow-up messages with human review",
+          "Turn a repeated task into a skill",
+          "Build a lightweight plugin brief",
+          "Defer AI until the workflow is clearer",
         ]
       : [
           "Run a small reversible experiment",
@@ -612,27 +773,36 @@ function generalFramework(question: string): DecisionGuideFramework {
           "Defer if the downside is not bounded",
         ],
     constraintPrompts: [
-      "What outcome would make this decision feel like a win?",
-      "What would make an option unacceptable regardless of upside?",
-      "What repeated task or decision step currently consumes the most owner time?",
-      "What is the smallest reversible test you could run in two weeks?",
+      "Which repeated tasks or decision steps consume the most owner time each week?",
+      "What would make an AI option unacceptable regardless of time saved?",
+      "Which candidate task has repeatable inputs and a clear human review step?",
+      "What is the smallest reversible AI test you could run in two weeks?",
     ],
     aiWorkflowIdeas: [
-      {
-        title: "Workflow triage prompt",
-        description: "List repeated tasks, time cost, risk, and whether AI can draft, summarize, or check them.",
-        permissionTier: "T0",
-      },
-      {
-        title: "SOP-first automation",
-        description: "Ask AI to turn the current process into a checklist before choosing tools.",
-        permissionTier: "T1",
-      },
-      {
-        title: "Low-risk draft assistant",
-        description: "Use AI only for drafts or summaries until the practice validates access boundaries.",
-        permissionTier: "T1",
-      },
+      promptIdea(
+        "AI insertion ranking prompt",
+        "Rank repeated tasks before selecting the first AI build.",
+        "Rank these practice tasks by time returned, repeatability, AI feasibility, privacy risk, setup burden, and human review cost. Recommend the safest first AI implementation and one fallback. Do not use patient details.",
+      ),
+      skillIdea(
+        "AI insertion scorer skill",
+        "Turn the decision framework into a reusable scoring skill.",
+        "ai-insertion-scorer",
+        [
+          "Collect candidate tasks, weekly hours, repeatability, data sensitivity, and review owner.",
+          "Apply vetoes for PHI, clinical judgment, unclear inputs, or no review path.",
+          "Score the remaining tasks and return the top prompt, skill, or plugin candidate.",
+        ],
+      ),
+      pluginIdea(
+        "Starter plugin brief",
+        "Define the first plugin only after the framework picks the winning workflow.",
+        [
+          "Trigger after the user accepts a ranked AI insertion point.",
+          "Generate a manifest, command surface, permission tier, and test workflow.",
+          "Keep v1 user-executed unless the user explicitly approves connector access.",
+        ],
+      ),
     ],
   });
 }
@@ -712,11 +882,11 @@ export function guideDecisionQuestion(
       candidateOptions: ["Rewrite with business facts", "Remove identifiers", "Ask again"],
       constraintPrompts: ["Can you rewrite this using only counts, categories, time ranges, and budget numbers?"],
       aiWorkflowIdeas: [
-        {
-          title: "Safe rewrite checklist",
-          description: "Convert patient-specific text into operational categories before using the app.",
-          permissionTier: "T0",
-        },
+        promptIdea(
+          "Safe rewrite prompt",
+          "Convert patient-specific text into operational categories before using the app.",
+          "Rewrite the decision as aggregate business facts only. Remove names, dates of birth, contact details, record numbers, clinical narrative, and any detail that can identify a patient.",
+        ),
       ],
     });
     return {
@@ -754,16 +924,22 @@ export function guideDecisionQuestion(
   if (!top || topScore < 2) {
     const framework = generalFramework(parsed.question);
     const primaryQuestion = frameworkQuestion(framework);
+    const isAiInsertion = framework.id === "ai-insertion-priority";
     return {
       status: "ready",
       confidence: 62,
       maturity: parsed.aiMaturity,
-      plainAnswer: `Use a custom ${framework.decisionType} framework instead of forcing this into one of the three starter templates.`,
-      rationale:
-        "Decision-science routing says the app should first define values, veto constraints, candidate options, and the smallest safe automation or operating experiment.",
+      plainAnswer: isAiInsertion
+        ? "Use a decision framework to rank AI insertion points before building a prompt, skill, or plugin."
+        : `Use a custom ${framework.decisionType} framework instead of forcing this into one of the three starter templates.`,
+      rationale: isAiInsertion
+        ? "Decision-science routing says to compare candidate workflows by time returned, AI feasibility, privacy risk, setup burden, and reversibility before selecting the first AI build."
+        : "Decision-science routing says the app should first define values, veto constraints, candidate options, and the smallest safe automation or operating experiment.",
       nextQuestions: [primaryQuestion],
       primaryQuestion,
-      progressLabel: "Custom framework: 1 of 4 anchors",
+      progressLabel: isAiInsertion
+        ? "AI insertion scan: 1 of 4 anchors"
+        : "Custom framework: 1 of 4 anchors",
       inferredAssumptions: frameworkAssumptions(framework),
       framework,
       chat: chatForResult(framework, parsed.aiMaturity),

@@ -11,29 +11,29 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { DecisionGuide } from "@/components/decision-guide";
+import { DecisionWorkbench } from "@/components/decision-workbench";
 
 const ACCELERATORS = [
   {
-    label: "Any decision",
+    label: "AI insertion",
     href: "#chat",
     active: true,
-    note: "Start in chat",
+    note: "Rank first",
   },
   {
     label: "Capacity",
     href: "/app/decisions/new/capacity",
-    note: "Demand and panel load",
+    note: "Time",
+  },
+  {
+    label: "Admin work",
+    href: "/app/decisions/new/admin-hire",
+    note: "Tasks",
   },
   {
     label: "Pricing",
     href: "/app/decisions/new/pricing",
-    note: "Fees, access, retention",
-  },
-  {
-    label: "Admin help",
-    href: "/app/decisions/new/admin-hire",
-    note: "Delegation and automation",
+    note: "Access",
   },
 ];
 
@@ -56,31 +56,30 @@ export default function AppPage() {
             <span>No PHI in v1</span>
           </div>
           <div className="simple-title">
-            <p className="eyebrow">Chat-first decision support</p>
-            <h1>Ask about any practice decision.</h1>
+            <p className="eyebrow">Decision frameworks for AI adoption</p>
+            <h1>Prioritize where AI should help.</h1>
             <p>
-              Decision Doctor turns free-text questions into a structured
-              recommendation, visible math, and AI workflow ideas that free
-              capacity.
+              Rank time drains, score AI feasibility, and leave with a starter
+              prompt, skill, or plugin plan.
             </p>
           </div>
           <div className="simple-actions">
             <a className="primary-button" href="#chat">
-              <span>Start chat</span>
+              <span>Start scan</span>
               <ArrowRight size={18} aria-hidden="true" />
             </a>
             <a className="secondary-button" href="#automation">
-              Find AI leverage
+              View artifacts
             </a>
           </div>
         </header>
 
         <section className="accelerator-bar" aria-label="Decision accelerators">
           <div>
-            <p className="eyebrow">Researched accelerators</p>
+            <p className="eyebrow">Researched starting points</p>
             <p>
-              Capacity, pricing, and admin help are fast paths. Chat still
-              handles a decision that does not fit a template.
+              Known practice decisions seed the framework. The guide can rank
+              any workflow where AI might return capacity.
             </p>
           </div>
           <nav className="template-strip" aria-label="Decision accelerators">
@@ -99,53 +98,7 @@ export default function AppPage() {
           </nav>
         </section>
 
-        <div className="decision-grid">
-          <section className="panel entry-panel" id="chat">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Step 1</p>
-                <h3>Chat through the decision.</h3>
-              </div>
-              <span className="quiet-badge">Any type</span>
-            </div>
-            <DecisionGuide />
-          </section>
-
-          <section
-            className="recommendation-main"
-            id="recommendation"
-            aria-label="Recommendation preview"
-          >
-            <div>
-              <div className="result-heading">
-                <p className="eyebrow">Recommendation preview</p>
-                <span className="confidence-badge">
-                  <span>82</span>
-                  Confidence
-                </span>
-              </div>
-              <h2>Recommended: cap new intakes for 14 days.</h2>
-              <p>
-                The chat routed this to the capacity model because the question
-                touches demand, access, clinician hours, and reversibility.
-              </p>
-            </div>
-            <div className="recommendation-bottom">
-              <div className="robust-row">
-                <div>
-                  <p>Robust fallback</p>
-                  <strong>
-                    Reopen two consult slots if cancellations exceed 15%.
-                  </strong>
-                </div>
-              </div>
-              <Link className="primary-button" href="/app/decisions/new/capacity">
-                <span>Run guided intake</span>
-                <ArrowRight size={18} aria-hidden="true" />
-              </Link>
-            </div>
-          </section>
-        </div>
+        <DecisionWorkbench />
 
         <section className="method-panel" aria-label="Decision explanation">
           <div className="method-header">
@@ -187,39 +140,48 @@ export default function AppPage() {
               <div className="trace-list">
                 <TraceRow
                   label="Values"
-                  text="Access, sustainability, cash stability"
+                  text="Time returned, safety, access, sustainability"
                 />
-                <TraceRow label="Constraints" text="No PHI, 28 clinical hours" />
-                <TraceRow label="Weights" text="Burnout 34, access 28, cash 23" />
-                <TraceRow label="Ranking" text="Cap intakes leads by 18 points" />
+                <TraceRow
+                  label="Constraints"
+                  text="No PHI, human review, reversible test"
+                />
+                <TraceRow
+                  label="Weights"
+                  text="Time 34, feasibility 28, risk 23"
+                />
+                <TraceRow
+                  label="Ranking"
+                  text="Follow-up draft workflow leads by 18 points"
+                />
               </div>
             </details>
 
             <div className="reducer-section" id="automation">
               <div className="panel-heading compact">
                 <div>
-                  <p className="eyebrow">AI leverage scan</p>
-                  <h3>Free capacity without adding clinical hours.</h3>
+                  <p className="eyebrow">Starter build outputs</p>
+                  <h3>Prompt, skill, and plugin plans.</h3>
                 </div>
               </div>
               <div className="reducer-list" aria-label="AI workflow ideas">
                 <ReducerCard
                   icon={<Mail size={20} aria-hidden="true" />}
                   label="Prompt"
-                  title="Waitlist reply draft"
-                  body="Explain the pause, review window, and next check-in."
+                  title="AI insertion ranker"
+                  body="Score repeated tasks by time returned, AI fit, risk, and setup effort."
                 />
                 <ReducerCard
                   icon={<ClipboardCheck size={20} aria-hidden="true" />}
-                  label="Playbook"
-                  title="Two-week triage script"
-                  body="Sort consults by fit, urgency, and referral source."
+                  label="Skill"
+                  title="Workflow scorer"
+                  body="Collect task candidates, apply vetoes, and recommend the first safe build."
                 />
                 <ReducerCard
                   icon={<CalendarClock size={20} aria-hidden="true" />}
-                  label="MCP hook"
-                  title="Review block"
-                  body="Create a calendar block to reopen capacity if assumptions shift."
+                  label="Plugin"
+                  title="Starter brief"
+                  body="Define command surface, permissions, and tests before connecting tools."
                 />
               </div>
             </div>

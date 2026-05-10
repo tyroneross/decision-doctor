@@ -11,14 +11,14 @@
           },
           {
             "assert": {
-              "text": "Question guide"
+              "text": "Prioritize where AI should help."
             }
           },
           {
             "click": "Pricing"
           },
           {
-            "click": "Guide me"
+            "click": "Rank work"
           },
           {
             "wait": 800
@@ -48,14 +48,14 @@
           },
           {
             "assert": {
-              "text": "Question guide"
+              "text": "Prioritize where AI should help."
             }
           },
           {
-            "click": "Admin help"
+            "click": "Admin work"
           },
           {
-            "click": "Guide me"
+            "click": "Rank work"
           },
           {
             "wait": 800

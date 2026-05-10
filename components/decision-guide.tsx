@@ -8,20 +8,21 @@ import type {
   DecisionGuideAssumption,
   DecisionGuideFramework,
   DecisionGuideResult,
+  DecisionGuideWorkflowIdea,
 } from "@/lib/decision-guide";
 
 const DEFAULT_QUESTION =
-  "I am exhausted and my waitlist keeps growing. Should I keep accepting new intakes?";
+  "I spend two hours each week on follow-up notes and messages. Where should AI help first?";
 
 const EXAMPLES = [
-  { label: "Capacity", text: DEFAULT_QUESTION },
+  { label: "Follow-up work", text: DEFAULT_QUESTION },
   {
-    label: "Pricing",
-    text: "Should I raise my fee or keep prices stable while I still take insurance?",
+    label: "Admin load",
+    text: "Calls, scheduling, and billing take 10 hours weekly. What should I automate or delegate first?",
   },
   {
-    label: "Admin help",
-    text: "I spend too much time on calls and billing. Should I hire admin help or automate first?",
+    label: "Demand pressure",
+    text: "My waitlist is growing and I need to free owner capacity without hurting access.",
   },
 ];
 
@@ -36,7 +37,11 @@ type ChatMessage = {
   text: string;
 };
 
-export function DecisionGuide() {
+type DecisionGuideProps = {
+  onResultChange?: (result: DecisionGuideResult | null) => void;
+};
+
+export function DecisionGuide({ onResultChange }: DecisionGuideProps) {
   const [question, setQuestion] = useState(DEFAULT_QUESTION);
   const [aiMaturity, setAiMaturity] = useState<AiMaturity>("new_to_ai");
   const [result, setResult] = useState<DecisionGuideResult | null>(null);
@@ -45,6 +50,11 @@ export function DecisionGuide() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const submitButtonHtml = `<button class="primary-button guide-submit"${
+    isLoading || !question.trim() ? " disabled" : ""
+  } type="submit" onclick="return true"><span>${
+    isLoading ? "Ranking..." : "Rank work"
+  }</span><span aria-hidden="true">-&gt;</span></button>`;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,10 +78,12 @@ export function DecisionGuide() {
       if (!response.ok) {
         setError(body?.error ?? "The guide could not process that question.");
         setResult(null);
+        onResultChange?.(null);
         return;
       }
 
       setResult(body);
+      onResultChange?.(body);
       setMessages((current) => [
         ...current,
         {
@@ -82,6 +94,7 @@ export function DecisionGuide() {
     } catch {
       setError("The guide could not connect. Try again in a moment.");
       setResult(null);
+      onResultChange?.(null);
     } finally {
       setIsLoading(false);
     }
@@ -93,6 +106,16 @@ export function DecisionGuide() {
         ? current.filter((topic) => topic !== assumption.topic)
         : [...current, assumption.topic],
     );
+  }
+
+  function handleQuickReply(reply: string) {
+    setDraftAnswer(reply);
+    setQuestion((current) => {
+      const nextQuestion = result?.chat.nextQuestion;
+      if (!nextQuestion) return reply;
+      if (current.includes(reply)) return current;
+      return `${nextQuestion} ${reply}`;
+    });
   }
 
   return (
@@ -108,13 +131,13 @@ export function DecisionGuide() {
           <WandSparkles size={20} />
         </div>
         <div>
-          <p className="eyebrow">Question guide</p>
-          <h3>Ask the practice decision.</h3>
+          <p className="eyebrow">Capacity scan</p>
+          <h3>List what wastes time.</h3>
         </div>
       </div>
 
-      <label className="guide-question" htmlFor="decision-question">
-        <span>Decision question</span>
+      <div className="guide-question">
+        <label htmlFor="decision-question">Decision question</label>
         <textarea
           id="decision-question"
           maxLength={700}
@@ -123,12 +146,16 @@ export function DecisionGuide() {
           rows={4}
           value={question}
         />
-      </label>
+        <div
+          className="guide-submit-slot"
+          dangerouslySetInnerHTML={{ __html: submitButtonHtml }}
+        />
+      </div>
 
       <div className="guide-examples" aria-label="Example questions">
         {EXAMPLES.map((example) => (
           <label
-            className="guide-example"
+            className={question === example.text ? "guide-example active" : "guide-example"}
             key={example.label}
           >
             <input
@@ -145,27 +172,30 @@ export function DecisionGuide() {
         ))}
       </div>
 
-      <fieldset className="guide-maturity">
-        <legend>AI comfort</legend>
-        <div>
-          {MATURITY_OPTIONS.map((option) => (
-            <label key={option.value}>
-              <input
-                checked={aiMaturity === option.value}
-                name="aiMaturity"
-                onChange={() => setAiMaturity(option.value)}
-                type="radio"
-                value={option.value}
-              />
-              {option.label}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <details className="guide-settings">
+        <summary>Settings</summary>
+        <fieldset className="guide-maturity">
+          <legend>AI comfort</legend>
+          <div>
+            {MATURITY_OPTIONS.map((option) => (
+              <label key={option.value}>
+                <input
+                  checked={aiMaturity === option.value}
+                  name="aiMaturity"
+                  onChange={() => setAiMaturity(option.value)}
+                  type="radio"
+                  value={option.value}
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      </details>
 
       <div className="guide-safety">
         <ShieldCheck size={18} aria-hidden="true" />
-        <span>Use counts and categories only. Keep patient details out.</span>
+        <span>Use counts and categories only. No patient details.</span>
       </div>
 
       {messages.length > 0 ? (
@@ -178,13 +208,6 @@ export function DecisionGuide() {
           ))}
         </div>
       ) : null}
-
-      <input
-        className="primary-button guide-submit"
-        disabled={isLoading}
-        type="submit"
-        value={isLoading ? "Guiding..." : "Guide me"}
-      />
 
       {error ? (
         <div className="guide-message" role="alert">
@@ -199,7 +222,7 @@ export function DecisionGuide() {
           draftAnswer={draftAnswer}
           onChallenge={challengeAssumption}
           onDraftAnswerChange={setDraftAnswer}
-          onQuickReply={setQuestion}
+          onQuickReply={handleQuickReply}
           result={result}
         />
       ) : null}
@@ -232,7 +255,7 @@ function GuideResult({
         <span>{result.confidence}% confidence</span>
       </div>
 
-      <h4>{result.templateTitle ?? "Choose a decision area"}</h4>
+      <h4>{result.templateTitle ?? result.framework.name}</h4>
       <p>{result.plainAnswer}</p>
       <p>{result.rationale}</p>
 
@@ -270,7 +293,7 @@ function GuideResult({
         <div className="guide-chip-row" aria-label="Chat quick replies">
           {result.chat.quickReplies.map((reply) => (
             <button
-              className="guide-answer-chip"
+              className={draftAnswer === reply ? "guide-answer-chip active" : "guide-answer-chip"}
               key={reply}
               onClick={() => onQuickReply(reply)}
               type="button"
@@ -340,6 +363,11 @@ function FrameworkSummary({ framework }: { framework: DecisionGuideFramework }) 
         <span>{framework.name}</span>
       </div>
       <p>{framework.why}</p>
+      <div className="guide-criteria-row" aria-label="Decision criteria">
+        {framework.criteria.map((criterion) => (
+          <span key={criterion.id}>{criterion.label}</span>
+        ))}
+      </div>
 
       <div className="guide-framework-grid">
         <div>
@@ -351,18 +379,55 @@ function FrameworkSummary({ framework }: { framework: DecisionGuideFramework }) 
           </ol>
         </div>
         <div>
-          <strong>AI capacity levers</strong>
+          <strong>Starter artifacts</strong>
           <div className="guide-ai-ideas">
             {framework.aiWorkflowIdeas.map((idea) => (
               <article key={idea.title}>
-                <span>{idea.permissionTier}</span>
+                <span>
+                  {idea.type} / {idea.permission_tier}
+                </span>
                 <strong>{idea.title}</strong>
                 <p>{idea.description}</p>
+                <WorkflowArtifact idea={idea} />
               </article>
             ))}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function WorkflowArtifact({ idea }: { idea: DecisionGuideWorkflowIdea }) {
+  const steps = idea.artifact.playbookSteps;
+  const manifest = idea.artifact.pluginManifest;
+
+  return (
+    <div className="guide-artifact">
+      {idea.artifact.promptText ? <p>{idea.artifact.promptText}</p> : null}
+      {idea.artifact.skillName ? <p>Skill: {idea.artifact.skillName}</p> : null}
+      {idea.artifact.skillMarkdown ? (
+        <details>
+          <summary>Skill starter</summary>
+          <pre>{idea.artifact.skillMarkdown}</pre>
+        </details>
+      ) : null}
+      {idea.artifact.mcpServer ? <p>MCP: {idea.artifact.mcpServer}</p> : null}
+      {idea.artifact.pluginUrl ? <p>{idea.artifact.pluginUrl}</p> : null}
+      {idea.artifact.pluginCommand ? <p>Command: {idea.artifact.pluginCommand}</p> : null}
+      {manifest ? (
+        <details>
+          <summary>Plugin starter</summary>
+          <pre>{JSON.stringify(manifest, null, 2)}</pre>
+        </details>
+      ) : null}
+      {steps?.length ? (
+        <ol>
+          {steps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      ) : null}
     </div>
   );
 }

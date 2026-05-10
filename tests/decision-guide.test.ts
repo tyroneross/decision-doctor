@@ -67,7 +67,7 @@ describe("decision question guide", () => {
     expect(result.status).toBe("ready");
     expect(result.templateId).toBeUndefined();
     expect(result.framework.name).toBe("Custom practice decision framework");
-    expect(result.primaryQuestion?.chips).toContain("Capacity returned");
+    expect(result.primaryQuestion?.chips).toContain("Time returned");
     expect(result.chat.quickReplies.length).toBeGreaterThanOrEqual(3);
     expect(result.alternatives.map((item) => item.templateId).sort()).toEqual([
       "admin-hire",
@@ -85,11 +85,28 @@ describe("decision question guide", () => {
 
     expect(result.status).toBe("ready");
     expect(result.templateId).toBeUndefined();
-    expect(result.framework.name).toBe("AI workflow opportunity framework");
+    expect(result.framework.name).toBe("AI insertion priority framework");
     expect(result.framework.decisionType).toBe("EDD");
-    expect(result.framework.methods.join(" ")).toMatch(/RGT-style/i);
+    expect(result.plainAnswer).toMatch(/prompt, skill, or plugin/i);
+    expect(result.framework.methods.join(" ")).toMatch(/PAPRIKA-style/i);
+    expect(result.framework.criteria.map((item) => item.id)).toContain(
+      "ai_feasibility",
+    );
     expect(result.framework.aiWorkflowIdeas.map((item) => item.title)).toContain(
-      "Workflow triage prompt",
+      "AI insertion scorer skill",
+    );
+    expect(result.framework.aiWorkflowIdeas.map((item) => item.type)).toContain(
+      "plugin",
+    );
+    const skill = result.framework.aiWorkflowIdeas.find(
+      (item) => item.title === "AI insertion scorer skill",
+    );
+    expect(skill?.artifact.skillMarkdown).toMatch(/name: ai-insertion-scorer/);
+    const plugin = result.framework.aiWorkflowIdeas.find(
+      (item) => item.title === "Starter plugin brief",
+    );
+    expect(plugin?.artifact.pluginManifest?.commands).toContain(
+      "/starter-plugin-brief:draft",
     );
   });
 
