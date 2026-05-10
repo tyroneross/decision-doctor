@@ -16,8 +16,12 @@ export interface DbActorContext {
 
 const dbActorContext = new AsyncLocalStorage<DbActorContext>();
 
+// IMPORTANT: app pool uses DATABASE_URL_APP (the `app_user` role with NOBYPASSRLS),
+// not DATABASE_URL (the owner role, which has rolbypassrls=true and silently bypasses
+// FORCE ROW LEVEL SECURITY). Verified 2026-05-10 in T-08 — owner-role reads returned
+// cross-tenant rows. The owner URL stays for drizzle-kit migrations only.
 const pool = new Pool({
-  connectionString: env.DATABASE_URL,
+  connectionString: env.DATABASE_URL_APP,
   max: 10, // PRD §7.5 — Neon WebSocket pool sizing
 });
 

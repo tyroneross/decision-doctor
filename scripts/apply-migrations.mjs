@@ -37,10 +37,31 @@ console.log(`Applying ${files.length} migration(s) to ${url.split("@")[1]?.split
 
 for (const f of files) {
   const sql = readFileSync(join(migrationsDir, f), "utf8");
-  // Split on '--> statement-breakpoint' (drizzle's marker) or fall back to ';' for hand-written SQL.
-  const statements = sql.includes("--> statement-breakpoint")
-    ? sql.split("--> statement-breakpoint").map((s) => s.trim()).filter(Boolean)
-    : sql.split(/;\s*$/m).map((s) => s.trim()).filter(Boolean);
+  // Split on '--> statement-breakpoint' (drizzle's marker) or, for hand-written SQL,
+  // a smarter splitter that preserves DO $$...$$ blocks (which contain inner ';').
+  let statements;
+  if (sql.includes("--> statement-breakpoint")) {
+    statements = sql.split("--> statement-breakpoint").map((s) => s.trim()).filter(Boolean);
+  } else {
+    statements = [];
+    let buf = "";
+    let inDollar = false;
+    const lines = sql.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("--") && !inDollar) continue;
+      // Toggle dollar-quote state on $$ or $tag$
+      const dollarMatches = (line.match(/\$\$/g) || []).length;
+      if (dollarMatches % 2 === 1) inDollar = !inDollar;
+      buf += line + "\n";
+      if (!inDollar && /;\s*$/.test(line)) {
+        const stmt = buf.trim().replace(/;\s*$/, "");
+        if (stmt) statements.push(stmt);
+        buf = "";
+      }
+    }
+    if (buf.trim()) statements.push(buf.trim());
+  }
 
   console.log(`\n→ ${f} (${statements.length} statements)`);
   for (const stmt of statements) {

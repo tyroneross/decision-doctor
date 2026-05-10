@@ -15,7 +15,13 @@ const optionalString = z
 
 const envSchema = z.object({
   // Database (Neon)
+  // DATABASE_URL — owner role; reserved for migrations and trusted scripts.
+  // DATABASE_URL_APP — dedicated app_user role with NOBYPASSRLS; required for the app
+  //   runtime pool because RLS is bypassed by any role with rolbypassrls=true (and
+  //   neondb_owner has it). See lib/db/actor.ts and drizzle/0002_app_role.sql.
+  // DATABASE_URL_UNPOOLED — owner role on the unpooled endpoint, for drizzle-kit migrations.
   DATABASE_URL: z.string().url(),
+  DATABASE_URL_APP: z.string().url(),
   DATABASE_URL_UNPOOLED: optionalUrl,
 
   // Better Auth
