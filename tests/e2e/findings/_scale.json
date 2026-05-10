@@ -1,29 +1,29 @@
 {
-  "generatedAt": "2026-05-10T09:38:43.270Z",
+  "generatedAt": "2026-05-10T09:52:56.989Z",
   "wave10": {
     "n": 10,
-    "wallMs": 3895,
+    "wallMs": 3708,
     "successCount": 10,
     "errorCount": 0,
     "errorRate": 0,
-    "p50ms": 3152,
-    "p95ms": 3895,
-    "p99ms": 3895,
-    "minMs": 2622,
-    "maxMs": 3895,
+    "p50ms": 3105,
+    "p95ms": 3708,
+    "p99ms": 3708,
+    "minMs": 2850,
+    "maxMs": 3708,
     "sampleErrors": []
   },
   "wave25": {
     "n": 25,
-    "wallMs": 4155,
+    "wallMs": 4281,
     "successCount": 25,
     "errorCount": 0,
     "errorRate": 0,
-    "p50ms": 3107,
-    "p95ms": 3711,
-    "p99ms": 4155,
-    "minMs": 2586,
-    "maxMs": 4155,
+    "p50ms": 3187,
+    "p95ms": 3479,
+    "p99ms": 4281,
+    "minMs": 2718,
+    "maxMs": 4281,
     "sampleErrors": []
   }
 }

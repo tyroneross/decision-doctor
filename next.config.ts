@@ -15,6 +15,11 @@ const config: NextConfig = {
   // Empty turbopack config silences the warning when build-loop later wires hand-rolled SW.
   turbopack: {},
   async headers() {
+    // Dev needs 'unsafe-eval' for React Refresh; production stays strict.
+    const isDev = process.env.NODE_ENV !== "production";
+    const scriptSrc = isDev
+      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+      : "script-src 'self' 'unsafe-inline'";
     return [
       {
         source: "/:path*",
@@ -26,7 +31,7 @@ const config: NextConfig = {
             key: "Content-Security-Policy",
             value:
               "default-src 'self'; " +
-              "script-src 'self' 'unsafe-inline'; " +
+              scriptSrc + "; " +
               "style-src 'self' 'unsafe-inline'; " +
               "img-src 'self' data: https:; " +
               "connect-src 'self' https://api.groq.com https://api.resend.com; " +

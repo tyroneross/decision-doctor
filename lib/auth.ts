@@ -46,6 +46,12 @@ export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   trustedOrigins: TRUSTED_ORIGINS,
 
+  // Postgres `verifications.id`, `users.id`, `sessions.id`, `accounts.id` are
+  // `uuid` columns (matches the live DB). Better Auth's default ID generator
+  // produces 32-char nanoid-style strings which Postgres rejects as 22P02.
+  // Tell Better Auth to use `gen_random_uuid()` for new ids.
+  advanced: { database: { generateId: "uuid" } },
+
   // PRD §9 — both methods, both shipped in v1.
   emailAndPassword: {
     enabled: true,

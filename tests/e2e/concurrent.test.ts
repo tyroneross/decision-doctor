@@ -27,7 +27,7 @@ function makeInput(seed: number): DecisionInput {
       currentWeeklyPatients: 18 + (seed % 4),
       waitlistLength: seed % 3,
       avgRevenuePerVisitUSD: 170 + (seed % 30),
-      energyLevel: ["depleted", "steady", "energized"][seed % 3],
+      energyLevel: (["depleted", "steady", "energized"] as const)[seed % 3]!,
       practiceStage: "growing",
       horizonMonths: 12,
     },

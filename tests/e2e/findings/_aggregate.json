@@ -1,44 +1,44 @@
 {
-  "generatedAt": "2026-05-10T09:36:32.812Z",
+  "generatedAt": "2026-05-10T09:52:56.990Z",
   "total": 5,
   "results": [
     {
       "id": "P1",
       "template": "admin-hire",
-      "latencyMs": 2353,
-      "confidence": 51,
+      "latencyMs": 3412,
+      "confidence": 53,
       "recommendation": "Hire a part-time virtual assistant (10–15 hrs/wk)",
       "error": null
     },
     {
       "id": "P2",
       "template": "pricing",
-      "latencyMs": 3585,
-      "confidence": 53,
-      "recommendation": "Raise rates 12–20% to match benchmark",
+      "latencyMs": 3022,
+      "confidence": 58,
+      "recommendation": "Add a tiered or premium service line",
       "error": null
     },
     {
       "id": "P3",
       "template": "capacity",
-      "latencyMs": 2425,
-      "confidence": 53,
-      "recommendation": "Build a structured waitlist + tiered intake",
+      "latencyMs": 3049,
+      "confidence": 52,
+      "recommendation": "Add 4–8 weekly clinical hours",
       "error": null
     },
     {
       "id": "P4",
       "template": "pricing",
-      "latencyMs": 3260,
-      "confidence": 59,
+      "latencyMs": 3077,
+      "confidence": 57,
       "recommendation": "Add a tiered or premium service line",
       "error": null
     },
     {
       "id": "P5",
       "template": "admin-hire",
-      "latencyMs": 3226,
-      "confidence": 50,
+      "latencyMs": 3004,
+      "confidence": 54,
       "recommendation": "Hire a part-time virtual assistant (10–15 hrs/wk)",
       "error": null
     }

@@ -56,7 +56,7 @@ export default function SignInPage() {
         </p>
       </div>
 
-      <div className="mt-8 flex gap-2 text-sm" role="tablist">
+      <div className="mt-8 flex gap-1 text-sm" role="tablist">
         {(
           [
             ["magic", "Magic link"],
@@ -74,7 +74,8 @@ export default function SignInPage() {
               setMsg(null);
             }}
             className={
-              "rounded px-3 py-1.5 " +
+              // min-h-11 = 44px = mobile touch-target floor (PRD §8 / WCAG 2.2)
+              "min-h-11 rounded px-3 " +
               (mode === key
                 ? "border-b-2 border-ink-900 text-ink-900 font-medium"
                 : "text-ink-500 hover:text-ink-900")
@@ -100,7 +101,7 @@ export default function SignInPage() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full rounded border-ink-300 focus:border-accent-600 focus:ring-accent-600"
+              className="mt-1 block w-full min-h-11 rounded border-ink-300 px-3 focus:border-accent-600 focus:ring-accent-600"
             />
           </label>
         )}
@@ -113,7 +114,7 @@ export default function SignInPage() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded border-ink-300 focus:border-accent-600 focus:ring-accent-600"
+            className="mt-1 block w-full min-h-11 rounded border-ink-300 px-3 focus:border-accent-600 focus:ring-accent-600"
           />
         </label>
 
@@ -127,7 +128,7 @@ export default function SignInPage() {
               autoComplete={mode === "create" ? "new-password" : "current-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded border-ink-300 focus:border-accent-600 focus:ring-accent-600"
+              className="mt-1 block w-full min-h-11 rounded border-ink-300 px-3 focus:border-accent-600 focus:ring-accent-600"
             />
           </label>
         )}
@@ -136,10 +137,13 @@ export default function SignInPage() {
           type="submit"
           disabled={!canSubmit}
           className={
-            "w-full rounded-md py-2.5 text-sm font-medium transition " +
+            // min-h-11 = 44px touch-target floor (PRD §8 / WCAG 2.5.8).
+            // Enabled bg-ink-900 (#1f2937) on white = 12.6:1; disabled
+            // text-ink-700 (#374151) on bg-ink-100 (#f3f4f6) = 7.2:1 (WCAG AA-large).
+            "w-full min-h-11 rounded-md py-3 text-sm font-medium transition " +
             (canSubmit
               ? "bg-ink-900 text-white hover:bg-ink-700"
-              : "bg-ink-100 text-ink-500 cursor-not-allowed")
+              : "bg-ink-100 text-ink-700 cursor-not-allowed")
           }
         >
           {busy

@@ -58,3 +58,4 @@ public/workbox-*.js.map
 # --- Misc ---
 .cache/
 .turbo/
+.vercel

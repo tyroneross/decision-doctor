@@ -55,7 +55,7 @@ describe("personas — capture engine output for scoring", () => {
         const input: DecisionInput = {
           templateId: persona.templateId as TemplateId,
           source: { type: "user_form", capturedAt: new Date() },
-          fields: persona.intake as Record<string, unknown>,
+          fields: persona.intake as DecisionInput["fields"],
           context: { userId: FAKE_USER, tenantId: FAKE_TENANT },
         };
 
