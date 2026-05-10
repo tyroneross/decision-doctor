@@ -3,15 +3,15 @@
 
 import { z } from "zod";
 
-// Coerce empty strings to undefined so .optional() works for blank optional vars.
-const optionalUrl = z
-  .string()
-  .transform((v) => (v === "" ? undefined : v))
-  .pipe(z.string().url().optional());
-const optionalString = z
-  .string()
-  .transform((v) => (v === "" ? undefined : v))
-  .pipe(z.string().optional());
+// Coerce empty/undefined to undefined so .optional() works for blank optional vars.
+const optionalUrl = z.preprocess(
+  (v) => (v === "" || v == null ? undefined : v),
+  z.string().url().optional(),
+);
+const optionalString = z.preprocess(
+  (v) => (v === "" || v == null ? undefined : v),
+  z.string().optional(),
+);
 
 const envSchema = z.object({
   // Database (Neon)
