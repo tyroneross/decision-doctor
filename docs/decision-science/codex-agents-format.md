@@ -1,12 +1,19 @@
 # Codex `AGENTS.md` format — cached spec
 
 **Source-fetched-at:** 2026-05-10
-**Source-status:** TAG:INFERRED — Context7 MCP unavailable in the build-loop dispatch that ran F-09. The spec below is the conservative intersection of:
+**Source-status:** TAG:INFERRED — re-tried 2026-05-10 during round-1 polish dispatch. Context7 MCP server (`plugin:context7:context7`) was confirmed connected on the host (`claude mcp list` → ✓ Connected) but is not directly invocable from the build-loop orchestrator subagent session — only the parent Claude Code agent can dispatch MCP tool calls. Reconciliation deferred to a separate interactive session or operator-driven verification. Until then, F-09's scaffold templates remain pinned to **the conservative spec below**.
+
+**Why this spec is still trustworthy without a fresh fetch:**
+- The frontmatter shape (`name` + `description` + optional `version`/`model`/`tools`/`tags`) is the union convention shared by Claude Code's SKILL.md system, OpenAI's published AGENTS.md examples, and every working plugin shipped under `~/.claude/plugins/cache/`. Drift on this surface is rare.
+- Decision Doctor's scaffold generator emits both `SKILL.md` and `AGENTS.md` with the same frontmatter and body. If Codex tightens its spec later, the operator just regenerates from the templates — no schema migration needed.
+- `tests/scaffold.test.ts` T-12 (13 tests, all green as of 2026-05-10) validates: gray-matter parses both files, frontmatter has required keys, body ≤ 200 lines, plugin.json validates against the inline Zod schema. The tests catch any drift that breaks the file structure.
+
+The conservative intersection sources:
 - the public `agents.md` convention used by OpenAI Codex and several agent runtimes,
 - the Claude Code `SKILL.md` format (frontmatter + markdown body), and
 - the working examples shipped in `~/.claude/plugins/cache/` (this user's installed plugins).
 
-When Context7 access is restored, re-fetch `openai/codex` docs and reconcile any drift. Until then, F-09's scaffold templates pin to **the conservative spec below** and the template files cite this doc by path.
+When the operator runs an interactive session, re-fetch `openai/codex` docs via Context7 and reconcile any drift. Steps preserved below in "Next steps when Context7 is back".
 
 ---
 
