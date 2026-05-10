@@ -43,33 +43,57 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
     }
   }
 
+  // If the engine couldn't find a different fallback, the orchestrator emits the
+  // sentinel "No clearly different fallback" string. Render that as a single
+  // honest message rather than a card that mirrors the recommendation.
+  const robustIsDistinct =
+    decision.robustAlternative.option !== "No clearly different fallback" &&
+    decision.robustAlternative.option !== decision.recommendation.option;
+
   return (
-    <div className="space-y-6">
-      {/* Hero recommendation */}
+    <div className="space-y-5">
+      {/* Hero recommendation — owns the H1 (page-level H1 was removed). */}
       <section className="rounded-2xl border border-slate-200 bg-canvas-raised p-5 sm:p-6">
-        <div className="text-xs uppercase tracking-wide text-ink-muted">Recommendation</div>
-        <h2 className="mt-1 text-2xl font-semibold leading-tight">
-          {decision.recommendation.option}
-        </h2>
-        <div className={cn("mt-3 flex items-center gap-2 text-sm font-medium", confColor)}>
-          <span className={cn("h-2 w-2 rounded-full", confDot)} aria-hidden="true" />
-          {confLabel} · {conf}%
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <h1 className="text-2xl font-semibold leading-tight flex-1 min-w-[200px]">
+            {decision.recommendation.option}
+          </h1>
+          <div
+            className={cn(
+              "inline-flex items-center gap-2 text-sm font-medium whitespace-nowrap mt-1",
+              confColor,
+            )}
+            aria-label={`${confLabel}, ${conf} percent`}
+          >
+            <span className={cn("h-2 w-2 rounded-full", confDot)} aria-hidden="true" />
+            {confLabel} · {conf}%
+          </div>
         </div>
         <p className="mt-3 text-ink-subtle leading-relaxed">{decision.recommendation.rationale}</p>
       </section>
 
-      {/* Robust alternative */}
-      <section className="rounded-2xl border border-slate-200 bg-canvas-raised p-5">
-        <div className="text-xs uppercase tracking-wide text-ink-muted">Robust alternative</div>
-        <div className="mt-1 text-base font-semibold">{decision.robustAlternative.option}</div>
-        <p className="mt-2 text-sm text-ink-subtle">{decision.robustAlternative.why}</p>
-      </section>
+      {/* Robust alternative — only render when distinct from recommendation */}
+      {robustIsDistinct ? (
+        <section className="rounded-2xl border border-slate-200 bg-canvas-raised p-5">
+          <h3 className="text-base font-semibold">If your assumptions shift</h3>
+          <div className="mt-2 text-base font-medium">{decision.robustAlternative.option}</div>
+          <p className="mt-2 text-sm text-ink-subtle">{decision.robustAlternative.why}</p>
+        </section>
+      ) : (
+        <section className="rounded-2xl border border-slate-200 bg-canvas-raised p-5">
+          <h3 className="text-base font-semibold">If your assumptions shift</h3>
+          <p className="mt-2 text-sm text-ink-subtle">
+            Your inputs converge on one path. If your situation changes, run the
+            same template again with the new numbers and compare.
+          </p>
+        </section>
+      )}
 
-      {/* Next steps (was: workload reducers — chips removed; verb-only context) */}
+      {/* First move (was: workload reducers — chips removed; verb-only context) */}
       {decision.workloadReducers.length > 0 && reducer && (
         <section className="rounded-2xl border border-slate-200 bg-canvas-raised p-5">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold">Next step</h3>
+            <h3 className="text-base font-semibold">Do this first</h3>
             {decision.workloadReducers.length > 1 && (
               <div className="text-xs text-ink-muted">
                 {reducerIdx + 1} of {decision.workloadReducers.length}
@@ -142,23 +166,28 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
         {showWork && (
           <div className="mt-3 space-y-3">
             <MethodTraceSummary trace={decision.methodTrace} />
-            <details className="rounded-xl border border-slate-200 bg-canvas-raised p-4">
-              <summary className="cursor-pointer text-sm text-ink-subtle">
-                Show raw reasoning data (for advanced users)
-              </summary>
-              <div className="mt-3 space-y-3">
-                {decision.methodTrace.map((entry, i) => (
-                  <details key={i} className="rounded-lg border border-slate-200 p-3">
-                    <summary className="cursor-pointer text-xs font-medium text-ink-subtle">
-                      {entry.name}
-                    </summary>
-                    <pre className="mt-2 overflow-auto text-xs leading-relaxed text-ink-muted whitespace-pre-wrap">
-                      {JSON.stringify(entry.output, null, 2)}
-                    </pre>
-                  </details>
-                ))}
-              </div>
-            </details>
+            {/* Raw JSON drawer — only for the OWNER, not for share-link recipients.
+                A shared decision goes to accountants / partners / spouses who do
+                not need engine internals (UX critic 2026-05-10). */}
+            {!publicView && (
+              <details className="rounded-xl border border-slate-200 bg-canvas-raised p-4">
+                <summary className="cursor-pointer text-sm text-ink-subtle">
+                  Show raw reasoning data (for advanced users)
+                </summary>
+                <div className="mt-3 space-y-3">
+                  {decision.methodTrace.map((entry, i) => (
+                    <details key={i} className="rounded-lg border border-slate-200 p-3">
+                      <summary className="cursor-pointer text-xs font-medium text-ink-subtle">
+                        {entry.name}
+                      </summary>
+                      <pre className="mt-2 overflow-auto text-xs leading-relaxed text-ink-muted whitespace-pre-wrap">
+                        {JSON.stringify(entry.output, null, 2)}
+                      </pre>
+                    </details>
+                  ))}
+                </div>
+              </details>
+            )}
           </div>
         )}
       </section>

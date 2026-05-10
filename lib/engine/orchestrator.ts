@@ -64,18 +64,34 @@ export async function runDecision(
     alternativesArr.push({ option: e.option, eliminatedAtStage: 4, reason: e.reason });
   }
   // Always include runner-up as a non-eliminated alternative if we have <2.
+  // Reason text stays in plain English — no weighted-score numbers (those
+  // leak engine plumbing into clinician UI per UX critic 2026-05-10).
   if (alternativesArr.length < 2) {
     const runnersUp = s5.output.ranked.slice(1, 3);
     for (const r of runnersUp) {
       alternativesArr.push({
         option: r.option,
         eliminatedAtStage: 4,
-        reason: `Ranked #${r.rank} with weighted score ${r.weightedScore.toFixed(2)} — outranked by the recommendation on the heaviest criteria.`,
+        reason:
+          "Ranked behind the recommendation on the criteria you weighted most heavily.",
       });
     }
   }
   // Cap to 5 to keep the UI scannable.
   const alternatives = alternativesArr.slice(0, 5);
+
+  // Robust alternative integrity: if the engine returns the SAME option as
+  // the recommendation (happens when only 1-2 options survived Stage 2 or
+  // when one option dominates every criterion), surface that honestly rather
+  // than render a "safety net" that's a copy of the recommendation. UX critic
+  // 2026-05-10 flagged this as the #1 trust killer.
+  const robustIsDistinct = s5.output.robustOption !== recommended.option;
+  const robustAlternative = robustIsDistinct
+    ? { option: s5.output.robustOption, why: s5.output.robustWhy }
+    : {
+        option: "No clearly different fallback",
+        why: "Your inputs converge on one path. If your assumptions shift later, run the same template again with the new numbers and compare.",
+      };
 
   const output: DecisionOutput = {
     decisionId,
@@ -86,10 +102,7 @@ export async function runDecision(
       rationale: s5.output.recommendationRationale,
     },
     alternatives,
-    robustAlternative: {
-      option: s5.output.robustOption,
-      why: s5.output.robustWhy,
-    },
+    robustAlternative,
     methodTrace: [
       { stage: 1, name: "values", output: s1.output },
       { stage: 2, name: "constraints", output: s2.output },

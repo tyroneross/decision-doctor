@@ -7,7 +7,7 @@ export default function LandingPage() {
       <div className="px-6 pt-4 flex justify-end">
         <Link
           href="/sign-in"
-          className="text-sm text-ink underline min-h-[44px] inline-flex items-center"
+          className="text-sm font-medium text-ink underline underline-offset-2 min-h-[44px] inline-flex items-center px-2"
         >
           Sign in
         </Link>

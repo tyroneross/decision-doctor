@@ -170,6 +170,19 @@ export function IntakeForm({ templateId, fields, title }: Props) {
     }
   }
 
+  // Progress: count fields with a non-empty value (PP-inspired progress badge —
+  // gives the user a sense of "where am I" without converting to a multi-step
+  // wizard. We keep the flat form for low-friction scanning + browser autofill,
+  // and add the badge for orientation + commitment-momentum.
+  const answeredCount = fields.filter((f) => {
+    const v = values[f.id];
+    if (v === undefined || v === null || v === "") return false;
+    if (Array.isArray(v) && v.length === 0) return false;
+    return true;
+  }).length;
+  const total = fields.length;
+  const pct = total > 0 ? Math.round((answeredCount / total) * 100) : 0;
+
   return (
     <form onSubmit={submit} className="mt-4 space-y-5">
       {showHint && (
@@ -181,21 +194,64 @@ export function IntakeForm({ templateId, fields, title }: Props) {
           <button
             type="button"
             onClick={dismissHint}
-            className="text-xs text-ink-muted underline ml-3"
+            className="text-xs text-ink-muted underline ml-3 min-h-[36px]"
           >
             Got it
           </button>
         </div>
       )}
 
-      {fields.map((f) => (
-        <div key={f.id}>
-          <label className="block text-sm font-medium text-ink">{f.label}</label>
-          {f.hint && <div className="text-xs text-ink-muted mt-0.5">{f.hint}</div>}
-          <FieldInput field={f} value={values[f.id]} onChange={(v) => setField(f.id, v)} />
-          {errors[f.id] && <div className="mt-1 text-xs text-confidence-low">{errors[f.id]}</div>}
-        </div>
-      ))}
+      {/* Progress badge + thin bar — orientation cue per UX critic 2026-05-10
+          and ProductPilot adaptive-intake pattern. */}
+      <div
+        className="flex items-center justify-between gap-3 text-xs text-ink-muted"
+        aria-live="polite"
+      >
+        <span>{answeredCount} of {total} answered</span>
+        <span aria-hidden="true">{pct}%</span>
+      </div>
+      <div
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Intake completion"
+        className="h-1 bg-slate-200 rounded-full overflow-hidden -mt-3"
+      >
+        <div
+          className="h-full bg-ink transition-all duration-300"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      {fields.map((f, i) => {
+        const isAnswered = (() => {
+          const v = values[f.id];
+          if (v === undefined || v === null || v === "") return false;
+          if (Array.isArray(v) && v.length === 0) return false;
+          return true;
+        })();
+        return (
+          <div key={f.id}>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xs text-ink-muted tabular-nums" aria-hidden="true">
+                {i + 1}.
+              </span>
+              <label className="block text-sm font-medium text-ink">
+                {f.label}
+                {isAnswered && (
+                  <span className="ml-2 text-xs text-confidence-high" aria-hidden="true">✓</span>
+                )}
+              </label>
+            </div>
+            {f.hint && <div className="text-xs text-ink-muted mt-0.5 ml-5">{f.hint}</div>}
+            <div className="ml-5">
+              <FieldInput field={f} value={values[f.id]} onChange={(v) => setField(f.id, v)} />
+            </div>
+            {errors[f.id] && <div className="mt-1 text-xs text-confidence-low ml-5">{errors[f.id]}</div>}
+          </div>
+        );
+      })}
 
       <div className="sticky bottom-0 left-0 right-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-canvas-raised/95 backdrop-blur border-t border-slate-200 flex flex-col gap-2 no-print">
         <button

@@ -51,7 +51,7 @@ export function SignInClient({ initialMode = "magic" }: { initialMode?: Mode } =
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border-slate-300 focus:border-ink focus:ring-ink"
+              className="w-full rounded-lg border-slate-300 focus:border-ink focus:ring-ink min-h-[44px]"
               autoComplete="name"
             />
           </Field>
@@ -62,7 +62,7 @@ export function SignInClient({ initialMode = "magic" }: { initialMode?: Mode } =
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border-slate-300 focus:border-ink focus:ring-ink"
+            className="w-full rounded-lg border-slate-300 focus:border-ink focus:ring-ink min-h-[44px]"
             autoComplete="email"
           />
         </Field>
@@ -74,7 +74,7 @@ export function SignInClient({ initialMode = "magic" }: { initialMode?: Mode } =
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border-slate-300 focus:border-ink focus:ring-ink"
+              className="w-full rounded-lg border-slate-300 focus:border-ink focus:ring-ink min-h-[44px]"
               autoComplete={mode === "signup" ? "new-password" : "current-password"}
             />
             <div className="mt-1 text-xs text-ink-muted">8 characters minimum.</div>
@@ -109,8 +109,11 @@ function Tab({ active, onClick, children }: { active: boolean; onClick: () => vo
     <button
       type="button"
       onClick={onClick}
-      className={`px-3 py-2 text-sm border-b-2 -mb-px ${
-        active ? "border-ink text-ink font-medium" : "border-transparent text-ink-muted"
+      aria-pressed={active}
+      className={`px-3 py-3 text-sm border-b-2 -mb-px min-h-[44px] inline-flex items-center ${
+        active
+          ? "border-ink text-ink font-medium"
+          : "border-transparent text-ink-subtle hover:text-ink"
       }`}
     >
       {children}

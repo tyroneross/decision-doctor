@@ -48,13 +48,14 @@ export default async function DecisionPage({
     : null;
   const tplTitle = tplId ? loadTemplate(tplId).title : row.templateId;
   return (
-    <main className="px-4 sm:px-6 py-6 max-w-3xl">
-      <div className="text-xs text-ink-muted uppercase tracking-wide">{tplTitle}</div>
-      <h1 className="mt-1 text-2xl font-semibold">{decision.recommendation.option}</h1>
-      <div className="mt-1 text-xs text-ink-muted">
-        {new Date(row.createdAt).toLocaleString()}
+    <main className="px-4 sm:px-6 py-6 max-w-3xl mx-auto">
+      {/* Lightweight breadcrumb only — the RecommendationView owns the H1 */}
+      <div className="text-xs text-ink-muted">
+        <span className="uppercase tracking-wide">{tplTitle}</span>
+        <span className="mx-2">·</span>
+        <span>{new Date(row.createdAt).toLocaleDateString()}</span>
       </div>
-      <div className="mt-5">
+      <div className="mt-3">
         <RecommendationView decision={decision} shareToken={row.shareToken} />
       </div>
     </main>
