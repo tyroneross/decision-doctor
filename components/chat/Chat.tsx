@@ -202,6 +202,31 @@ export function Chat() {
         </article>
       )}
 
+      {/* "Start over" — only when there's a real thread, never on empty state */}
+      {!isEmptyState && (
+        <div className="-mt-2 mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={reset}
+            className="ease-soft inline-flex items-center gap-1 rounded-full px-2 py-1 text-[12px] text-ink-500 hover:text-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden
+            >
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-2 14H7L5 6" />
+            </svg>
+            Start over
+          </button>
+        </div>
+      )}
+
       {/* MESSAGE LIST */}
       <ul
         className="flex-1 space-y-4 overflow-y-auto pb-4"
@@ -312,26 +337,6 @@ export function Chat() {
           autoComplete="off"
           className="block min-h-11 w-full bg-transparent text-[15px] text-ink-900 placeholder:text-ink-500 focus:outline-none focus:ring-0 border-0 sm:text-[16px]"
         />
-        <button
-          type="button"
-          onClick={reset}
-          aria-label="Start a new chat"
-          title="New chat"
-          className="ease-soft hidden h-9 items-center gap-1.5 rounded-full px-3 text-[13px] text-ink-500 hover:bg-cream-2 hover:text-ink-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral sm:inline-flex"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            aria-hidden
-          >
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-          <span>New</span>
-        </button>
         <button
           type="submit"
           disabled={!canSend}
