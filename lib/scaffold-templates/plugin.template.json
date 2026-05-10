@@ -1,0 +1,14 @@
+{
+  "name": "{{slug}}",
+  "version": "0.1.0",
+  "description": "{{description}}",
+  "author": "Decision Doctor",
+  "homepage": "https://decision-doctor-xi.vercel.app",
+  "commands": [
+    {
+      "name": "{{slug}}",
+      "description": "{{title}}",
+      "argument-hint": "<your inputs here>"
+    }
+  ]
+}

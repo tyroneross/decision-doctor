@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Decision Doctor v2-08 — Scaffold viewer</title>
+<style>
+  /* Mockup — Sunrise palette only. No new tokens introduced. */
+  :root {
+    --cream: #fff9f4;
+    --cream-2: #fdf3e7;
+    --ink-900: #2a2118;
+    --ink-700: #4f4036;
+    --ink-500: #8a7a6e;
+    --rule: #efe1cc;
+    --skill: #0fb8a6;
+    --skill-bg: #dffaf6;
+    --skill-deep: #075a51;
+    --plum: #7a3aa8;
+    --plum-bg: #f1e5fa;
+    --cap: #ff6b4a;
+    --cap-bg: #ffe9e0;
+    --coral: #ff8d5e;
+    --coral-2: #ff6b4a;
+    --teal: #0fb8a6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--cream);
+    color: var(--ink-900);
+    -webkit-font-smoothing: antialiased;
+  }
+  .stage {
+    max-width: 1100px;
+    margin: 48px auto;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: 1fr 640px;
+    gap: 32px;
+    align-items: start;
+  }
+  @media (max-width: 920px) {
+    .stage { grid-template-columns: 1fr; }
+    .drawer { position: static !important; max-width: 100% !important; }
+  }
+  .page-stub {
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 24px;
+    padding: 24px;
+    opacity: .55;
+    pointer-events: none;
+  }
+  .page-stub h1 { font-size: 22px; margin: 0 0 8px; }
+  .page-stub p { color: var(--ink-700); font-size: 14px; }
+  .skill-card {
+    margin-top: 24px;
+    background: white;
+    border: 2px solid var(--skill);
+    border-radius: 20px;
+    padding: 20px;
+  }
+  .skill-card .pill {
+    display: inline-block;
+    background: var(--skill);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .skill-card h3 { margin: 10px 0 4px; font-size: 18px; }
+  .skill-card p { color: var(--ink-700); font-size: 13.5px; line-height: 1.5; }
+  .open-cta {
+    margin-top: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    background: var(--skill);
+    color: white;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  /* DRAWER */
+  .drawer {
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    box-shadow: 0 12px 32px -16px rgba(42, 33, 24, 0.18);
+    overflow: hidden;
+    max-width: 640px;
+  }
+  .drawer header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .drawer header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .drawer header .sub {
+    font-size: 12px;
+    color: var(--ink-500);
+    margin-top: 2px;
+  }
+  .close {
+    width: 32px; height: 32px;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: white;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--ink-700);
+  }
+  .tabs {
+    display: flex;
+    gap: 6px;
+    padding: 14px 22px 0;
+  }
+  .tab {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: white;
+    color: var(--ink-700);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tab.active {
+    background: var(--cream-2);
+    color: var(--ink-900);
+    border-color: var(--ink-700);
+  }
+  .body-grid {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    min-height: 380px;
+  }
+  .files {
+    padding: 16px 12px;
+    border-right: 1px solid var(--rule);
+    background: var(--cream);
+  }
+  .files .label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-500);
+    padding: 4px 8px 10px;
+  }
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: var(--ink-700);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .file-item.active {
+    background: white;
+    color: var(--ink-900);
+    font-weight: 600;
+    box-shadow: 0 1px 0 var(--rule);
+  }
+  .file-item .icon { opacity: .65; }
+  .preview {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--rule);
+    margin-bottom: 10px;
+  }
+  .preview-head .name {
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 12.5px;
+    color: var(--ink-700);
+  }
+  .copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: white;
+    color: var(--ink-700);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .copy-btn.copied { color: var(--teal); border-color: var(--teal); }
+  pre {
+    margin: 0;
+    background: var(--cream-2);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--ink-900);
+    overflow: auto;
+    white-space: pre;
+    flex: 1;
+  }
+  /* Calm Precision: "Copied ✓" is teal text only, no green pill. */
+  pre .kw { color: var(--plum); }
+  pre .str { color: var(--skill-deep); }
+  pre .com { color: var(--ink-500); font-style: italic; }
+  .footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px 22px;
+    border-top: 1px solid var(--rule);
+    background: var(--cream);
+  }
+  .footer button {
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: white;
+    color: var(--ink-700);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .footer .primary {
+    background: var(--coral);
+    color: white;
+    border-color: var(--coral);
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div>
+    <div class="page-stub">
+      <h1>Recommended: cap new intakes at 4/week and waitlist the rest</h1>
+      <p>(rest of the decision page would render here)</p>
+      <div class="skill-card">
+        <span class="pill">🛠️ Skill</span>
+        <h3>Insurance pre-auth letter</h3>
+        <p>One-paragraph paste-ready letter — drafts in 60 seconds instead of 15 minutes.</p>
+        <a class="open-cta" href="#">Open scaffold →</a>
+      </div>
+    </div>
+  </div>
+
+  <aside class="drawer" role="dialog" aria-label="Scaffold viewer">
+    <header>
+      <div>
+        <h2>Scaffold · Insurance pre-auth letter skill</h2>
+        <div class="sub">Two files · paste-ready · works in Claude Code or Codex</div>
+      </div>
+      <button class="close" aria-label="Close">✕</button>
+    </header>
+    <div class="tabs" role="tablist">
+      <button class="tab active" role="tab" aria-selected="true">Claude Code</button>
+      <button class="tab" role="tab" aria-selected="false">Codex</button>
+    </div>
+    <div class="body-grid">
+      <nav class="files" aria-label="Files in scaffold">
+        <div class="label">📁 Files</div>
+        <div class="file-item active">
+          <span class="icon">📄</span> SKILL.md
+        </div>
+        <div class="file-item">
+          <span class="icon">📄</span> AGENTS.md
+        </div>
+      </nav>
+      <div class="preview">
+        <div class="preview-head">
+          <span class="name">SKILL.md</span>
+          <button class="copy-btn copied">✓ Copied</button>
+        </div>
+<pre><span class="com">---</span>
+<span class="kw">name:</span> <span class="str">pre-auth-letter</span>
+<span class="kw">description:</span> <span class="str">Drafts a calm, plain-language insurance pre-authorization letter from a 4-line clinical summary.</span>
+<span class="com">---</span>
+
+<span class="kw"># Pre-auth letter skill</span>
+
+When the user asks for a pre-authorization letter, ask for these four
+fields if any are missing:
+- Diagnosis (ICD-10 if known)
+- Procedure / medication being requested
+- Clinical justification (one sentence)
+- Payer / plan
+
+Then produce a letter ≤ 350 words in this format:
+- Header line (date, payer)
+- Patient identifier line (placeholders only — no PHI)
+- 2-sentence clinical summary
+- Requested service line
+- Justification paragraph (3-4 sentences)
+- Sign-off block
+
+Never include PHI in worked examples. Use placeholders.
+</pre>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="primary">📥 Copy all</button>
+      <button>▶️ Try in Claude Code</button>
+      <button>💾 Download .zip</button>
+    </div>
+  </aside>
+</div>
+</body>
+</html>

@@ -100,11 +100,17 @@ describe("T-03 — Engine returns valid DecisionOutput", () => {
         }
         expect(output.robustAlternative.option).toBeTruthy();
         expect(output.workloadReducers.length).toBeGreaterThanOrEqual(3);
-        // methodTrace covers all 5 stages
-        const stages = output.methodTrace.map((m) => m.stage).sort();
-        expect(stages).toEqual([1, 2, 3, 4, 5]);
-        // Token telemetry populated
-        expect(llmCalls.length).toBe(2); // Stage 1 + Stage 5
+        // methodTrace covers Stages 1..5 (core) + Stage 6 (F-08 feasibility)
+        // + Stage 7 (F-09 scaffold). Stages 0 (F-11 classifier) and 1B (F-10
+        // AHP) only land when their respective routing fires; SED + LLM-
+        // weights path never includes them.
+        const stages = output.methodTrace
+          .map((m) => m.stage)
+          .filter((s) => typeof s === "number")
+          .sort((a, b) => (a as number) - (b as number));
+        expect(stages).toEqual([1, 2, 3, 4, 5, 6, 7]);
+        // Token telemetry populated. F-08 adds Stage 6 → 3 LLM calls.
+        expect(llmCalls.length).toBe(3); // Stage 1 + Stage 5 + Stage 6
         for (const c of llmCalls) {
           expect(c.tokensIn).toBeGreaterThan(0);
           expect(c.tokensOut).toBeGreaterThan(0);

@@ -11,6 +11,7 @@ import { runStage3Weights } from "@/lib/engine/stage3-weights";
 import { runStage4Outranking } from "@/lib/engine/stage4-outranking";
 import { runStage5Ranking } from "@/lib/engine/stage5-ranking";
 import { runStage6Feasibility } from "@/lib/engine/stage6-feasibility";
+import { runStage7Scaffold } from "@/lib/engine/stage7-scaffold";
 import type { TemplateId } from "@/shared/schema";
 
 export interface RunDecisionResult {
@@ -112,6 +113,17 @@ export async function runDecision(
     const bScore = b.combinedScore ?? 0;
     return bScore - aScore;
   });
+
+  // STAGE 7 (F-09): scaffold generation for reducers classified "skill" or
+  // "plugin". Deterministic, no LLM call. Only fires when ≥1 reducer is in
+  // the eligible tier — else the stage is a no-op that returns reducers
+  // unchanged.
+  const eligibleForScaffold = rankedReducers.some(
+    (r) => r.aiFeasibility === "skill" || r.aiFeasibility === "plugin",
+  );
+  const stage7 = eligibleForScaffold
+    ? runStage7Scaffold(rankedReducers)
+    : { reducers: rankedReducers, generatedCount: 0 };
 
   // Assemble output. Alternatives = (Stage2 vetoes ∪ Stage4 outranked), excluding the top.
   const alternatives: DecisionOutput["alternatives"] = [];
@@ -246,8 +258,18 @@ export async function runDecision(
           reasoning: stage6.reasoning,
         },
       },
+      {
+        stage: 7,
+        name: "scaffold",
+        output: {
+          generatedCount: stage7.generatedCount,
+          eligibleReducers: stage7.reducers
+            .filter((r) => r.scaffold)
+            .map((r) => ({ title: r.title, fileCount: r.scaffold!.files.length })),
+        },
+      },
     ],
-    workloadReducers: rankedReducers,
+    workloadReducers: stage7.reducers,
     destinations: [
       {
         type: "user_ui",

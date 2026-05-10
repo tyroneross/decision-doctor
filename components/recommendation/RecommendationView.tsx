@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Decision } from "@/lib/db/schema";
+import { ScaffoldViewer } from "@/components/scaffold/ScaffoldViewer";
+import type { Scaffold } from "@/shared/schema";
 import {
   categoryFor,
   confidenceBand,
@@ -37,6 +39,8 @@ type WorkloadReducer = {
   aiFeasibility?: AiFeasibility;
   feasibilityRationale?: string;
   combinedScore?: number;
+  // F-09: paste-ready scaffold for skill/plugin reducers.
+  scaffold?: Scaffold;
   artifact?: {
     promptText?: string;
     playbookSteps?: string[];
@@ -52,6 +56,9 @@ export function RecommendationView({ row }: { row: Decision }) {
   const robust = (row.robustAlternative as Robust | null) ?? null;
   const trace = (row.methodTrace as MethodTraceEntry[] | null) ?? [];
   const reducers = (row.workloadReducers as WorkloadReducer[] | null) ?? [];
+  // F-09: scaffold viewer state. Holds the reducer index whose scaffold is
+  // currently being viewed, or null when the drawer is closed.
+  const [scaffoldOpenIndex, setScaffoldOpenIndex] = useState<number | null>(null);
 
   if (!rec) {
     return (
@@ -197,6 +204,17 @@ export function RecommendationView({ row }: { row: Decision }) {
               </p>
               {topReducer.artifact?.promptText && (
                 <CopyPromptButton text={topReducer.artifact.promptText} />
+              )}
+              {/* F-09: open the scaffold drawer for skill/plugin reducers. */}
+              {topReducer.scaffold && (
+                <button
+                  type="button"
+                  onClick={() => setScaffoldOpenIndex(0)}
+                  className="ease-soft mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-cat-skill-deep hover:gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                  aria-label={`Open scaffold for ${topReducer.title}`}
+                >
+                  Open scaffold →
+                </button>
               )}
               {topReducer.estTimeSavingHrsPerWeek && (
                 <p className="mt-3 text-[11.5px] text-ink-500">
@@ -417,6 +435,16 @@ export function RecommendationView({ row }: { row: Decision }) {
         alternatives={alternatives}
         trace={trace}
       />
+
+      {/* F-09: scaffold drawer for the currently-selected reducer */}
+      {scaffoldOpenIndex !== null && reducers[scaffoldOpenIndex]?.scaffold && (
+        <ScaffoldViewer
+          scaffold={reducers[scaffoldOpenIndex]!.scaffold!}
+          title={reducers[scaffoldOpenIndex]!.title}
+          open
+          onClose={() => setScaffoldOpenIndex(null)}
+        />
+      )}
 
       {/* PRIMARY-VS-SECONDARY framing */}
       <div className="rounded-2xl border border-rule bg-cream-2 p-5 sm:p-6">
