@@ -24,9 +24,9 @@ threat_model: "OWASP LLM Top 10 + OWASP Agentic Top 10 + Cisco DefenseClaw 3-pil
 
 Decision Doctor helps solo practitioners pick the right AI use cases for their workflow and ship them — then provides a decision framework when AI alone can't solve the problem.
 
-**Primary path: "Find where AI saves you time."** A 5-minute conversation surfaces a ranked list of weekly capacity drains, scores each on AI feasibility (skill / plugin / agent / human-only), and **builds the starter tool** (paste-ready prompt, custom Claude Skill, MCP plugin, or agent recipe) for the top one. Time saved is the universal metric. Each week, the user gets a workflow audit: how their active AI tools performed + new recommendations + honest tradeoffs between custom tools the app built and public tools they could leverage instead.
+**Primary path: "Find where AI saves you time."** A 5-minute conversation surfaces a ranked list of weekly capacity drains, **scores each on AI feasibility** (`skill` / `plugin` / `agent` / `human`) — a load-bearing must-have, not a nice-to-have — and **builds the starter tool** for the top one as a **paste-ready scaffold that works in Claude Code AND OpenAI Codex out of the box** (a valid `SKILL.md` + `AGENTS.md` block for skills; a valid `plugin.json` + minimal directory layout for plugins). No hand-editing required — copy, paste, run. Time saved is the universal metric. Each week, the user gets a workflow audit: how their active AI tools performed + new recommendations + honest tradeoffs between custom tools the app built and public tools they could leverage instead.
 
-**Secondary path: "Help me decide given my constraints."** When AI can't directly solve the problem (raise prices? cap intakes? hire admin?), the same engine runs a transparent MCDA pipeline: alternatives considered, why each was eliminated, confidence band, robust fallback if assumptions shift, paired-path anti-nudge framing. Math is collapsed under a "Show the math" disclosure — visible on demand, not in the way. v1 ships three decision templates — capacity, pricing, admin-hire — to a Next.js 16 mobile-first PWA. Single-user UX, multi-tenant-ready architecture, no PHI in v1.
+**Secondary path: "Help me decide given my constraints."** When AI can't directly solve the problem (raise prices? cap intakes? expand referrals?), the same engine runs a transparent MCDA pipeline: alternatives considered, why each was eliminated, confidence band, robust fallback if assumptions shift, paired-path anti-nudge framing. Math is collapsed under a "Show the math" disclosure — visible on demand, not in the way. v1 ships three decision templates — capacity, pricing, referral-network — to a Next.js 16 mobile-first PWA (PWA install ships right after core). Single-user UX, multi-tenant-ready architecture, no PHI in v1.
 
 ## 2. Context & North-Star
 
@@ -72,23 +72,26 @@ If the LLM hits one of these, follow as written or pause and ask:
 - **PHI rejection at intake** (LD-03 / ADR-002 / T-09) — Zod must reject any free-form field that could plausibly contain patient identifiers
 - **RLS on every user-owned table** (LD-04 / §7.4 / T-08) — `FORCE ROW LEVEL SECURITY` enabled with `WITH CHECK` clause
 - **Multi-tenant-ready schema** (ADR-003) — every user-owned table includes `tenant_id` from day 1
-- **Composable per-stage engine** (ADR-004 / §6.2) — each MCDA stage is a discrete bounded function; no mega-prompts that fuse multiple stages
+- **Composable per-stage engine** (ADR-004 / §6.2) — each MCDA stage is a discrete bounded function; no mega-prompts that fuse multiple stages. **Parallelize stages where dependency graph allows** (e.g., AI-feasibility classification can run in parallel with Stage 4 outranking once Stage 3 weights are set).
 - **Both auth methods** (ADR-005) — magic link AND email/password, both via Better Auth, both shipped in v1
-- **Transparent reasoning UI** (F-04 / U-02) — `methodTrace` must be visible (expandable); confidence color-coded; alternatives + elimination reasons shown
+- **Transparent reasoning UI** (F-04 / U-02) — `methodTrace` must be visible (expandable); confidence color-coded; alternatives + elimination reasons shown; **MCDA detail collapsed behind a "Show the math" disclosure by default** — Pyramid Principle, hero metric (time saved) leads, math is one click away
 - **`workloadReducers[]` ≥3 per recommendation** (T-03 / A-12) — paste-ready artifacts ship with every decision
+- **AI-feasibility scoring on every `workloadReducer`** (F-08 / T-11) — every reducer carries `aiFeasibility: "skill" | "plugin" | "agent" | "human"`. Tells the user *how* to ship, not just whether it's feasible. **The output of the engine is a ranked list of capacity drains × AI feasibility**, with the top one built. Without this, the engine can't prioritize what to build first.
+- **Skill / plugin scaffold generator** (F-09 / T-12) — for any reducer scored `"skill"` or `"plugin"`, the engine emits a paste-ready artifact compatible with **Claude Code** (a valid `SKILL.md` with frontmatter for skills, or a valid `plugin.json` + minimal directory layout for plugins) AND **OpenAI Codex** (matching `AGENTS.md` block for skills, equivalent plugin scaffold). User must be able to copy/paste the output directly into their tool of choice and have it work — no hand-editing.
 - **Node runtime for DB-touching routes** (LD-08) — `export const runtime = "nodejs"` on `/api/decisions/*` and `/api/auth/*`
-- **All 7 P0 features + 10 F-criteria tests** in §5
-- **Engine latency p95 < 6s** (T-03)
+- **All P0 features + corresponding F-criteria tests** in §5
 - **Per-user Groq rate limit** (T-10) — 20 decisions/day
 
 ### Nice-to-have (ship if time permits; defer cleanly if blocked)
 
 These improve the build but skipping them does not violate the spec. If deferred, log in §16 Decision Log.
 
-- **PWA installable** (F-07) — if `@ducanh2912/next-pwa` × Next 16 has friction (OQ-02), defer to v1.1
+- **PWA installable** (F-07) — **next step after core functionality ships**. Hand-rolled SW per OQ-02 fallback acceptable. Demote-but-keep — phone-first usage between patients is a real adoption driver, just not a round-1 blocker.
+- **1-page print/PDF export** (F-05 / T-04) — nice-to-have, not major. Browser-print path acceptable; full PDF rendering deferred. If under time pressure, skip the dedicated print-optimized layout — share-by-link is the higher-leverage path.
+- **No hard cap on engine latency** — prior <6s p95 target removed. Target remains ≤8s p95 as a design goal, but the build should **plan for parallel processing where the dependency graph allows** rather than chase a strict number. Adding F-08 + F-09 inevitably adds pipeline stages; parallelism is the right answer, not stage-cutting.
 - **Sentry + structured logging** — wire in production only; blank in dev
 - **All Q-criteria green** (§18.2) — Q-01–Q-04 required; Q-05 (migration on fresh DB) and Q-07 (Lighthouse ≥90) are nice-to-have for hackathon
-- **Upstash-backed rate limiter** — in-memory acceptable for hackathon
+- **Upstash-backed rate limiter** — in-memory acceptable for hackathon (Upstash swap already shipped as of 2026-05-10 commit `73d1dc1`)
 - **Custom domain** (`decisiondoctor.app`) — Vercel preview URL is acceptable for Round 1
 
 ### Flexible (LLM picks based on what's optimal at build time)
@@ -148,7 +151,7 @@ The traceability spine. Every feature in §5 satisfies ≥1 of these; every test
 
 | ID | User Need |
 |---|---|
-| U-01 | As a solo healthcare practitioner, I need to make recurring high-stakes business decisions (capacity, pricing, hiring) without access to a CFO, consultant, or analyst. |
+| U-01 | As a solo healthcare practitioner, I need to make recurring business decisions about my capacity, pricing, and referral-network expansion — and identify where AI can take the work off my plate — without access to a CFO, consultant, or analyst. |
 | U-02 | As a healthcare-adjacent user, I need to see the math behind every AI recommendation — alternatives considered, why each was eliminated, confidence — because confident-sounding answers without provenance disqualify the tool in my context. |
 | U-03 | As a busy practitioner, I need to complete a decision in ≤20 min using ≤5 min of structured intake on my phone, between patients. |
 | U-04 | As an owner-operator weighing irreversible decisions, I need a robust fallback recommendation if my assumptions shift — not just one answer. |
@@ -170,7 +173,14 @@ P0 features ship for Round 1. Each feature: ID + size + needs satisfied + data p
 | **F-04** | Transparent recommendation UI (renders rec + alternatives + reasoning + workloadReducers) | M | U-02 | reads D-03, D-04, D-05, D-06, D-09 | T-04 |
 | **F-05** | 1-page summary export (print-optimized HTML, signed shareable URL) | S | U-02 | reads D-03, D-04, D-05; writes D-08 | T-05 |
 | **F-06** | Auth + decision history | S | U-06 | reads D-08; writes D-07 | T-06 |
-| **F-07** | PWA installable + IndexedDB intake-state cache + queued submission | M | U-07 | caches D-01, D-02 | T-07 |
+| **F-08** | **AI-feasibility scoring** — every `workloadReducer` carries `aiFeasibility: "skill" \| "plugin" \| "agent" \| "human"`; engine ranks reducers by impact × feasibility; UI surfaces feasibility chip on every reducer card | M | U-02, U-04 | writes D-03 (feasibility field) | T-11 |
+| **F-09** | **Skill/plugin scaffold generator** — for any reducer scored `"skill"` or `"plugin"`, engine emits paste-ready artifact compatible with Claude Code (`SKILL.md` w/ frontmatter, or `plugin.json` + dir layout) AND Codex (`AGENTS.md` block / matching plugin scaffold) | M | U-02, U-04 | writes D-03 (artifact field) | T-12 |
+
+### P0+ — Next step after core (was F-07)
+
+| ID | Feature | Size | Why "next" |
+|---|---|---|---|
+| **F-07** | PWA installable + IndexedDB intake-state cache + queued submission | M | Phone-first usage between patients drives adoption; deferred from round-1 must-have only because OQ-02 hit Next 16 friction. Hand-rolled SW per OQ-02 fallback is the right path; ship right after core. |
 
 ### P1 — v1.1 (sized but deferred)
 
@@ -196,14 +206,16 @@ P0 features ship for Round 1. Each feature: ID + size + needs satisfied + data p
 |---|---|---|
 | T-01 | User reaches intake form in ≤3 taps from `/app` landing | F-criteria |
 | T-02 | Each template form has ≤7 fields, all Zod-validated, none accept free-form long enough to plausibly contain PHI; form state persists to IndexedDB and survives page reload | F-criteria |
-| T-03 | Engine returns Decision JSON: 1 recommendation + ≥2 alternatives + ≥1 elimination reason per alternative + confidence 0–100 + 1 robust alternative + method_trace covering Stages 1–5 + ≥3 workloadReducers; p95 latency <6s | F-criteria |
-| T-04 | Recommendation visible above fold at 375px viewport; alternatives + reasons in expandable; confidence color-coded (green ≥75 / amber 50–74 / red <50); robust alt visible; "show the work" expand reveals method trace; workloadReducers rendered as 3-card carousel | F-criteria |
-| T-05 | Export contains rec + alternatives + confidence + robust alt + date; shareable URL signed and viewable without auth | F-criteria |
+| T-03 | Engine returns Decision JSON: 1 recommendation + ≥2 alternatives + ≥1 elimination reason per alternative + confidence 0–100 + 1 robust alternative + method_trace covering Stages 1–5 + ≥3 workloadReducers; p95 latency target ≤8s (no hard cap — parallelize stages where dependency graph allows) | F-criteria |
+| T-04 | Recommendation visible above fold at 375px viewport; alternatives + reasons in expandable (MCDA detail collapsed by default under "Show the math"); confidence color-coded AND glyph-prefixed (✓ ≥75 / ~ 50–74 / ? <50); robust alt visible; workloadReducers rendered as bento cards with AI-feasibility chips per F-08 | F-criteria |
+| T-05 | Export contains rec + alternatives + confidence + robust alt + date; shareable URL signed and viewable without auth (nice-to-have: skip dedicated print-optimized layout if under time pressure, browser-print of the in-app view is acceptable) | F-criteria (nice-to-have) |
 | T-06 | Magic link AND email/password both succeed; authenticated user sees only their own decisions (RLS-verified per T-08) | F-criteria |
-| T-07 | App installs to phone home screen; templates cached on first load; intake form survives offline; submission queued and replayed on reconnect | F-criteria |
+| T-07 | App installs to phone home screen; templates cached on first load; intake form survives offline; submission queued and replayed on reconnect | F-criteria (next step after core) |
 | T-08 | Cross-user RLS: User A cannot read decisions of User B (404, not 403 — don't leak existence) | F-criteria, security |
 | T-09 | PHI rejection: Zod schema rejects free-form input matching common PHI patterns | F-criteria, security |
 | T-10 | Per-user rate limit: 21st Groq call in 24h window from same user_id returns 429 | F-criteria, cost |
+| **T-11** | **AI-feasibility on every reducer.** Decision JSON has ≥3 `workloadReducers`; each has `aiFeasibility ∈ {"skill","plugin","agent","human"}`; rank order matches impact × feasibility (engine asserts deterministic tiebreaks); UI renders the feasibility chip on every reducer card. | **F-criteria** (F-08) |
+| **T-12** | **Scaffold generator round-trip.** For ≥1 reducer scored `"skill"`, engine emits a valid `SKILL.md` (frontmatter parses, body non-empty, ≤200 lines) AND a Codex-compatible `AGENTS.md` block referencing it. For ≥1 reducer scored `"plugin"`, engine emits a valid `plugin.json` + at least one component file (command/agent/skill/hook). Both formats validate against the official Claude Code plugin schema (`plugin.json` Zod) and load without errors when copied into a real plugin directory. | **F-criteria** (F-09) |
 
 ### Data Points
 
@@ -229,7 +241,7 @@ The architecture is plug-in from day 1: v1 has one input source and one output d
 // V1 source: user form submission
 // V2 sources: voice intake, calendar API, practice-management connector, EHR-adjacent reads
 interface DecisionInput {
-  templateId: "capacity" | "pricing" | "admin-hire";  // v2: extensible registry
+  templateId: "capacity" | "pricing" | "referral-network";  // v2: extensible registry
   source: {
     type: "user_form";              // v2: "voice" | "calendar_api" | "pms_connector" | ...
     sourceId?: string;               // upstream tracking ID if applicable
@@ -465,7 +477,7 @@ USING (
 
 | Feature | I/O role | Synthesis dimensions |
 |---|---|---|
-| **F-01 Template selector** | **Input** — emits `templateId` selection | full-screen list of 3 cards on `/app` landing; bottom nav to history. **CTA primary** (only entry point). **Tone** terse, action-oriented: "Decide your capacity" / "Decide pricing" / "Decide a hire". **Visual weight** hero, full-bleed, large tap targets. **Empty state** N/A. |
+| **F-01 Template selector** | **Input** — emits `templateId` selection | full-screen list of 3 cards on `/app` landing; bottom nav to history. **CTA primary** (only entry point). **Tone** terse, action-oriented: "Decide your capacity" / "Decide pricing" / "Plan referral expansion". **Visual weight** hero, full-bleed, large tap targets. **Empty state** N/A. |
 | **F-02 Intake form** | **Input** — collects `fields` and packages as `DecisionInput`, POSTs to `/api/decisions` | single column, one question-group per scroll section, mobile keyboard-friendly. **CTA primary** "Get my recommendation" sticky-bottom; **secondary** "Save & finish later". **Tone** concise plain language. **Visual weight** section heading per question group. **Empty state** first-run hint at top: "This takes ~5 minutes. Your answers stay on this device until you submit." Dismissible (localStorage flag). |
 | **F-04 Recommendation UI** | **Output** — renders `recommendation`, `alternatives`, `methodTrace`, `workloadReducers`. Save/share emits `destinations[]` entries. | recommendation card above fold; alternatives collapsed below; "show the work" expand reveals method trace; **`workloadReducers` rendered as 3-card carousel below the recommendation**; sticky-bottom save/share. **CTA primary** "Save this decision" / "Sign in to save"; **secondary** "Show the work"; **adjunct** "Share". **Tone** confident but qualified — "Recommended: hire a part-time virtual assistant. Confidence: 78%." Never "you must" / "you should always". **Visual weight** recommendation = hero; alternatives = collapsed; reasoning = inline expand. **Empty state** N/A. |
 | **F-05 1-page summary export** | **Output** — renders `DecisionOutput` in print-optimized HTML; emits `destinations[].type: "user_pdf"` row | triggered from F-04 "Save & share"; opens browser print preview. **CTA secondary** on F-04. **Tone** re-uses F-04 copy verbatim. **Visual weight** print-optimized — single column, heading hierarchy, no nav chrome, no dark mode. **Empty state** N/A. |
@@ -1133,7 +1145,7 @@ Round 1 due 2026-05-12. Round 1 rubric weights: Problem & Audience Fit 30%, Impa
 ## Goal
 A transparent decision engine for solo healthcare practitioners. ~5-min intake → one recommendation per high-stakes decision, with the math made visible. Each recommendation ships with paste-ready prompts, playbooks, and MCP-tool hooks that turn the decision into action.
 
-v1 ships three decision templates (capacity, pricing, admin-hire) to a Next.js mobile-first PWA an owner-operator uses from her phone between patients.
+v1 ships three decision templates (capacity, pricing, referral-network) to a Next.js mobile-first PWA an owner-operator uses from her phone between patients.
 
 ## North-star
 A practitioner makes 3 decisions in 20 minutes that she'd been putting off. Reported in her own words: "the math made it feel safe."
@@ -1180,7 +1192,7 @@ lib/
     templates/
       capacity.ts
       pricing.ts
-      admin-hire.ts
+      referral-network.ts
     schema.ts            (DecisionInput + DecisionOutput Zod schemas)
   groq.ts                (Groq client; reasoning_format: parsed)
 public/
