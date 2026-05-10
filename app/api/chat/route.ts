@@ -226,24 +226,78 @@ export async function POST(req: Request) {
         context: { userId: session.userId, tenantId: session.tenantId },
       };
       // Validate the extracted fields against the template's strict schema.
-      // If validation fails (e.g. user gave a budget the parser couldn't shape),
-      // surface a friendly retry message in the chat — NEVER bubble the raw
-      // Zod error to the user. (Maya persona retest 2026-05-10: a raw red
-      // bubble saying "Extracted fields invalid" was where she closed the tab.)
-      try {
-        loadTemplate(tplId).buildZodSchema().parse(turn.transcript.extractedFields);
-      } catch {
+      // If validation fails, surface a friendly recovery message in the chat
+      // that NAMES the specific field + offers chips when the field type
+      // supports them — never a dead-end. (Maya/Priya retest 2026-05-10:
+      // 'I lost track' with no asking-field was the worst-rated failure
+      // mode — Priya: 'no path forward, had to start a new decision'.)
+      const tplDef = loadTemplate(tplId);
+      const parseResult = tplDef.buildZodSchema().safeParse(turn.transcript.extractedFields);
+      if (!parseResult.success) {
+        // Find the first failing field and describe it conversationally.
+        const issues = parseResult.error.issues;
+        const failedFieldId = issues[0]?.path[0]?.toString() ?? null;
+        const failedField = failedFieldId
+          ? tplDef.fields.find((f) => f.id === failedFieldId)
+          : null;
+
+        let content: string;
+        let chips: { value: string; label: string }[] | undefined;
+
+        if (failedField) {
+          // Show the user what we tried to capture + ask again with chips
+          const captured = (turn.transcript.extractedFields as Record<string, unknown>)[failedField.id];
+          const capturedStr = captured === undefined || captured === null || captured === ""
+            ? "nothing"
+            : Array.isArray(captured)
+              ? `[${captured.join(", ")}]`
+              : String(captured);
+          content =
+            `I caught "${capturedStr}" for "${failedField.label}" but couldn't quite parse it. ` +
+            `Could you try again? ${failedField.hint ? `(${failedField.hint})` : ""}`;
+
+          if (failedField.kind.type === "select") {
+            chips = failedField.kind.options.map((o) => ({ value: o.value, label: o.label }));
+          } else if (failedField.kind.type === "boolean") {
+            chips = [
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+            ];
+          }
+        } else {
+          content =
+            "I lost track of one of your answers — could you tell me again, in your own words?";
+        }
+
         const friendly = {
           role: "assistant" as const,
-          content:
-            "I lost track of one of your answers — could you tell me again, in your own words? Most often it's a number or range I didn't quite catch.",
+          content,
           timestamp: new Date(),
+          ...(chips ? { chips } : {}),
+          delta: failedFieldId ? { askingField: failedFieldId } : undefined,
         };
+        // Restore the askingField in transcript so the NEXT turn re-extracts
+        // for the SAME field (otherwise the orchestrator would advance to the
+        // next field, leaving the failing field unresolved).
+        const recoveryTranscript = failedFieldId
+          ? {
+              ...turn.transcript,
+              messages: [
+                ...turn.transcript.messages.slice(0, -1),
+                friendly,
+              ],
+              extractedFields: {
+                ...(turn.transcript.extractedFields as Record<string, unknown>),
+                // Drop the bad value so the next turn extracts cleanly
+                [failedFieldId]: undefined,
+              },
+            }
+          : turn.transcript;
         return Response.json({
           decisionId,
           status: "chatting",
           assistant: friendly,
-          transcript: turn.transcript,
+          transcript: recoveryTranscript,
         });
       }
 

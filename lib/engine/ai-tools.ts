@@ -60,7 +60,7 @@ export interface AiTool {
 export const AI_TOOLS: AiTool[] = [
   {
     id: "ai_scribe_baa",
-    name: "AI clinical scribe (Heidi / Freed / Nuance DAX / Abridge)",
+    name: "AI clinical scribe (Heidi / Freed / Nuance DAX / Abridge / Upheal)",
     url: "https://www.heidihealth.com",
     area: "clinical_notes",
     replaces: "Manually authoring SOAP / progress notes after every visit",
@@ -68,7 +68,11 @@ export const AI_TOOLS: AiTool[] = [
     setupDays: 2,
     monthlyCostRange: [99, 200],
     hipaa: "baa_required",
-    fitsSpecialty: ["primary_care", "pediatrics", "physical_therapy", "psychiatry"],
+    // Sam persona retest 2026-05-10: Heidi/Upheal explicitly market to
+    // therapists (EMDR, couples). Adding 'therapy' to fits — was excluded
+    // before, which produced the wrong recommendation for an LMFT spending
+    // 5-7 hr/wk on clinical notes.
+    fitsSpecialty: ["primary_care", "pediatrics", "physical_therapy", "psychiatry", "therapy"],
     defaultRecommend: ["clinical_notes"],
     warnings: ["Sign the BAA before turning microphone on for the first patient. Verify the product's BAA covers your jurisdiction."],
     setupSteps: [

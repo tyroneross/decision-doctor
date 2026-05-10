@@ -289,15 +289,30 @@ function assembleOutput(opts: {
     rationale: `${rationale} Estimated savings: ~${totalSaved.toFixed(0)} hours per week, ~$${totalCost.toFixed(0)}/month total tool cost, with the longest single tool taking ~${totalSetupDays} days to set up.`,
   };
 
-  // Alternatives: top runners-up + eliminated tools (capped at 5 total)
+  // Alternatives: top runners-up + eliminated tools (capped at 5 total).
+  // Reasons are DIFFERENTIATED per the actual cause — never the same boilerplate
+  // string twice. (Sam persona retest 2026-05-10: 3 different runners-up all
+  // said "outranked + would overlap"; a sceptical buyer reads that as Mad-Libs.)
+  const stackAreas = new Set(stack.map((s) => s.tool.area));
   const alternatives = [
-    ...runnersUp.slice(0, 3).map((r) => ({
-      option: r.tool.name,
-      eliminatedAtStage: 4 as const,
-      reason: r.score < 0.5
-        ? "Doesn't move the needle enough on the time you said you spend in this area."
-        : `Outranked by ${stack[0]?.tool.name ?? "the top pick"} on hours-saved-per-dollar; would also overlap an already-picked tool.`,
-    })),
+    ...runnersUp.slice(0, 3).map((r) => {
+      let reason: string;
+      if (r.score < 0.5) {
+        reason = "Doesn't move the needle enough on the time you said you spend in this area.";
+      } else if (stackAreas.has(r.tool.area)) {
+        const overlapping = stack.find((s) => s.tool.area === r.tool.area);
+        reason = `Overlaps with ${overlapping?.tool.name.split(/\s+\(/)[0] ?? "an already-picked tool"} — both target the same workflow area.`;
+      } else if (r.estimatedMonthlyCost > 0) {
+        reason = `Solid pick (~${r.estimatedSavedHrs.toFixed(0)} hr/wk for ~$${r.estimatedMonthlyCost.toFixed(0)}/mo) but ranked just below the top picks on hours-saved-per-dollar.`;
+      } else {
+        reason = "Ranked just below the top picks on overall fit.";
+      }
+      return {
+        option: r.tool.name,
+        eliminatedAtStage: 4 as const,
+        reason,
+      };
+    }),
     ...eliminated.slice(0, 2).map((e) => ({
       option: e.tool.name,
       eliminatedAtStage: 2 as const,
