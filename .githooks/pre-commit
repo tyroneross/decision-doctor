@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Pre-commit hook: block commits containing real secret-shaped strings.
+#
+# Patterns detect actual API key shapes:
+#   gsk_<20+ chars not 'xxx'>  Groq API key
+#   re_<20+ chars not 'xxx'>   Resend API key
+#   npg_<8+ chars>             Neon DB password
+#   sk-<20+ chars>             OpenAI / Anthropic legacy
+#
+# Skips:
+#   - The hook scripts themselves (.githooks/*)
+#   - .env.example (intentional placeholders like gsk_xxx, re_xxx)
+#   - Documentation that quotes placeholders verbatim
+set -euo pipefail
+
+# Real-secret patterns (require non-placeholder body — must contain mixed case + digits)
+PATTERNS='(gsk_[A-Za-z0-9_]{30,}|re_[A-Za-z0-9_]{20,}_[A-Za-z0-9]{20,}|npg_[A-Za-z0-9]{12,}|sk-[A-Za-z0-9]{40,}|sk-ant-[A-Za-z0-9_-]{40,})'
+
+# Path filter: list staged files but skip hook scripts and .env.example.
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -vE '^\.githooks/' | grep -vE '^\.env\.example$' || true)
+
+if [[ -z "$STAGED" ]]; then
+  exit 0
+fi
+
+# Scan only added/modified content lines in the filtered set.
+HITS=""
+while IFS= read -r f; do
+  [[ -z "$f" ]] && continue
+  hit=$(git diff --cached --no-color -U0 -- "$f" | awk '/^\+[^+]/' | grep -E "$PATTERNS" || true)
+  if [[ -n "$hit" ]]; then
+    HITS="${HITS}--- ${f} ---"$'\n'"${hit}"$'\n'
+  fi
+done <<< "$STAGED"
+
+if [[ -n "$HITS" ]]; then
+  echo "❌ pre-commit blocked: real secret-shaped content detected:"
+  echo "$HITS" | head -30
+  echo ""
+  echo "If this is a false positive, refine the regex in .githooks/pre-commit."
+  echo "Otherwise, add the file path to .gitignore."
+  exit 1
+fi
+
+# Also block any attempt to commit known-secret paths.
+BAD_PATHS=$(git diff --cached --name-only | grep -E '^(git ignore/|Reference files/|.*\.rtf$|dd-secrets)' || true)
+if [[ -n "$BAD_PATHS" ]]; then
+  echo "❌ pre-commit blocked: attempt to commit ignored secrets path:"
+  echo "$BAD_PATHS"
+  exit 1
+fi
+
+exit 0

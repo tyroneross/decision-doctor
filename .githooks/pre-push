@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Pre-push hook: full-history scan for real secrets before pushing.
+# Defense in depth — catches anything that slipped past pre-commit.
+set -euo pipefail
+
+REMOTE="${1:-origin}"
+URL="${2:-}"
+
+PATTERNS='(gsk_[A-Za-z0-9_]{30,}|re_[A-Za-z0-9_]{20,}_[A-Za-z0-9]{20,}|npg_[A-Za-z0-9]{12,}|sk-[A-Za-z0-9]{40,}|sk-ant-[A-Za-z0-9_-]{40,})'
+
+while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+  [[ -z "${local_sha:-}" ]] && continue
+  if [[ "$local_sha" == "0000000000000000000000000000000000000000" ]]; then
+    continue
+  fi
+
+  if [[ "$remote_sha" == "0000000000000000000000000000000000000000" ]]; then
+    range="$local_sha"
+  else
+    range="${remote_sha}..${local_sha}"
+  fi
+
+  # Only check changes in non-hook, non-example files.
+  HITS=$(git log -p "$range" -- ':!.githooks/*' ':!.env.example' 2>/dev/null \
+    | grep -E "^\+" \
+    | grep -E "$PATTERNS" || true)
+
+  if [[ -n "$HITS" ]]; then
+    echo "❌ pre-push blocked: real secret detected in commits being pushed."
+    echo "Range: $range"
+    echo "$HITS" | head -20
+    exit 1
+  fi
+done
+
+exit 0
