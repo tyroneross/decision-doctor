@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #ffffff;
+    --fg: #1f2937;
+  }
+  html, body {
+    background: var(--bg);
+    color: var(--fg);
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply font-sans text-[15px] leading-relaxed;
+  }
+  /* Calm-precision: text-color status only, never background badges. */
+  .status-ok    { @apply text-emerald-700; }
+  .status-warn  { @apply text-amber-700; }
+  .status-error { @apply text-rose-700; }
+}
+
+/* Print: F-05. Hide chrome, expand content. */
+@media print {
+  .no-print { display: none !important; }
+  body { font-size: 11pt; color: #000; }
+  a { text-decoration: none; color: inherit; }
+  .page-break { page-break-after: always; }
+}

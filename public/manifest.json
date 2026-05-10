@@ -1,0 +1,24 @@
+{
+  "name": "Decision Doctor",
+  "short_name": "Decision Dr",
+  "description": "Transparent decisions for solo healthcare practitioners.",
+  "start_url": "/app/decisions",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f2937",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
