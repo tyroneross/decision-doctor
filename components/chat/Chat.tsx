@@ -174,27 +174,27 @@ export function Chat() {
     <main className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-3xl flex-col">
       {/* HERO VALUE PROP — only on empty state, mockup v2-01 */}
       {isEmptyState && (
-        <article className="dd-fade-up relative mb-6 overflow-hidden rounded-3xl border border-rule bg-white p-6 shadow-soft sm:p-8">
+        <article className="dd-fade-up relative mb-8 overflow-hidden rounded-3xl border border-rule bg-white p-8 shadow-soft sm:p-10">
           <div
             aria-hidden
             className="grad-coral absolute -right-12 -top-12 h-48 w-48 rounded-full opacity-20 blur-2xl"
           />
-          <p className="grad-coral-text text-[11px] font-semibold uppercase tracking-[.14em] sm:text-[12px]">
-            Tell me what's eating your time
+          <p className="grad-coral-text text-xs font-bold uppercase tracking-widest sm:text-sm">
+            Tell me what&apos;s eating your time
           </p>
-          <h1 className="mt-2 text-[26px] font-semibold leading-[1.1] tracking-tight sm:text-[32px]">
-            I'll rank what AI can take off your plate, and build the skill to do it.
+          <h1 className="mt-3 text-3xl font-bold leading-tight tracking-tight sm:text-4xl md:text-5xl">
+            I&apos;ll rank what AI can take off your plate, and build the skill to do it.
           </h1>
-          <p className="mt-3 max-w-xl text-[15px] leading-snug text-ink-700 sm:text-[16px]">
+          <p className="mt-4 max-w-2xl text-base leading-relaxed text-ink-700 sm:text-lg">
             Five-minute conversation. You get a ranked list of capacity drains, an
             AI-feasibility score for each, and a paste-ready skill or playbook for
-            the top one — so the time comes back this week, not "someday."
+            the top one — so the time comes back this week, not &quot;someday.&quot;
           </p>
-          <p className="mt-3 text-[12.5px] text-ink-500">
+          <p className="mt-4 text-sm text-ink-500">
             Already know the shape of it?{" "}
             <Link
               href="/app/decisions/new"
-              className="font-semibold text-ink-700 underline-offset-2 hover:text-coral hover:underline"
+              className="font-bold text-ink-700 underline-offset-2 hover:text-coral hover:underline"
             >
               Pick a template instead →
             </Link>
@@ -204,15 +204,15 @@ export function Chat() {
 
       {/* "Start over" — only when there's a real thread, never on empty state */}
       {!isEmptyState && (
-        <div className="-mt-2 mb-2 flex justify-end">
+        <div className="mb-4 flex justify-end">
           <button
             type="button"
             onClick={reset}
-            className="ease-soft inline-flex items-center gap-1 rounded-full px-2 py-1 text-[12px] text-ink-500 hover:text-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            className="ease-soft inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-ink-500 hover:text-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral"
           >
             <svg
               viewBox="0 0 24 24"
-              className="h-3.5 w-3.5"
+              className="h-4 w-4"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -229,28 +229,28 @@ export function Chat() {
 
       {/* MESSAGE LIST */}
       <ul
-        className="flex-1 space-y-4 overflow-y-auto pb-4"
+        className="flex-1 space-y-4 overflow-y-auto pb-6"
         aria-live="polite"
       >
         {thread.messages.map((m, i) => (
           <li
             key={i}
             className={
-              "dd-fade-up flex items-end gap-2.5 " +
+              "dd-fade-up flex items-end gap-3 " +
               (m.role === "user" ? "justify-end" : "justify-start")
             }
           >
             {m.role === "assistant" && (
               <span
                 aria-hidden
-                className="grad-coral hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-white sm:flex"
+                className="grad-coral hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white sm:flex"
               >
                 DD
               </span>
             )}
             <div
               className={
-                "max-w-[85%] rounded-3xl px-5 py-3 text-[15px] leading-relaxed shadow-sm sm:text-[16px] " +
+                "max-w-[85%] rounded-3xl px-5 py-4 text-base leading-relaxed shadow-sm sm:text-lg " +
                 (m.role === "user"
                   ? "grad-coral rounded-br-md text-white"
                   : "rounded-bl-md bg-cream-2 text-ink-700")
@@ -263,13 +263,13 @@ export function Chat() {
 
         {/* Suggested-prompt chips — empty state only, three Miller-friendly */}
         {isEmptyState && !busy && (
-          <li className="ml-0 flex flex-wrap gap-2 sm:ml-11">
+          <li className="ml-0 flex flex-wrap gap-3 sm:ml-11">
             {QUICK_PROMPTS.map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => runQuery(t)}
-                className="dd-fade-up ease-soft min-h-11 rounded-full border border-rule bg-white px-4 text-[14px] text-ink-700 shadow-sm hover:-translate-y-0.5 hover:border-coral hover:text-coral hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 active:translate-y-0 active:scale-[0.98]"
+                className="dd-fade-up ease-soft min-h-11 rounded-full border border-rule bg-white px-4 py-2 text-sm font-semibold text-ink-700 shadow-sm hover:-translate-y-0.5 hover:border-coral hover:text-coral hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 active:translate-y-0 active:scale-[0.98]"
               >
                 {t}
               </button>
@@ -279,15 +279,15 @@ export function Chat() {
 
         {/* Skeleton thinking state (NN/g: -40% perceived load vs spinner) */}
         {busy && (
-          <li className="flex items-end gap-2.5">
+          <li className="flex items-end gap-3">
             <span
               aria-hidden
-              className="grad-coral hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-white sm:flex"
+              className="grad-coral hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white sm:flex"
             >
               DD
             </span>
             <div
-              className="max-w-[85%] space-y-2 rounded-3xl rounded-bl-md bg-cream-2 px-5 py-4 shadow-sm"
+              className="max-w-[85%] space-y-3 rounded-3xl rounded-bl-md bg-cream-2 px-5 py-4 shadow-sm"
               aria-label="Thinking"
             >
               <span className="skeleton block h-3 w-48 rounded-full" />
@@ -298,7 +298,7 @@ export function Chat() {
         )}
 
         {thread.decision && (
-          <li className="mt-4">
+          <li className="mt-6">
             <DecisionCard
               decision={thread.decision}
               painPoints={thread.painPoints ?? []}
@@ -311,7 +311,7 @@ export function Chat() {
       </ul>
 
       {err && (
-        <p className="status-error mb-2 text-sm" role="alert">
+        <p className="status-error mb-3 text-sm font-semibold" role="alert">
           {err}
         </p>
       )}
@@ -322,7 +322,7 @@ export function Chat() {
           e.preventDefault();
           runQuery();
         }}
-        className="ease-soft sticky bottom-0 mt-3 flex items-center gap-2 rounded-full border border-rule bg-white pl-5 pr-2 py-1.5 shadow-sm focus-within:border-coral focus-within:ring-coral-glow"
+        className="ease-soft sticky bottom-0 mt-4 flex items-center gap-2 rounded-full border border-rule bg-white pl-5 pr-2 py-2 shadow-sm focus-within:border-coral focus-within:ring-coral-glow"
       >
         <label htmlFor="chat-input" className="sr-only">
           Type a message
@@ -335,14 +335,14 @@ export function Chat() {
           placeholder="Tell me where the hours go…"
           disabled={busy}
           autoComplete="off"
-          className="block min-h-11 w-full bg-transparent text-[15px] text-ink-900 placeholder:text-ink-500 focus:outline-none focus:ring-0 border-0 sm:text-[16px]"
+          className="block min-h-12 w-full bg-transparent text-base text-ink-900 placeholder:text-ink-500 focus:outline-none focus:ring-0 border-0 sm:text-lg"
         />
         <button
           type="submit"
           disabled={!canSend}
           aria-label="Send message"
           className={
-            "ease-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 " +
+            "ease-soft flex h-12 w-12 shrink-0 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 " +
             (canSend
               ? "grad-coral text-white shadow-coral-press hover:-translate-y-0.5 hover:shadow-coral-hover active:translate-y-0 active:scale-[0.96]"
               : "cursor-not-allowed bg-cream-2 text-ink-300")
@@ -350,7 +350,7 @@ export function Chat() {
         >
           {busy ? (
             <svg
-              className="h-4 w-4 animate-spin"
+              className="h-5 w-5 animate-spin"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
