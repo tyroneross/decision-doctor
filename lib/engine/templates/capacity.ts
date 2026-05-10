@@ -12,19 +12,33 @@ export const capacityTemplate: DecisionTemplate = {
     {
       id: "currentWeeklyHours",
       label: "Hours per week you currently see patients",
-      kind: { type: "number", min: 0, max: 80, step: 1, unit: "hrs" },
+      kind: {
+        type: "slider",
+        min: 0,
+        max: 80,
+        step: 1,
+        unit: "hrs",
+        ticks: [0, 20, 40, 60, 80],
+      },
       required: true,
     },
     {
       id: "targetWeeklyHours",
       label: "Hours per week you actually want to work",
-      kind: { type: "number", min: 0, max: 80, step: 1, unit: "hrs" },
+      kind: {
+        type: "slider",
+        min: 0,
+        max: 80,
+        step: 1,
+        unit: "hrs",
+        ticks: [0, 20, 40, 60, 80],
+      },
       required: true,
     },
     {
       id: "waitlistDepth",
       label: "How many patients are on your waitlist right now?",
-      kind: { type: "number", min: 0, max: 1000, step: 1 },
+      kind: { type: "number-picker", min: 0, max: 200, step: 1 },
       required: true,
     },
     {
@@ -42,9 +56,17 @@ export const capacityTemplate: DecisionTemplate = {
     },
     {
       id: "incomeFloor",
-      label: "Minimum monthly take-home you need (USD)",
-      hint: "Pre-tax gross.",
-      kind: { type: "number", min: 0, max: 100000, step: 100, unit: "$" },
+      label: "Monthly take-home you need (USD)",
+      hint: "Pre-tax gross. Drag both ends if you're not sure of the exact number — the engine treats this as a range.",
+      kind: {
+        type: "range",
+        min: 0,
+        max: 50000,
+        step: 500,
+        unit: "$",
+        defaultLow: 8000,
+        defaultHigh: 15000,
+      },
       required: true,
     },
     {
@@ -91,9 +113,16 @@ export const capacityTemplate: DecisionTemplate = {
     z.object({
       currentWeeklyHours: z.number().min(0).max(80),
       targetWeeklyHours: z.number().min(0).max(80),
-      waitlistDepth: z.number().min(0).max(1000),
+      waitlistDepth: z.number().min(0).max(200),
       burnoutLevel: z.enum(["low", "moderate", "high"]),
-      incomeFloor: z.number().min(0).max(100000),
+      // incomeFloor is a [low, high] tuple from the range slider.
+      // Accept a single number too for backward compat with old saved drafts.
+      incomeFloor: z.union([
+        z.number().min(0).max(50000),
+        z
+          .tuple([z.number().min(0).max(50000), z.number().min(0).max(50000)])
+          .refine(([lo, hi]) => lo <= hi, "Low end must be ≤ high end"),
+      ]),
       supportLevel: z.enum(["none", "partial", "full"]),
       horizonMonths: z.enum(["3", "6", "12"]),
     }),

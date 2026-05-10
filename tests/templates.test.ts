@@ -23,7 +23,16 @@ describe("templates registry (T-02)", () => {
     it(`${t.id}: every field has a label and known kind`, () => {
       for (const f of t.fields) {
         expect(f.label.length).toBeGreaterThan(0);
-        expect(["number", "select", "multiselect", "boolean", "text"]).toContain(
+        expect([
+          "number",
+          "slider",
+          "number-picker",
+          "range",
+          "select",
+          "multiselect",
+          "boolean",
+          "text",
+        ]).toContain(
           f.kind.type,
         );
       }
@@ -43,6 +52,9 @@ describe("templates registry (T-02)", () => {
       const sample: Record<string, unknown> = {};
       for (const f of t.fields) {
         if (f.kind.type === "number") sample[f.id] = ((f.kind.min ?? 0) + (f.kind.max ?? 1)) / 2;
+        else if (f.kind.type === "slider") sample[f.id] = (f.kind.min + f.kind.max) / 2;
+        else if (f.kind.type === "number-picker") sample[f.id] = f.kind.min;
+        else if (f.kind.type === "range") sample[f.id] = [f.kind.min, f.kind.max];
         else if (f.kind.type === "select") sample[f.id] = f.kind.options[0]!.value;
         else if (f.kind.type === "multiselect") sample[f.id] = [];
         else if (f.kind.type === "boolean") sample[f.id] = false;

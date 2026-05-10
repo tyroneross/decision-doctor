@@ -93,15 +93,29 @@ export function IntakeForm({ templateId, fields, title }: Props) {
     for (const f of fields) {
       if (!f.required) continue;
       const v = values[f.id];
-      if (v === undefined || v === null || v === "") {
+      const isEmpty =
+        v === undefined ||
+        v === null ||
+        v === "" ||
+        (Array.isArray(v) && v.length === 0);
+      if (isEmpty) {
         next[f.id] = "Required.";
         continue;
       }
-      if (f.kind.type === "number") {
+      if (f.kind.type === "number" || f.kind.type === "slider" || f.kind.type === "number-picker") {
         const n = typeof v === "number" ? v : Number(v);
         if (!Number.isFinite(n)) next[f.id] = "Enter a number.";
         else if (f.kind.min !== undefined && n < f.kind.min) next[f.id] = `Minimum ${f.kind.min}.`;
         else if (f.kind.max !== undefined && n > f.kind.max) next[f.id] = `Maximum ${f.kind.max}.`;
+      }
+      if (f.kind.type === "range") {
+        if (!Array.isArray(v) || v.length !== 2) next[f.id] = "Set a low and high end.";
+        else {
+          const [lo, hi] = v as [number, number];
+          if (!Number.isFinite(lo) || !Number.isFinite(hi)) next[f.id] = "Numbers only.";
+          else if (lo > hi) next[f.id] = "Low end must be ≤ high end.";
+          else if (lo < f.kind.min || hi > f.kind.max) next[f.id] = `Must be within ${f.kind.min}–${f.kind.max}.`;
+        }
       }
       if (f.kind.type === "text" && typeof v === "string" && v.length > f.kind.maxLength) {
         next[f.id] = `Max ${f.kind.maxLength} characters.`;
@@ -119,8 +133,15 @@ export function IntakeForm({ templateId, fields, title }: Props) {
     const cleanedValues: Record<string, unknown> = {};
     for (const f of fields) {
       const v = values[f.id];
-      if (f.kind.type === "number") cleanedValues[f.id] = Number(v);
-      else cleanedValues[f.id] = v;
+      if (f.kind.type === "number" || f.kind.type === "slider" || f.kind.type === "number-picker") {
+        cleanedValues[f.id] = Number(v);
+      } else if (f.kind.type === "range") {
+        // Send range as the array tuple [low, high]; engine receives this and
+        // can use the midpoint for ranking + the spread for confidence shading.
+        cleanedValues[f.id] = Array.isArray(v) ? v.map(Number) : v;
+      } else {
+        cleanedValues[f.id] = v;
+      }
     }
 
     const payload = {
@@ -308,6 +329,126 @@ function FieldInput({
         {field.kind.unit && (
           <span className="self-center text-sm text-ink-muted px-2">{field.kind.unit}</span>
         )}
+      </div>
+    );
+  }
+  if (field.kind.type === "slider") {
+    const k = field.kind;
+    const step = k.step ?? 1;
+    const current = typeof value === "number" ? value : (k.min + k.max) / 2;
+    const ticks = k.ticks ?? [k.min, Math.round((k.min + k.max) / 2), k.max];
+    return (
+      <div className="mt-2">
+        <div className="flex items-baseline justify-between mb-1.5">
+          <span className="text-2xl font-semibold tabular-nums text-ink">
+            {current}
+            {k.unit && <span className="text-sm font-normal text-ink-muted ml-1">{k.unit}</span>}
+          </span>
+        </div>
+        <input
+          type="range"
+          min={k.min}
+          max={k.max}
+          step={step}
+          value={current}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="w-full accent-ink min-h-[44px]"
+          aria-label={field.label}
+        />
+        <div className="flex justify-between text-xs text-ink-muted mt-0.5 tabular-nums">
+          {ticks.map((t) => (
+            <span key={t}>{t}{k.unit ? k.unit : ""}</span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (field.kind.type === "number-picker") {
+    const k = field.kind;
+    const step = k.step ?? 1;
+    const current = typeof value === "number" ? value : k.min;
+    const dec = () => onChange(Math.max(k.min, current - step));
+    const inc = () => onChange(Math.min(k.max, current + step));
+    return (
+      <div className="mt-2 flex items-stretch gap-2 max-w-[280px]">
+        <button
+          type="button"
+          onClick={dec}
+          disabled={current <= k.min}
+          aria-label="Decrease"
+          className="w-12 h-12 rounded-lg border border-slate-300 text-xl text-ink disabled:opacity-40"
+        >
+          −
+        </button>
+        <div className="flex-1 flex items-center justify-center rounded-lg border border-slate-300 bg-canvas-raised">
+          <span className="text-2xl font-semibold tabular-nums text-ink">
+            {current}
+            {k.unit && <span className="text-sm font-normal text-ink-muted ml-1">{k.unit}</span>}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={inc}
+          disabled={current >= k.max}
+          aria-label="Increase"
+          className="w-12 h-12 rounded-lg border border-slate-300 text-xl text-ink disabled:opacity-40"
+        >
+          +
+        </button>
+      </div>
+    );
+  }
+  if (field.kind.type === "range") {
+    const k = field.kind;
+    const step = k.step ?? 1;
+    const tuple = (Array.isArray(value) ? value : null) as [number, number] | null;
+    const lo = tuple?.[0] ?? k.defaultLow ?? k.min;
+    const hi = tuple?.[1] ?? k.defaultHigh ?? k.max;
+    const setLo = (v: number) => onChange([Math.min(v, hi - step), hi]);
+    const setHi = (v: number) => onChange([lo, Math.max(v, lo + step)]);
+    return (
+      <div className="mt-2">
+        <div className="text-2xl font-semibold tabular-nums text-ink">
+          {k.unit ?? ""}{lo}
+          <span className="mx-2 text-ink-muted text-base font-normal">to</span>
+          {k.unit ?? ""}{hi}
+        </div>
+        <div className="text-xs text-ink-muted mb-2">
+          Move both handles. The engine treats this as a range so you don't have
+          to be exact.
+        </div>
+        <div className="grid gap-2">
+          <label className="block">
+            <span className="text-xs text-ink-muted">Low end</span>
+            <input
+              type="range"
+              min={k.min}
+              max={k.max}
+              step={step}
+              value={lo}
+              onChange={(e) => setLo(Number(e.target.value))}
+              className="w-full accent-ink min-h-[44px]"
+              aria-label={`${field.label} — low`}
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs text-ink-muted">High end</span>
+            <input
+              type="range"
+              min={k.min}
+              max={k.max}
+              step={step}
+              value={hi}
+              onChange={(e) => setHi(Number(e.target.value))}
+              className="w-full accent-ink min-h-[44px]"
+              aria-label={`${field.label} — high`}
+            />
+          </label>
+        </div>
+        <div className="flex justify-between text-xs text-ink-muted mt-0.5 tabular-nums">
+          <span>{k.min}{k.unit ? k.unit : ""}</span>
+          <span>{k.max}{k.unit ? k.unit : ""}</span>
+        </div>
       </div>
     );
   }
