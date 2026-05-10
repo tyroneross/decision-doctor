@@ -64,6 +64,10 @@ export function Chat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // F-11: decline-and-reframe chips returned by the API when the user's
+  // question is out of scope (Type 2/3/5/etc). Two short canned reframes
+  // the user can tap to redirect the conversation to a Type-4 decision.
+  const [reframeChips, setReframeChips] = useState<string[] | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   // Restore prior thread on mount.
@@ -100,6 +104,7 @@ export function Chat() {
     setThread({ messages: [OPENING] });
     setErr(null);
     setInput("");
+    setReframeChips(null);
     if (typeof window !== "undefined") window.localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -141,7 +146,12 @@ export function Chat() {
         }
 
         const data = (await res.json()) as
-          | { status: "asking"; reply: string }
+          | {
+              status: "asking";
+              reply: string;
+              // F-11: present when classifier redirects an out-of-scope question.
+              reframeChips?: string[];
+            }
           | {
               status: "ready";
               reply: string;
@@ -157,6 +167,12 @@ export function Chat() {
           painPoints: data.status === "ready" ? data.painPoints : undefined,
           templateId: data.status === "ready" ? data.templateId : undefined,
         }));
+        // F-11: surface reframe chips when present (else clear stale ones).
+        setReframeChips(
+          data.status === "asking" && Array.isArray(data.reframeChips) && data.reframeChips.length > 0
+            ? data.reframeChips
+            : null,
+        );
       } catch (e) {
         setErr(e instanceof Error ? e.message : String(e));
       } finally {
@@ -270,6 +286,28 @@ export function Chat() {
                 type="button"
                 onClick={() => runQuery(t)}
                 className="dd-fade-up ease-soft min-h-11 rounded-full border border-rule bg-white px-4 text-[14px] text-ink-700 shadow-sm hover:-translate-y-0.5 hover:border-coral hover:text-coral hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 active:translate-y-0 active:scale-[0.98]"
+              >
+                {t}
+              </button>
+            ))}
+          </li>
+        )}
+
+        {/* F-11 decline-and-reframe chips — surfaced when the classifier
+            redirected an out-of-scope question (diagnostic / predictive /
+            optimization / descriptive / sequential). Tapping one re-runs
+            the conversation with the reframed prompt as the next user msg. */}
+        {reframeChips && reframeChips.length > 0 && !busy && (
+          <li className="ml-0 flex flex-wrap gap-2 sm:ml-11" aria-label="Reframe suggestions">
+            {reframeChips.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => {
+                  setReframeChips(null);
+                  runQuery(t);
+                }}
+                className="dd-fade-up ease-soft min-h-11 rounded-full border border-cat-cap bg-cat-cap-bg px-4 text-[13.5px] font-semibold text-cat-cap-deep shadow-sm hover:-translate-y-0.5 hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
               >
                 {t}
               </button>

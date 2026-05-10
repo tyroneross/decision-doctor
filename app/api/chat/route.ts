@@ -11,6 +11,12 @@ import { z } from "zod";
 import { groq, GROQ_MODEL } from "@/lib/groq";
 import { CHAT_SYSTEM_PROMPT } from "@/lib/chat/system-prompt";
 import { runDecision } from "@/lib/engine/orchestrator";
+import {
+  runStage0Classifier,
+  shouldDeclineAndReframe,
+  isVdd,
+  reframeMessageFor,
+} from "@/lib/engine/stage0-classifier";
 import { getSessionActor } from "@/lib/auth-session";
 import { runWithActor, withActor } from "@/lib/db/actor";
 import { decisions, auditEvents } from "@/lib/db/schema";
@@ -128,6 +134,31 @@ export async function POST(req: Request) {
     });
   }
 
+  // F-11 Stage 0 — classify the user's most recent message BEFORE the engine
+  // runs. If the question is out-of-scope (diagnostic / predictive /
+  // optimization / descriptive / sequential), decline-and-reframe instead of
+  // running the engine. Defensive: if classifier fails, default to engine.
+  const lastUserMessage =
+    [...parsed.data.messages].reverse().find((m) => m.role === "user")
+      ?.content ?? "";
+  let classifierResult: Awaited<ReturnType<typeof runStage0Classifier>> | null = null;
+  try {
+    classifierResult = await runStage0Classifier(lastUserMessage);
+  } catch (e) {
+    console.error("[/api/chat] stage0 classifier failure:", e);
+    classifierResult = null;
+  }
+
+  if (classifierResult && shouldDeclineAndReframe(classifierResult.classification)) {
+    const reframe = reframeMessageFor(classifierResult.classification);
+    return NextResponse.json({
+      status: "asking", // stay in conversation
+      reply: reframe.reply,
+      reframeChips: reframe.chips,
+      decisionType: classifierResult.classification,
+    });
+  }
+
   // Phase B — assistant says it's ready. Run the engine.
   const engineInput: DecisionInput = {
     templateId: parsedAssistant.templateId as TemplateId,
@@ -201,10 +232,26 @@ export async function POST(req: Request) {
     // Persistence is non-fatal here; we still return the recommendation.
   }
 
+  // F-11 VDD: when the classification is values-dominant, strip the
+  // numerical confidence on the recommendation. The values-map output is the
+  // contract — there is no single ranked answer to anchor a percent on.
+  const isVddOutput =
+    !!classifierResult && isVdd(classifierResult.classification);
+
   const decisionOutput: DecisionOutput = {
     decisionId: decisionId ?? "ephemeral",
     decidedAt: new Date(),
     ...engineResult.output,
+    ...(classifierResult
+      ? { decisionType: classifierResult.classification }
+      : {}),
+    recommendation: isVddOutput
+      ? {
+          option: engineResult.output.recommendation.option,
+          // confidence intentionally omitted — VDD contract.
+          rationale: engineResult.output.recommendation.rationale,
+        }
+      : engineResult.output.recommendation,
   };
 
   return NextResponse.json({
