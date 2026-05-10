@@ -227,6 +227,46 @@ P0 features ship for Round 1. Each feature: ID + size + needs satisfied + data p
 |---|---|---|---|
 | **F-07** | PWA installable + IndexedDB intake-state cache + queued submission | M | Phone-first usage between patients drives adoption; deferred from round-1 must-have only because OQ-02 hit Next 16 friction. Hand-rolled SW per OQ-02 fallback is the right path; ship right after core. |
 
+### P0++ — Chat-first + semantic-search wave (round-2 commitments)
+
+Round-1 (`buildathon-round-1.2`) shipped F-08/F-09/F-10/F-11. Round-2 introduces a corpus-backed chat-first IA so users can ask questions across AI-research literature instead of starting from an empty decision template. Sources, sizing, and tradeoffs are evidence-backed in `docs/research/pipeline-simplification-2026-05-10.md`.
+
+| ID | Feature | Size | Satisfies | Reads / writes | Test |
+|---|---|---|---|---|---|
+| **F-30** | **Research corpus (global + per-user)** — ingests AI-research artifacts from arXiv, Anthropic blog/changelog, OpenAI changelog, Perplexity blog, user-added RSS feeds and URLs. Corpus rows carry `scope ∈ {"global", user_id}` so the same table serves both shared knowledge and per-user libraries. Dedup by `source_id` + content hash. | L | U-02, new U-08 ("see the field's current thinking, not just my intake") | writes D-30 (corpus_documents) | T-30 |
+| **F-31** | **Hybrid semantic search with RRF fusion** — `/api/search?q=...&scope=global,user` returns Reciprocal-Rank-Fusion-merged results from pgvector (HNSW) + Postgres FTS. ⌘K palette is the primary surface. Citation chips on chat responses link back to source. Empty-state handling for "no corpus indexed yet". | M–L | U-02, U-08 | reads D-30, D-31 | T-31 |
+| **F-32** | **Chat-first IA** — `/app` becomes the chat surface (was `/app/decisions`); decisions list demotes to `/history`. Chat composer has always-visible search affordance + `Ctrl/⌘ K` palette shortcut. Source filter (global · my-sources · both) in palette. Past decisions remain accessible from chat ("recall my prior decisions on capacity"). | M | U-06, U-08, new U-09 ("chat is the door, not the side panel") | reads D-07, D-08, D-30 | T-32 |
+| **F-33** | **Railway worker infrastructure** — single Railway service on project `11d80262-9690-428d-ac73-ec689f9d5574` running pg-boss + node-cron + source adapters. Decouples ingestion from Vercel function limits. Idempotent jobs (content-hash gated). Distributed lock prevents cron overlap. | M | enables F-30 | writes D-30 via queue | T-33 |
+
+**F-30/31/32/33 acceptance (locked):**
+
+- **F-30** — ≥100 docs indexed across ≥2 sources; dedup verified (re-fetch yields zero new rows); `scope` column on every row with RLS `(scope = 'global') OR (user_id = current_user_id())`; user can ingest a private RSS feed and see it scoped to their account only; embeddings use `text-embedding-3-small` at **768 dims** (locked via ADR-007).
+- **F-31** — hybrid recall on a 20-query eval set beats pure-vector by ≥10 pp; RRF `k=60`; ⌘K palette opens in <100 ms; results render citation chips opening source URL in a new tab; per-result "use as context" injects the doc as a system message into the next chat turn.
+- **F-32** — post-auth landing at `/app` shows the chat composer; `/app/decisions` 301-redirects to `/history`; ⌘K palette is reachable from every authed page; existing decision detail pages keep working at their current URLs.
+- **F-33** — worker idle cost ≤ $5/mo on Railway baseline; `/health` endpoint returns Postgres connectivity + last job timestamp; pg-boss queue visible in Neon (`pgboss.job` schema); node-cron schedules tagged with `concurrency=1` semantics.
+
+**New tests:**
+
+| ID | What it verifies | Type |
+|---|---|---|
+| T-30 | arXiv adapter ingests 10 known papers, dedup zero on re-run, RLS isolates per-user docs | integration |
+| T-31 | RRF beats pure-vector on 20-query eval; ⌘K palette renders + filters in JSDOM | integration + unit |
+| T-32 | `/app` post-auth lands on chat; `/app/decisions` redirects; decision detail still works | e2e |
+| T-33 | Worker container starts, connects to Neon, registers pg-boss queue, processes a fixture job | integration in Railway preview |
+
+**New ADRs supporting this wave:**
+
+- **ADR-006** — Job queue = **pg-boss** over BullMQ. Postgres-native; ≤100 jobs/sec is well below pg-boss's contention ceiling; removes Redis from the stack; exactly-once via Postgres transactions. Source: `docs/research/pipeline-simplification-2026-05-10.md` §1.1.
+- **ADR-007** — Embedding model = `text-embedding-3-small` at **768 dimensions** via OpenAI's native Matryoshka `dimensions:` parameter. ≥97% MTEB quality retention at 50% storage. Locks in Atomize's outstanding DEBT-3 fix from day 1. Source: same research doc §2.1.
+- **ADR-008** — Search strategy = **hybrid pgvector + Postgres FTS with Reciprocal Rank Fusion** `k=60` in app code. Vector-only = 78% recall@10; hybrid w/ RRF = 91%. Never silent threshold fallback (Atomize DEBT-10). Source: same research doc §3.
+
+**New data points (D-30, D-31):**
+
+- **D-30 `corpus_documents`** — `id, scope ('global'|user_id::text), source_id, source_type, source_url, title, body, content_hash (sha256), fetched_at, published_at, metadata jsonb`. RLS: `scope = 'global' OR scope = current_user_id::text`.
+- **D-31 `corpus_embeddings`** — `document_id, chunk_index, chunk_text, embedding vector(768), content_hash`. HNSW index `using hnsw (embedding vector_cosine_ops) WITH (m=16, ef_construction=200)`. FTS companion: `tsvector` generated column + GIN index.
+
+**Note on ID collision:** Current §5 P1 references `F-10, F-11, F-12, F-13` for legacy ideas (voice intake, on-device LLM, template authoring, multi-decision threading). These IDs were superseded by P0's F-10/F-11. The new wave deliberately uses F-30+ to sidestep the collision. A separate cleanup PR should renumber the P1 entries to F-16–F-19.
+
 ### P1 — v1.1 (sized but deferred)
 
 | ID | Feature | Size | Why deferred |
