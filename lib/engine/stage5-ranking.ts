@@ -229,7 +229,19 @@ Rules:
 - Use exactly 3 different types from {prompt, playbook, skill}.
 - artifact MUST contain exactly the field for its type (promptText / playbookSteps / skillName) and nothing else.
 - Never reference PHI (no patient names, diagnoses, MRNs).
-- Tone: action-oriented, specific to the recommendation.`;
+- Tone: action-oriented, specific to the recommendation.
+
+AI-time-recovery requirement (NEW):
+At least ONE of the 3 workloadReducers MUST be an AI-driven workflow whose specific aim is to reclaim clinical time the practitioner is currently spending on non-clinical work. Examples to inspire (do NOT copy verbatim — tailor to the recommendation):
+  • A "prompt" that drafts patient comms (cancellation rebooking note, late-policy explainer, intake screening) so the practitioner doesn't write each from scratch.
+  • A "prompt" that summarizes a referral letter or insurance EOB into a 4-line action plan.
+  • A "playbook" for routing scheduling/triage to an AI assistant + a human review gate.
+  • A "skill" reference name for a Claude Code or ChatGPT skill that automates a recurring weekly task (e.g., monthly revenue snapshot, no-show pattern detector).
+This reducer's promptText MUST embed the user's intake context (e.g., "I run a [specialty] practice with [X] visits/week and lose ~[Y] hours to [pain-point]") and end with a clear output spec.
+
+Permission tiers:
+- T0 = paste-only (user copies into ChatGPT/Claude). Use for "prompt" reducers.
+- T1 = simple tool/skill the user installs locally (no external write). Use for "skill" reducers.`;
 
 interface RationaleArgs {
   template: DecisionTemplate;

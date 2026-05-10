@@ -25,20 +25,26 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           >
             Decision Doctor
           </Link>
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-3 text-sm sm:gap-4">
             <Link
               href="/app/decisions"
-              className="text-ink-700 hover:text-ink-900"
+              className="hidden min-h-11 items-center text-ink-700 hover:text-ink-900 sm:inline-flex"
             >
               History
             </Link>
             <Link
-              href="/app/decisions/new"
-              className="rounded bg-ink-900 px-3 py-1.5 text-white hover:bg-ink-700"
+              href="/app/chat"
+              className="inline-flex min-h-11 items-center rounded border border-ink-300 px-3 text-ink-900 hover:border-ink-700"
             >
-              New decision
+              Chat
             </Link>
-            <span className="hidden text-ink-500 sm:inline">{email}</span>
+            <Link
+              href="/app/decisions/new"
+              className="inline-flex min-h-11 items-center rounded bg-ink-900 px-3 text-white hover:bg-ink-700"
+            >
+              New
+            </Link>
+            <span className="hidden text-ink-500 lg:inline">{email}</span>
             <SignOutButton />
           </div>
         </nav>

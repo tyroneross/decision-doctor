@@ -13,6 +13,7 @@ type Field = {
   required?: boolean;
   min?: number;
   max?: number;
+  step?: number;
 };
 
 type PublicTemplate = {
@@ -126,10 +127,10 @@ export function IntakeForm({ template }: { template: PublicTemplate }) {
         type="submit"
         disabled={!filled || busy}
         className={
-          "w-full rounded-md py-2.5 text-sm font-medium transition " +
+          "w-full min-h-11 rounded-md py-3 text-sm font-medium transition " +
           (filled && !busy
             ? "bg-ink-900 text-white hover:bg-ink-700"
-            : "bg-ink-100 text-ink-500 cursor-not-allowed")
+            : "bg-ink-100 text-ink-700 cursor-not-allowed")
         }
         aria-disabled={!filled || busy}
       >
@@ -170,7 +171,7 @@ function FieldRow({
           id={id}
           value={(value as string) ?? ""}
           onChange={(e) => onChange(e.target.value)}
-          className="mt-1 block w-full rounded border-ink-300 focus:border-accent-600 focus:ring-accent-600"
+          className="mt-1 block min-h-11 w-full rounded border-ink-300 px-3 focus:border-accent-600 focus:ring-accent-600"
         >
           <option value="" disabled>
             Select…
@@ -208,6 +209,18 @@ function FieldRow({
       </label>
     );
   }
+  // Number with both min+max → render as a slider (easier on mobile + visual).
+  if (
+    field.kind === "number" &&
+    typeof field.min === "number" &&
+    typeof field.max === "number" &&
+    Number.isFinite(field.min) &&
+    Number.isFinite(field.max)
+  ) {
+    return <SliderRow id={id} field={field} value={value} onChange={onChange} />;
+  }
+
+  // Fallback: text input or unbounded number.
   return (
     <label htmlFor={id} className="block text-sm">
       <span className="text-ink-700">
@@ -234,11 +247,88 @@ function FieldRow({
             onChange(e.target.value);
           }
         }}
-        className="mt-1 block w-full rounded border-ink-300 focus:border-accent-600 focus:ring-accent-600"
+        className="mt-1 block min-h-11 w-full rounded border-ink-300 px-3 focus:border-accent-600 focus:ring-accent-600"
       />
       {field.helper && (
         <span className="mt-1 block text-xs text-ink-500">{field.helper}</span>
       )}
     </label>
+  );
+}
+
+function SliderRow({
+  id,
+  field,
+  value,
+  onChange,
+}: {
+  id: string;
+  field: Field;
+  value: unknown;
+  onChange: (v: unknown) => void;
+}) {
+  const min = field.min ?? 0;
+  const max = field.max ?? 100;
+  // Default mid-range only when user hasn't set a value yet (so the slider is
+  // visibly active immediately — Calm-precision: action button states require
+  // a non-empty signal, but for sliders that signal is the thumb position).
+  const numericValue =
+    typeof value === "number" && Number.isFinite(value) ? value : Math.round((min + max) / 2);
+  const hasUserValue = typeof value === "number" && Number.isFinite(value);
+
+  // Initialize cache only on first interaction so we don't pre-fill the form
+  // and let the user think they "answered" without actually moving anything.
+  const handleChange = (n: number) => {
+    onChange(n);
+  };
+
+  return (
+    <div className="block text-sm">
+      <div className="flex items-baseline justify-between gap-3">
+        <label htmlFor={id} className="text-ink-700">
+          {field.label}
+          {field.required !== false && (
+            <span aria-hidden className="ml-0.5 text-ink-500">
+              *
+            </span>
+          )}
+        </label>
+        <span
+          className={
+            "inline-flex min-w-[3.5rem] justify-center rounded px-2 py-0.5 text-sm tabular-nums font-medium " +
+            (hasUserValue ? "bg-ink-900 text-white" : "bg-ink-100 text-ink-500")
+          }
+          aria-live="polite"
+          aria-label={`Current value ${numericValue}`}
+        >
+          {numericValue}
+        </span>
+      </div>
+      <input
+        id={id}
+        type="range"
+        min={min}
+        max={max}
+        step={field.step ?? 1}
+        value={numericValue}
+        onChange={(e) => handleChange(Number(e.target.value))}
+        // Touch on first move so we capture the value (slider's existing
+        // position becomes the user's intended value).
+        onPointerDown={() => {
+          if (!hasUserValue) handleChange(numericValue);
+        }}
+        className="mt-2 block h-11 w-full cursor-pointer accent-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-600"
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={numericValue}
+      />
+      <div className="mt-1 flex justify-between text-xs text-ink-500 tabular-nums">
+        <span>{min}</span>
+        <span>{max}</span>
+      </div>
+      {field.helper && (
+        <p className="mt-1 text-xs text-ink-500">{field.helper}</p>
+      )}
+    </div>
   );
 }
