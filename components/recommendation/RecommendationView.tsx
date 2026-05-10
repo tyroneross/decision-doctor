@@ -10,6 +10,8 @@ import {
   relativeDay,
   totalHoursSaved,
 } from "@/lib/decision-display";
+import { rankByFeasibility } from "@/lib/ai-feasibility";
+import { AIFeasibilityChip } from "@/components/feasibility/AIFeasibilityChip";
 
 // ─── JSON-column shapes (defensive — DB types are unknown at boundary) ──
 
@@ -158,6 +160,42 @@ export function RecommendationView({ row }: { row: Decision }) {
           </div>
         </div>
       </section>
+
+      {/* RANKED DRAINS — AI feasibility sidebar */}
+      {reducers.length > 0 && (
+        <section className="rounded-2xl border border-rule bg-cream-2 p-6 sm:p-8">
+          <div className="mb-6">
+            <p className="text-xs font-bold uppercase tracking-widest text-ink-500">
+              Ranked by AI feasibility
+            </p>
+            <h3 className="mt-2 text-xl font-bold">
+              How to ship {reducers.length} {reducers.length === 1 ? "skill" : "skills"}
+            </h3>
+          </div>
+          <div className="space-y-3">
+            {rankByFeasibility(reducers).map(({ reducer, score, index }) => (
+              <div
+                key={index}
+                className="rounded-lg border border-rule bg-white p-4 space-y-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-ink-900 text-sm">
+                      {(reducer as any).title || "Untitled skill"}
+                    </p>
+                    {(reducer as any).description && (
+                      <p className="mt-1 text-xs text-ink-600">
+                        {(reducer as any).description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <AIFeasibilityChip score={score} compact />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* PYRAMID TIER 2 — 3 MECE SUPPORTING CARDS */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-7">

@@ -8,6 +8,7 @@ import { getSessionActor } from "@/lib/auth-session";
 import { totalHoursSaved, formatHrs } from "@/lib/decision-display";
 import { SignOutButton } from "./_components/sign-out";
 import { ServiceWorkerRegister } from "./_components/sw-register";
+import { MobileTabBar } from "@/components/nav/MobileTabBar";
 
 // Auth gate for everything under /app/*. SSR redirect — no client flash.
 // Guest mode: dd_guest cookie bypasses auth for UI preview (demo data shown).
@@ -68,7 +69,7 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-cream">
+    <div className="min-h-screen flex flex-col bg-cream pb-20 md:pb-0">
       <header className="no-print border-b border-rule bg-cream-2/60 backdrop-blur">
         <nav
           aria-label="Primary"
@@ -167,6 +168,7 @@ export default async function AppLayout({
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:max-w-4xl sm:py-8">
         {children}
       </main>
+      <MobileTabBar userInitials={initials} userEmail={email} />
       <ServiceWorkerRegister />
     </div>
   );
