@@ -130,13 +130,11 @@ async function handleFirstClassification(
     return askFirstTemplateField(next);
   }
 
-  // For other modes → ask for the first piece of missing info
-  const ack = `${routerOut.rationale} ${
-    routerOut.missingInfo.length > 0
-      ? `To do this well, ${routerOut.missingInfo[0]}.`
-      : "Tell me a bit more."
-  }`;
-  const assistant = makeMsg("assistant", ack);
+  // For other modes → just ack the rationale and move into a clarifier loop.
+  // (Persona panel 2026-05-10: concatenating rationale + missingInfo[0]
+  // produced sentence fragments that nearly drove Maya off. Now we let the
+  // generic clarifier pick the next question on the next user turn.)
+  const assistant = makeMsg("assistant", routerOut.rationale);
   return {
     kind: "chatting",
     assistant,
@@ -252,7 +250,17 @@ async function handleGenericClarifier(
   const lastUser = [...transcript.messages].reverse().find((m) => m.role === "user");
   if (!lastUser) return readyToRun(transcript, transcript.routerOutput!.mode);
 
-  const sys = `You are a calm, focused decision-aid assistant for solo healthcare practitioners. Your job: ask ONE short clarifying question that surfaces the single most important missing piece for this decision. NO numbered lists, NO multi-paragraph essays. Plain language. ≤2 sentences. End with a question mark. NEVER ask for patient identifying info (PHI).`;
+  const sys = `You are a calm, focused decision-aid assistant for solo healthcare practitioners. Your job: ask EXACTLY ONE clarifying question.
+
+STRICT RULES:
+1. ONE question only. Not two combined with "and". Not a question + a follow-up. ONE.
+2. Plain language. NO words like "structured_enumerable", "values_dominant", "TOPSIS", "MCDA", "template", "mode", "router", "Stage N".
+3. ≤ 25 words.
+4. End with a question mark.
+5. NEVER ask for patient identifying info (PHI).
+6. Avoid jargon a non-AI user wouldn't understand.
+
+If the user already gave you 3+ specific data points, do NOT ask another question — instead, ask if they're ready to see the recommendation.`;
 
   const transcriptText = transcript.messages
     .slice(-6) // last 3 turns from each side

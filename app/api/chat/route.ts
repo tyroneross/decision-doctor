@@ -124,56 +124,79 @@ export async function POST(req: Request) {
       }
 
       // For v1: only structured_enumerable + matched template path runs the
-      // existing 5-stage engine. Modes 2-4 are ROUTED + transcript captured but
-      // produce a placeholder output (engine fan-out for design-brief + values-map
-      // lands in v1.1 per the dynamic-frameworks-roadmap).
+      // existing 5-stage engine. Modes 2-4 store a "saved conversation" placeholder
+      // that the recommendation page detects and renders as a transcript view —
+      // not a fake recommendation. (Persona panel 2026-05-10: previous placeholder
+      // copy leaked "v1.1" + internal mode names into user copy and crashed the
+      // recommendation page render.)
       const tplId = turn.transcript.routerOutput?.templateMatch ?? null;
       if (turn.mode !== "structured_enumerable" || !tplId) {
-        // Placeholder: store transcript + mode, mark complete, return a brief explainer.
+        const friendlyMode =
+          turn.mode === "values_dominant"
+            ? "values question"
+            : turn.mode === "generative_design"
+              ? "open exploration"
+              : "open decision";
+        // Persist the conversation as "complete" but with a sentinel
+        // recommendation shape that the rec page recognizes and renders as
+        // a saved-conversation card. NO version numbers, NO internal mode names.
         await tx.update(decisions).set({
           status: "complete",
           recommendation: {
-            option: "Mode-specific output coming in v1.1",
-            confidence: 50,
-            rationale: `This conversation classified as ${turn.mode}. The full output for this mode (design brief or values map) ships in v1.1; the chat transcript is saved.`,
+            option: "Conversation saved",
+            confidence: 0,
+            rationale: `We saved your ${friendlyMode}. A full structured output for this kind of decision is in development — for now you can re-read the conversation, or start a new one and try a different angle.`,
           } as object,
           alternatives: [
-            { option: "Run a structured template instead", eliminatedAtStage: 4, reason: "If this fits one of the 3 templates (capacity / pricing / hire), starting from a template gives a full ranked output today." },
-            { option: "Continue the conversation tomorrow", eliminatedAtStage: 4, reason: "We saved the transcript; you can pick up where you left off." },
+            {
+              option: "Start over with a more specific framing",
+              eliminatedAtStage: 4,
+              reason: "If you can name two or three concrete options you're choosing between, the ranked-recommendation flow handles that today.",
+            },
+            {
+              option: "Talk it through in the conversation again",
+              eliminatedAtStage: 4,
+              reason: "Sometimes naming what's at stake out loud is the work.",
+            },
           ] as object,
           robustAlternative: {
             option: "No clearly different fallback",
-            why: "Mode 2/3/4 outputs ship in v1.1.",
+            why: "We didn't want to fabricate a backup option for an open question.",
           } as object,
           methodTrace: [
-            { stage: 1, name: "values", output: { mode: turn.mode, transcript: turn.transcript } },
+            { stage: 1, name: "values", output: { savedConversation: true } },
           ] as object,
           workloadReducers: [
             {
               type: "playbook",
-              title: "Save this conversation for later",
-              description: "We've stored the transcript. v1.1 ships full design-brief + values-map output for this mode.",
-              artifact: { playbookSteps: ["Bookmark this URL", "Continue when v1.1 ships"] },
+              title: "Re-read the conversation",
+              description: "Note the words you kept coming back to. Those are usually your real constructs.",
+              artifact: { playbookSteps: ["Open the saved conversation", "Highlight what you'd repeat", "Note what felt forced"] },
               automationLevel: "user_executes",
               coverage: "task_setup",
               permission_tier: "T0",
             },
             {
               type: "playbook",
-              title: "Try a structured template",
-              description: "If this fits capacity / pricing / hire, those templates run the full engine today.",
-              artifact: { playbookSteps: ["Go to /app", "Pick the template that fits"] },
+              title: "Try the structured form",
+              description: "If your decision fits patient load, pricing, or hiring, the structured form gives you a full ranked recommendation.",
+              artifact: { playbookSteps: ["Visit the templates page from the menu", "Pick the closest fit", "Answer the questions"] },
               automationLevel: "user_executes",
               coverage: "task_setup",
               permission_tier: "T0",
             },
             {
-              type: "playbook",
-              title: "Talk it through",
-              description: "Sometimes the chat itself helped you see the shape of the problem.",
-              artifact: { playbookSteps: ["Re-read the transcript", "Note the constructs that came up"] },
-              automationLevel: "user_executes",
-              coverage: "task_setup",
+              type: "prompt",
+              title: "Take it to your trusted advisor",
+              description: "Paste this prompt into ChatGPT, Claude, or send it to a peer-consult colleague.",
+              artifact: {
+                promptText: `I'm a solo healthcare practitioner. I've been thinking through a decision and the conversation went like this:\n\n${turn.transcript.messages
+                  .filter((m) => m.role !== "system")
+                  .map((m) => `${m.role}: ${m.content}`)
+                  .join("\n\n")}\n\nWhat questions am I not asking? What would you push back on?`,
+              },
+              automationLevel: "ai_assisted",
+              coverage: "partial_task",
               permission_tier: "T0",
             },
           ] as object,
@@ -186,7 +209,6 @@ export async function POST(req: Request) {
           status: "ready",
           assistant: turn.assistant,
           mode: turn.mode,
-          note: "v1.1: this mode renders a full output. v1: chat is captured + a placeholder card is shown.",
         });
       }
 

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Decision Doctor — Warm Paper (light Warm Craft)</title>
+<style>
+  /* Light inversion of Warm Craft — cream paper background, sepia text, ember accent.
+     Earthy, lived-in, "trusted advisor" feel. Tested for warmth with Maya/Hank-style users. */
+  :root {
+    --bg: #faf6ee;            /* cream paper */
+    --surface: #fffdf8;        /* warmer white card */
+    --surface-2: #f4ede0;      /* aged paper */
+    --primary: #2a221c;        /* warm dark ink (not black) */
+    --secondary: #6a5b48;      /* tan-gray for body */
+    --muted: #9c8e7a;          /* faded warm gray */
+    --faint: #d6c8ad;          /* border tone */
+    --ember: #c8651e;          /* darker ember for light bg */
+    --ember-soft: #f6e6d5;     /* ember tinted bg */
+    --sage: #4f8f5a;           /* darker sage for AA contrast */
+    --clay: #a8543c;
+    --font: 'Georgia', 'Iowan Old Style', 'Charter', serif;
+    --font-ui: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--primary); -webkit-font-smoothing: antialiased; }
+  .frame { max-width: 420px; margin: 32px auto; background: var(--surface); border: 1px solid var(--faint); border-radius: 4px; box-shadow: 0 8px 24px rgba(60,40,20,0.06), 0 1px 0 rgba(60,40,20,0.04); }
+
+  .header { padding: 18px 22px; border-bottom: 1px solid var(--faint); display: flex; justify-content: space-between; align-items: center; font-family: var(--font-ui); }
+  .brand { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ember); }
+  .nav { display: flex; gap: 18px; font-family: var(--font-ui); }
+  .nav a { font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing: 0.04em; text-transform: uppercase; }
+  .nav a.active { color: var(--primary); }
+
+  .stream { padding: 24px; min-height: 480px; display: flex; flex-direction: column; gap: 14px; }
+  .bubble { max-width: 88%; padding: 14px 18px; font-size: 16px; line-height: 1.6; white-space: pre-wrap; border-radius: 2px; }
+  .bubble.assistant { background: transparent; align-self: flex-start; color: var(--primary); border-left: 3px solid var(--ember); padding-left: 16px; }
+  .bubble.user { background: var(--surface-2); color: var(--primary); align-self: flex-end; border-radius: 2px; }
+
+  .meta { font-family: var(--font-ui); font-size: 11px; color: var(--muted); padding: 0 4px; align-self: flex-start; letter-spacing: 0.04em; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 4px; }
+  .chip { font-family: var(--font-ui); font-size: 13px; color: var(--secondary); background: transparent; border: 1px solid var(--faint); padding: 8px 16px; border-radius: 999px; cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; }
+  .chip:hover { border-color: var(--ember); color: var(--ember); }
+  .chip.primary { background: var(--ember-soft); border-color: var(--ember); color: var(--ember); font-weight: 500; }
+
+  .input { padding: 14px 22px; border-top: 1px solid var(--faint); background: var(--surface); }
+  textarea { font-family: var(--font); width: 100%; resize: none; border: 1px solid var(--faint); border-radius: 2px; padding: 12px 14px; font-size: 16px; min-height: 48px; outline: none; background: var(--bg); color: var(--primary); }
+  textarea:focus { border-color: var(--ember); }
+  .input-row { display: flex; gap: 10px; align-items: flex-end; }
+  .send { font-family: var(--font-ui); padding: 0 22px; background: var(--ember); color: white; border: none; border-radius: 2px; font-weight: 600; font-size: 13px; min-height: 48px; cursor: pointer; letter-spacing: 0.04em; text-transform: uppercase; }
+  .input-hint { font-family: var(--font-ui); font-size: 11px; color: var(--muted); margin-top: 8px; letter-spacing: 0.02em; }
+
+  .label { font-family: var(--font-ui); font-size: 11px; font-weight: 500; margin: 36px auto 8px; max-width: 420px; padding: 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.10em; }
+
+  .rec { padding: 24px; }
+  .breadcrumb { font-family: var(--font-ui); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.10em; margin-bottom: 18px; }
+  .rec h1 { font-size: 26px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; }
+  .conf { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; font-family: var(--font-ui); font-size: 13px; font-weight: 500; color: var(--sage); padding: 4px 10px; background: rgba(79,143,90,0.08); border-radius: 2px; }
+  .conf-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sage); }
+  .rationale { font-size: 16px; color: var(--secondary); line-height: 1.65; margin-top: 16px; }
+  .card { border: none; padding: 22px 0; margin-top: 16px; border-top: 1px solid var(--faint); }
+  .card h3 { font-family: var(--font-ui); font-size: 11px; font-weight: 600; margin-bottom: 10px; color: var(--ember); text-transform: uppercase; letter-spacing: 0.10em; }
+  .card .body { font-size: 15px; color: var(--secondary); line-height: 1.6; }
+  .actions { padding: 16px 24px; border-top: 1px solid var(--faint); background: var(--surface); display: flex; gap: 10px; }
+  .btn-primary { font-family: var(--font-ui); padding: 12px 20px; background: var(--ember); color: white; border: none; border-radius: 2px; font-weight: 600; font-size: 13px; min-height: 48px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .btn-secondary { font-family: var(--font-ui); padding: 12px 20px; background: transparent; color: var(--primary); border: 1px solid var(--faint); border-radius: 2px; font-weight: 500; font-size: 13px; min-height: 48px; letter-spacing: 0.04em; text-transform: uppercase; }
+
+  .prompt-box { margin-top: 14px; padding: 16px; background: var(--surface-2); border-left: 3px solid var(--clay); font-family: 'DM Mono', monospace; font-size: 13px; line-height: 1.6; color: var(--primary); }
+</style></head><body>
+
+<div class="label">A · CHAT FIRST TURN</div>
+<div class="frame">
+  <div class="header">
+    <span class="brand">Decision Doctor</span>
+    <div class="nav"><a class="active" href="#">New</a><a href="#">History</a><a href="#">Sign out</a></div>
+  </div>
+  <div class="stream">
+    <div class="bubble assistant">Tell me about a decision you're trying to make. One sentence is enough — no patient names, just the situation.</div>
+    <div class="meta">Or jump straight to:</div>
+    <div class="chips">
+      <button class="chip">Patient load</button>
+      <button class="chip">Pricing</button>
+      <button class="chip">Hiring help</button>
+    </div>
+  </div>
+  <div class="input">
+    <div class="input-row">
+      <textarea placeholder="Describe your decision in your own words…"></textarea>
+      <button class="send">Send</button>
+    </div>
+    <div class="input-hint">No patient names — your messages stay on your account.</div>
+  </div>
+</div>
+
+<div class="label">B · MID CONVERSATION</div>
+<div class="frame">
+  <div class="header">
+    <span class="brand">Decision Doctor</span>
+    <div class="nav"><a class="active" href="#">New</a><a href="#">History</a><a href="#">Sign out</a></div>
+  </div>
+  <div class="stream">
+    <div class="bubble assistant">This is about your patient load. I'll ask a few quick questions and walk you through the math.</div>
+    <div class="bubble user">Hiring vs capping vs retiring at 18 vs 36 months</div>
+    <div class="bubble assistant">How many hours per week do you currently see patients?</div>
+    <div class="bubble user">42</div>
+    <div class="bubble assistant">How many hours per week do you actually want to work?</div>
+    <div class="chips">
+      <button class="chip primary">25</button>
+      <button class="chip">30</button>
+      <button class="chip">35</button>
+    </div>
+  </div>
+  <div class="input">
+    <div class="input-row">
+      <textarea placeholder="Type your answer or tap a number above…"></textarea>
+      <button class="send">Send</button>
+    </div>
+  </div>
+</div>
+
+<div class="label">C · RECOMMENDATION</div>
+<div class="frame">
+  <div class="header">
+    <span class="brand">Decision Doctor</span>
+    <div class="nav"><a href="#">New</a><a href="#">History</a><a href="#">Sign out</a></div>
+  </div>
+  <div class="rec">
+    <div class="breadcrumb">Patient load · May 10</div>
+    <h1>Cap intake at current load and hire 8 hours of admin help.</h1>
+    <div class="conf"><span class="conf-dot"></span>Moderate confidence · 72%</div>
+    <div class="rationale">You weighted reducing your burnout and protecting your income highest, and this option scores best on both. Adding a fourth day pushed you past the 28-hour ceiling you said matters; raising prices alone doesn't address the waitlist or the burnout.</div>
+    <div class="card">
+      <h3>If your assumptions shift</h3>
+      <div class="body">If hiring isn't feasible in 60 days, raise rates 12% on new patients only and cap intake — the income math holds and the burnout math improves.</div>
+    </div>
+    <div class="card">
+      <h3>Do this first</h3>
+      <div class="body">Draft an admin-help job description with this prompt — paste it into ChatGPT or Claude.</div>
+      <div class="prompt-box">I'm a solo pediatrician seeing 42 patients/week and need 8 hours of admin help to reclaim clinical time. Draft a job description, hourly target, and three interview questions…</div>
+      <button class="btn-secondary" style="margin-top: 12px;">Copy this text</button>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn-primary">Print / Save as PDF</button>
+    <button class="btn-secondary">Copy share link</button>
+  </div>
+</div>
+
+</body></html>

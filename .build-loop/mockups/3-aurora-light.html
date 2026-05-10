@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Decision Doctor — Aurora Light</title>
+<style>
+  /* Light Aurora — pearl background with subtle indigo aurora gradient drifting at the
+     edges. Glass cards with soft shadows. Modern but not cold. Spacing + layout principles
+     from Aurora Glass; surface treatment inverted to white. */
+  :root {
+    --bg: #fafbff;
+    --surface: rgba(255,255,255,0.85);
+    --glass-border: rgba(99,102,241,0.10);
+    --primary: #1e1b4b;
+    --secondary: #475569;
+    --muted: #94a3b8;
+    --indigo: #4f46e5;
+    --indigo-soft: rgba(99,102,241,0.08);
+    --violet: #7c3aed;
+    --emerald: #059669;
+    --rose: #e11d48;
+    --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font); color: var(--primary); -webkit-font-smoothing: antialiased;
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse at 15% 25%, rgba(99,102,241,0.08) 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 15%, rgba(34,211,238,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 90%, rgba(167,139,250,0.05) 0%, transparent 60%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  .frame {
+    max-width: 420px; margin: 32px auto;
+    background: var(--surface); backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    box-shadow: 0 1px 3px rgba(99,102,241,0.04), 0 8px 32px rgba(99,102,241,0.06);
+    overflow: hidden;
+  }
+
+  .header { padding: 16px 20px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
+  .brand { font-size: 14px; font-weight: 600; letter-spacing: -0.02em; background: linear-gradient(135deg, var(--indigo), var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .nav { display: flex; gap: 14px; }
+  .nav a { font-size: 13px; color: var(--muted); text-decoration: none; }
+  .nav a.active { color: var(--primary); font-weight: 500; }
+
+  .stream { padding: 20px; min-height: 480px; display: flex; flex-direction: column; gap: 12px; }
+  .bubble { max-width: 86%; padding: 12px 16px; border-radius: 18px; font-size: 14.5px; line-height: 1.55; white-space: pre-wrap; }
+  .bubble.assistant { background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); border: 1px solid var(--glass-border); align-self: flex-start; color: var(--primary); }
+  .bubble.user { background: linear-gradient(135deg, var(--indigo), var(--violet)); color: white; align-self: flex-end; }
+  .meta { font-size: 11px; color: var(--muted); padding: 0 4px; align-self: flex-start; letter-spacing: 0.02em; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 4px; }
+  .chip { font-size: 13px; color: var(--secondary); background: rgba(255,255,255,0.6); border: 1px solid var(--glass-border); padding: 8px 14px; border-radius: 999px; cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; backdrop-filter: blur(8px); transition: all 0.15s; }
+  .chip:hover { border-color: var(--indigo); color: var(--indigo); }
+  .chip.primary { background: var(--indigo-soft); border-color: var(--indigo); color: var(--indigo); font-weight: 500; }
+
+  .input { padding: 12px 16px; border-top: 1px solid var(--glass-border); background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); }
+  .input-row { display: flex; gap: 8px; }
+  textarea { flex: 1; resize: none; border: 1px solid var(--glass-border); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14.5px; min-height: 44px; outline: none; background: rgba(255,255,255,0.5); color: var(--primary); }
+  textarea:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px var(--indigo-soft); }
+  .send { padding: 0 18px; background: linear-gradient(135deg, var(--indigo), var(--violet)); color: white; border: none; border-radius: 12px; font: inherit; font-weight: 500; font-size: 14px; min-height: 44px; cursor: pointer; box-shadow: 0 1px 4px rgba(99,102,241,0.25); }
+  .input-hint { font-size: 11px; color: var(--muted); margin-top: 6px; letter-spacing: 0.02em; }
+
+  .label { font-size: 11px; font-weight: 500; margin: 36px auto 8px; max-width: 420px; padding: 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.10em; }
+
+  .rec { padding: 24px; }
+  .breadcrumb { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.10em; margin-bottom: 18px; }
+  .rec h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+  .conf { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 6px 12px; font-size: 13px; font-weight: 500; color: var(--emerald); background: rgba(5,150,105,0.08); border-radius: 999px; }
+  .conf-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 0 3px rgba(5,150,105,0.15); }
+  .rationale { font-size: 14.5px; color: var(--secondary); line-height: 1.6; margin-top: 14px; }
+  .card { border: 1px solid var(--glass-border); border-radius: 18px; padding: 20px; margin-top: 14px; background: rgba(255,255,255,0.6); backdrop-filter: blur(8px); }
+  .card h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--primary); }
+  .card .body { font-size: 13.5px; color: var(--secondary); line-height: 1.55; }
+  .actions { padding: 14px 20px; border-top: 1px solid var(--glass-border); background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); display: flex; gap: 8px; }
+  .btn-primary { padding: 10px 18px; background: linear-gradient(135deg, var(--indigo), var(--violet)); color: white; border: none; border-radius: 12px; font: inherit; font-weight: 500; font-size: 14px; min-height: 44px; box-shadow: 0 1px 4px rgba(99,102,241,0.25); }
+  .btn-secondary { padding: 10px 18px; background: rgba(255,255,255,0.6); color: var(--primary); border: 1px solid var(--glass-border); border-radius: 12px; font: inherit; font-size: 14px; min-height: 44px; }
+  .prompt-box { margin-top: 12px; padding: 14px; background: rgba(99,102,241,0.04); border-left: 3px solid var(--indigo); border-radius: 8px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12.5px; line-height: 1.5; color: var(--primary); }
+</style></head><body>
+
+<div class="label">A · CHAT FIRST TURN</div>
+<div class="frame">
+  <div class="header">
+    <span class="brand">Decision Doctor</span>
+    <div class="nav"><a class="active" href="#">New</a><a href="#">History</a><a href="#">Sign out</a></div>
+  </div>
+  <div class="stream">
+    <div class="bubble assistant">Tell me about a decision you're trying to make. One sentence is enough — no patient names, just the situation.</div>
+    <div class="meta">Or jump straight to:</div>
+    <div class="chips">
+      <button class="chip">Patient load</button>
+      <button class="chip">Pricing</button>
+      <button class="chip">Hiring help</button>
+    </div>
+  </div>
+  <div class="input">
+    <div class="input-row">
+      <textarea placeholder="Describe your decision in your own words…"></textarea>
+      <button class="send">Send</button>
+    </div>
+    <div class="input-hint">No patient names — your messages stay on your account.</div>
+  </div>
+</div>
+
+<div class="label">B · MID CONVERSATION</div>
+<div class="frame">
+  <div class="header">
+    <span class="brand">Decision Doctor</span>
+    <div class="nav"><a class="active" href="#">New</a><a href="#">History</a><a href="#">Sign out</a></div>
+  </div>
+  <div class="stream">
+    <div class="bubble assistant">This is about your patient load. I'll ask a few quick questions and walk you through the math.</div>
+    <div class="bubble user">Hiring vs capping vs retiring at 18 vs 36 months</div>
+    <div class="bubble assistant">How many hours per week do you currently see patients?</div>
+    <div class="bubble user">42</div>
+    <div class="bubble assistant">How many hours per week do you actually want to work?</div>
+    <div class="chips">
+      <button class="chip primary">25</button>
+      <button class="chip">30</button>
+      <button class="chip">35</button>
+    </div>
+  </div>
+  <div class="input">
+    <div class="input-row">
+      <textarea placeholder="Type your answer or tap a number above…"></textarea>
+      <button class="send">Send</button>
+    </div>
+  </div>
+</div>
+
+<div class="label">C · RECOMMENDATION</div>
+<div class="frame">
+  <div class="header">
+    <span class="brand">Decision Doctor</span>
+    <div class="nav"><a href="#">New</a><a href="#">History</a><a href="#">Sign out</a></div>
+  </div>
+  <div class="rec">
+    <div class="breadcrumb">Patient load · May 10</div>
+    <h1>Cap intake at current load and hire 8 hours of admin help.</h1>
+    <div class="conf"><span class="conf-dot"></span>Moderate confidence · 72%</div>
+    <div class="rationale">You weighted reducing your burnout and protecting your income highest, and this option scores best on both. Adding a fourth day pushed you past the 28-hour ceiling you said matters; raising prices alone doesn't address the waitlist or the burnout.</div>
+    <div class="card">
+      <h3>If your assumptions shift</h3>
+      <div class="body">If hiring isn't feasible in 60 days, raise rates 12% on new patients only and cap intake — the income math holds and the burnout math improves.</div>
+    </div>
+    <div class="card">
+      <h3>Do this first</h3>
+      <div class="body">Draft an admin-help job description with this prompt — paste it into ChatGPT or Claude.</div>
+      <div class="prompt-box">I'm a solo pediatrician seeing 42 patients/week and need 8 hours of admin help to reclaim clinical time. Draft a job description, hourly target, and three interview questions…</div>
+      <button class="btn-secondary" style="margin-top: 10px;">Copy this text</button>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn-primary">Print / Save as PDF</button>
+    <button class="btn-secondary">Copy share link</button>
+  </div>
+</div>
+
+</body></html>

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Decision Doctor — Calm Light</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --ink: #0f172a;
+    --ink-subtle: #475569;
+    --ink-muted: #64748b;
+    --border: #e2e8f0;
+    --accent: #4f46e5;
+    --accent-soft: #eef2ff;
+    --green: #16a34a;
+    --amber: #f59e0b;
+    --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
+  .frame { max-width: 420px; margin: 32px auto; background: var(--surface); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; box-shadow: 0 1px 2px rgba(15,23,42,0.04); }
+  .header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .brand { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+  .nav { display: flex; gap: 16px; }
+  .nav a { font-size: 13px; color: var(--ink-muted); text-decoration: none; }
+  .nav a.active { color: var(--ink); font-weight: 500; }
+
+  .stream { padding: 20px; min-height: 480px; display: flex; flex-direction: column; gap: 12px; }
+  .bubble { max-width: 86%; padding: 12px 16px; border-radius: 18px; font-size: 14.5px; line-height: 1.5; white-space: pre-wrap; }
+  .bubble.assistant { background: #f8fafc; border: 1px solid var(--border); align-self: flex-start; color: var(--ink); }
+  .bubble.user { background: var(--ink); color: white; align-self: flex-end; }
+  .meta { font-size: 11px; color: var(--ink-muted); padding: 0 4px; align-self: flex-start; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 4px; }
+  .chip { font-size: 13px; color: var(--ink); border: 1px solid var(--border); background: var(--surface); padding: 8px 14px; border-radius: 999px; cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; }
+  .chip:hover { border-color: var(--ink); }
+  .chip.primary { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 500; }
+
+  .input { padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); }
+  .input-row { display: flex; gap: 8px; }
+  textarea { flex: 1; resize: none; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14.5px; min-height: 44px; outline: none; }
+  textarea:focus { border-color: var(--ink); }
+  .send { padding: 0 18px; background: var(--ink); color: white; border: none; border-radius: 12px; font: inherit; font-weight: 500; font-size: 14px; min-height: 44px; cursor: pointer; }
+  .input-hint { font-size: 11px; color: var(--ink-muted); margin-top: 6px; }
+
+  .label { font-size: 14px; font-weight: 500; margin: 36px auto 8px; max-width: 420px; padding: 0 4px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
+
+  /* Recommendation page variant */
+  .rec { padding: 20px; }
+  .breadcrumb { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 16px; }
+  .rec h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; }
+  .conf { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 13px; font-weight: 500; color: var(--green); }
+  .conf-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .rationale { font-size: 14px; color: var(--ink-subtle); line-height: 1.55; margin-top: 12px; }
+  .card { border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-top: 16px; }
+  .card h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .card .body { font-size: 13.5px; color: var(--ink-subtle); line-height: 1.55; }
+  .actions { position: sticky; bottom: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+  .btn-primary { padding: 10px 18px; background: var(--ink); color: white; border: none; border-radius: 12px; font: inherit; font-weight: 500; font-size: 14px; min-height: 44px; }
+  .btn-secondary { padding: 10px 18px; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 12px; font: inherit; font-size: 14px; min-height: 44px; }
+</style></head><body>
+
+<div class="label">A · CHAT FIRST TURN</div>
+<div class="frame">
+  <div class="header">
+    <span class="brand">Decision Doctor</span>
+    <div class="nav"><a class="active" href="#">New</a><a href="#">History</a><a href="#">Sign out</a></div>
+  </div>
+  <div class="stream">
+    <div class="bubble assistant">Tell me about a decision you're trying to make. One sentence is enough — no patient names, just the situation.</div>
+    <div class="meta">Or jump straight to:</div>
+    <div class="chips">
+      <button class="chip">Patient load</button>
+      <button class="chip">Pricing</button>
+      <button class="chip">Hiring help</button>
+    </div>
+  </div>
+  <div class="input">
+    <div class="input-row">
+      <textarea placeholder="Describe your decision in your own words…"></textarea>
+      <button class="send">Send</button>
+    </div>
+    <div class="input-hint">No patient names — your messages stay on your account.</div>
+  </div>
+</div>
+
+<div class="label">B · MID CONVERSATION (TEMPLATE EXTRACTION)</div>
+<div class="frame">
+  <div class="header">
+    <span class="brand">Decision Doctor</span>
+    <div class="nav"><a class="active" href="#">New</a><a href="#">History</a><a href="#">Sign out</a></div>
+  </div>
+  <div class="stream">
+    <div class="bubble assistant">This is about your patient load. I'll ask a few quick questions and walk you through the math.</div>
+    <div class="bubble user">Hiring vs capping vs retiring at 18 vs 36 months</div>
+    <div class="bubble assistant">How many hours per week do you currently see patients?</div>
+    <div class="bubble user">42</div>
+    <div class="bubble assistant">How many hours per week do you actually want to work?</div>
+    <div class="chips">
+      <button class="chip primary">25</button>
+      <button class="chip">30</button>
+      <button class="chip">35</button>
+    </div>
+  </div>
+  <div class="input">
+    <div class="input-row">
+      <textarea placeholder="Type your answer or tap a number above…"></textarea>
+      <button class="send">Send</button>
+    </div>
+  </div>
+</div>
+
+<div class="label">C · RECOMMENDATION</div>
+<div class="frame">
+  <div class="header">
+    <span class="brand">Decision Doctor</span>
+    <div class="nav"><a href="#">New</a><a href="#">History</a><a href="#">Sign out</a></div>
+  </div>
+  <div class="rec">
+    <div class="breadcrumb">Patient load · May 10</div>
+    <h1>Cap intake at current load and hire 8 hours of admin help.</h1>
+    <div class="conf"><span class="conf-dot"></span>Moderate confidence · 72%</div>
+    <div class="rationale">You weighted reducing your burnout and protecting your income highest, and this option scores best on both. Adding a fourth day pushed you past the 28-hour ceiling you said matters; raising prices alone doesn't address the waitlist or the burnout.</div>
+    <div class="card">
+      <h3>If your assumptions shift</h3>
+      <div class="body">If hiring isn't feasible in 60 days, raise rates 12% on new patients only and cap intake — the income math holds and the burnout math improves.</div>
+    </div>
+    <div class="card">
+      <h3>Do this first</h3>
+      <div class="body">Draft an admin-help job description with this prompt — copy it into ChatGPT or Claude.</div>
+      <div style="margin-top: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; font-size: 12.5px; line-height: 1.5; color: var(--ink); font-family: monospace;">I'm a solo pediatrician seeing 42 patients/week and need 8 hours of admin help to reclaim clinical time. Draft a job description, hourly target, and three interview questions…</div>
+      <button class="btn-secondary" style="margin-top: 10px;">Copy this text</button>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn-primary">Print / Save as PDF</button>
+    <button class="btn-secondary">Copy share link</button>
+  </div>
+</div>
+
+</body></html>

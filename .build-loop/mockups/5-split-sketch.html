@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Decision Doctor — Split Sketch</title>
+<style>
+  /* Split Sketch — chat on left, live "decision sketch" on right that updates as
+     the conversation progresses. Visible reasoning. Inspired by Cursor / Lovable /
+     Claude.ai artifacts. Light, clean, indigo accent. Desktop-first; mobile collapses
+     the sketch into a swipe-up drawer. Best for power users who want to see the math
+     forming as they type. */
+  :root {
+    --bg: #fafbfc;
+    --surface: #ffffff;
+    --primary: #0f172a;
+    --secondary: #475569;
+    --muted: #94a3b8;
+    --border: #e2e8f0;
+    --indigo: #4338ca;
+    --indigo-soft: #eef2ff;
+    --green: #059669;
+    --amber: #d97706;
+    --rose: #dc2626;
+    --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--primary); -webkit-font-smoothing: antialiased; }
+
+  .frame { max-width: 980px; margin: 32px auto; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03); }
+  .header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .brand { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+  .nav { display: flex; gap: 14px; }
+  .nav a { font-size: 13px; color: var(--muted); text-decoration: none; }
+  .nav a.active { color: var(--primary); font-weight: 500; }
+
+  /* Split layout — chat 50%, sketch 50% */
+  .split { display: grid; grid-template-columns: 1fr 1fr; min-height: 540px; }
+  .chat-col { border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .sketch-col { background: #f8fafc; display: flex; flex-direction: column; }
+
+  .stream { padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+  .bubble { max-width: 92%; padding: 12px 14px; border-radius: 14px; font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
+  .bubble.assistant { background: var(--surface); border: 1px solid var(--border); align-self: flex-start; color: var(--primary); }
+  .bubble.user { background: var(--indigo); color: white; align-self: flex-end; }
+  .meta { font-size: 11px; color: var(--muted); padding: 0 4px; align-self: flex-start; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 4px; }
+  .chip { font-size: 13px; color: var(--secondary); border: 1px solid var(--border); background: var(--surface); padding: 7px 12px; border-radius: 999px; cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; }
+  .chip.primary { background: var(--indigo-soft); border-color: var(--indigo); color: var(--indigo); font-weight: 500; }
+
+  .input { padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); }
+  .input-row { display: flex; gap: 8px; }
+  textarea { flex: 1; resize: none; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 14px; min-height: 44px; outline: none; }
+  textarea:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px var(--indigo-soft); }
+  .send { padding: 0 16px; background: var(--indigo); color: white; border: none; border-radius: 10px; font: inherit; font-weight: 500; font-size: 14px; min-height: 44px; cursor: pointer; }
+
+  /* Sketch column */
+  .sketch-header { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .sketch-title { font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .sketch-mode { font-size: 14px; font-weight: 600; color: var(--primary); margin-top: 4px; }
+  .sketch-body { padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+
+  .field-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .field-row.captured { border-color: var(--green); background: rgba(5,150,105,0.04); }
+  .field-row.current { border-color: var(--indigo); background: var(--indigo-soft); }
+  .field-row.pending { opacity: 0.6; }
+  .fr-label { font-size: 13px; color: var(--secondary); }
+  .fr-value { font-size: 14px; font-weight: 500; color: var(--primary); font-variant-numeric: tabular-nums; }
+  .fr-status { font-size: 10px; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+  .fr-status.captured { color: var(--green); background: rgba(5,150,105,0.08); }
+  .fr-status.current { color: var(--indigo); background: var(--indigo-soft); }
+
+  .progress { display: flex; align-items: center; gap: 10px; }
+  .progress-bar { flex: 1; height: 4px; background: var(--border); border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--indigo); transition: width 0.3s ease; }
+  .progress-text { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .preview-card { padding: 14px; background: var(--surface); border: 1px dashed var(--border); border-radius: 10px; }
+  .preview-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+  .preview-rec { font-size: 14px; font-weight: 500; color: var(--primary); line-height: 1.4; }
+  .preview-conf { font-size: 11px; color: var(--amber); margin-top: 6px; }
+
+  .label { font-size: 11px; font-weight: 500; margin: 36px auto 8px; max-width: 980px; padding: 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.10em; }
+
+  /* Final state — sketch is now full output */
+  .final .sketch-body { padding: 20px; }
+  .rec-h1 { font-size: 20px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
+  .rec-conf { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 10px; font-size: 12px; font-weight: 500; color: var(--green); background: rgba(5,150,105,0.08); border-radius: 999px; }
+  .rec-rationale { font-size: 13px; color: var(--secondary); line-height: 1.55; margin-top: 12px; }
+  .rec-card { border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .rec-card h3 { font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 6px; }
+  .rec-card .body { font-size: 12.5px; color: var(--secondary); line-height: 1.5; }
+
+  @media (max-width: 720px) {
+    .split { grid-template-columns: 1fr; }
+    .sketch-col { border-top: 1px solid var(--border); }
+  }
+</style></head><body>
+
+<div class="label">A · MID CONVERSATION — chat left, live decision sketch right</div>
+<div class="frame">
+  <div class="header">
+    <span class="brand">Decision Doctor</span>
+    <div class="nav"><a class="active" href="#">New</a><a href="#">History</a><a href="#">Sign out</a></div>
+  </div>
+  <div class="split">
+    <div class="chat-col">
+      <div class="stream">
+        <div class="bubble assistant">This is about your patient load. I'll ask a few quick questions and walk you through the math.</div>
+        <div class="bubble user">Hiring vs capping vs retiring at 18 vs 36 months</div>
+        <div class="bubble assistant">How many hours per week do you currently see patients?</div>
+        <div class="bubble user">42</div>
+        <div class="bubble assistant">How many hours per week do you actually want to work?</div>
+        <div class="chips">
+          <button class="chip primary">25</button>
+          <button class="chip">30</button>
+          <button class="chip">35</button>
+        </div>
+      </div>
+      <div class="input">
+        <div class="input-row">
+          <textarea placeholder="Type or tap a number above…"></textarea>
+          <button class="send">Send</button>
+        </div>
+      </div>
+    </div>
+    <div class="sketch-col">
+      <div class="sketch-header">
+        <div class="sketch-title">Decision sketch</div>
+        <div class="sketch-mode">Patient load · capacity</div>
+        <div class="progress" style="margin-top: 12px;">
+          <span class="progress-text">2 of 7</span>
+          <div class="progress-bar"><div class="progress-fill" style="width: 28%"></div></div>
+          <span class="progress-text">28%</span>
+        </div>
+      </div>
+      <div class="sketch-body">
+        <div class="field-row captured">
+          <span class="fr-label">Current hours / week</span>
+          <span class="fr-value">42</span>
+        </div>
+        <div class="field-row current">
+          <span class="fr-label">Target hours / week</span>
+          <span class="fr-status current">Now</span>
+        </div>
+        <div class="field-row pending">
+          <span class="fr-label">Burnout level</span>
+          <span class="fr-value">—</span>
+        </div>
+        <div class="field-row pending">
+          <span class="fr-label">Monthly take-home needed</span>
+          <span class="fr-value">—</span>
+        </div>
+        <div class="field-row pending">
+          <span class="fr-label">Admin support today</span>
+          <span class="fr-value">—</span>
+        </div>
+        <div class="field-row pending">
+          <span class="fr-label">Decision horizon</span>
+          <span class="fr-value">—</span>
+        </div>
+        <div class="field-row pending">
+          <span class="fr-label">Waitlist depth</span>
+          <span class="fr-value">—</span>
+        </div>
+        <div class="preview-card" style="margin-top: 6px;">
+          <div class="preview-label">Forming recommendation</div>
+          <div class="preview-rec">Need 5 more inputs before I can rank.</div>
+          <div class="preview-conf">— · waiting on data</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="label">B · FINAL — sketch becomes the full recommendation, chat collapses</div>
+<div class="frame final">
+  <div class="header">
+    <span class="brand">Decision Doctor</span>
+    <div class="nav"><a href="#">New</a><a href="#">History</a><a href="#">Sign out</a></div>
+  </div>
+  <div class="split">
+    <div class="chat-col">
+      <div class="stream">
+        <div class="meta">7 questions · 3 minutes · 4 chips clicked</div>
+        <div class="bubble assistant">Got what I need. I'll show the recommendation on the right →</div>
+        <div class="bubble user">42</div>
+        <div class="bubble user">25</div>
+        <div class="bubble user">Running on fumes</div>
+        <div class="bubble user">$12k</div>
+        <div class="meta">Tap a row on the right to revise.</div>
+      </div>
+      <div class="input">
+        <div class="input-row">
+          <textarea placeholder="Ask a follow-up about this recommendation…"></textarea>
+          <button class="send">Ask</button>
+        </div>
+      </div>
+    </div>
+    <div class="sketch-col">
+      <div class="sketch-header">
+        <div class="sketch-title">Recommendation</div>
+        <div class="sketch-mode">Patient load · capacity</div>
+      </div>
+      <div class="sketch-body">
+        <div class="rec-h1">Cap intake at current load and hire 8 hours of admin help.</div>
+        <div class="rec-conf"><span style="width:6px;height:6px;border-radius:50%;background:var(--green)"></span>Moderate confidence · 72%</div>
+        <div class="rec-rationale">You weighted reducing your burnout and protecting your income highest. This option scores best on both. Adding a fourth day pushed you past your 28-hour ceiling.</div>
+        <div class="rec-card">
+          <h3>If your assumptions shift</h3>
+          <div class="body">If hiring isn't feasible in 60 days, raise rates 12% on new patients only and cap intake.</div>
+        </div>
+        <div class="rec-card">
+          <h3>Do this first</h3>
+          <div class="body">Draft an admin-help job description with a paste-ready prompt.</div>
+          <button style="margin-top: 8px; padding: 6px 12px; background: var(--surface); color: var(--primary); border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: 12px; cursor: pointer;">Copy prompt →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body></html>

@@ -99,22 +99,30 @@ export function classifyHeuristic(message: string): RouterOutput {
     };
   }
 
-  // 1. Template match (highest priority — fastest path)
+  // 1. Template match (highest priority — fastest path).
+  // CRITICAL: when a template matches, we COMMIT to structured_enumerable
+  // regardless of whether the user gave a number on this turn. The chat
+  // orchestrator will collect the missing fields turn-by-turn. Letting
+  // confidence drop below 0.7 here lets the LLM override → wrong pipeline.
+  // (Persona panel 2026-05-10: Priya's "Hire a VA" went to generative_design
+  // because of this; Maya's "Pricing" chip ended at the v1.1 placeholder.)
   for (const [tplId, pat] of Object.entries(TEMPLATE_PATTERNS) as [
     keyof typeof TEMPLATE_PATTERNS,
     RegExp,
   ][]) {
     if (pat.test(m)) {
-      const hasNumeric = /\b\d{1,3}(?:\.\d+)?\b/.test(m);
+      const labelByTpl: Record<string, string> = {
+        capacity: "your patient load",
+        pricing: "your pricing",
+        "admin-hire": "admin help",
+      };
       return {
         mode: "structured_enumerable",
-        // Need a numeric anchor to commit fully; without one we're at 0.6.
-        confidence: hasNumeric ? 0.9 : 0.65,
+        // Always confident enough to commit; orchestrator handles missing fields.
+        confidence: 0.95,
         templateMatch: tplId,
-        missingInfo: hasNumeric ? [] : ["a number anchoring your situation (e.g. hours/week, current rate, panel size)"],
-        rationale: `Matches the ${tplId} template — ${
-          hasNumeric ? "you gave a number we can ground in" : "we'd want one number to anchor it"
-        }.`,
+        missingInfo: [],
+        rationale: `This is about ${labelByTpl[tplId] ?? "this"}. I'll ask a few quick questions and walk you through the math.`,
       };
     }
   }
@@ -126,9 +134,9 @@ export function classifyHeuristic(message: string): RouterOutput {
       mode: "values_dominant",
       confidence: valuesHits >= 2 ? 0.85 : 0.7,
       templateMatch: null,
-      missingInfo: ["the time horizon you're thinking about"],
+      missingInfo: [],
       rationale:
-        "This reads as a values question — we won't try to rank-and-pick; we'll help you map what's at stake.",
+        "This reads as a values question rather than a pick-one decision. I'll help you see what's at stake instead of trying to rank for you.",
     };
   }
 
@@ -139,8 +147,9 @@ export function classifyHeuristic(message: string): RouterOutput {
       mode: "generic_structured",
       confidence: optionScore >= 2 ? 0.85 : 0.7,
       templateMatch: null,
-      missingInfo: ["one criterion that matters most to you"],
-      rationale: "You named specific options — we'll rank them once we know what you're optimizing for.",
+      missingInfo: [],
+      rationale:
+        "You named some specific options. I'll ask a few questions about what matters to you, then rank them.",
     };
   }
 
@@ -151,25 +160,29 @@ export function classifyHeuristic(message: string): RouterOutput {
       mode: "generative_design",
       confidence: 0.8,
       templateMatch: null,
-      missingInfo: ["one constraint that bounds the exploration (time, money, or what you won't change)"],
+      missingInfo: [],
       rationale:
-        "No specific options yet — we'll help you build a starting plan rather than rank choices.",
+        "Sounds like you're still figuring out what the options even are. I'll help you build a starting plan instead of forcing a ranking.",
     };
   }
 
-  // 5. Fallback — uncertain. Default to clarifying chip-question.
+  // 5. Short / nonsense / unrecognized input — DO NOT pretend to classify.
+  // Personas 2026-05-10: "xyzzy" got classified at 0.85 — bug. We now
+  // surface the clarifier honestly when nothing matched.
+  const tooShort = m.split(/\s+/).length < 3;
   return {
     mode: "generative_design",
-    confidence: 0.4,
+    confidence: tooShort ? 0.2 : 0.35,
     templateMatch: null,
-    missingInfo: ["whether you're choosing between options, exploring an open question, or weighing values"],
-    rationale: "Couldn't classify confidently from this alone.",
+    missingInfo: [],
+    rationale:
+      "I'm not sure I caught the shape of the decision yet — could you tell me which of these fits?",
     clarifyingQuestion: {
-      text: "Quick check — which best describes what you're doing?",
+      text: "Which best describes what you're trying to do?",
       chips: [
-        { value: "structured_enumerable", label: "Choosing between specific options" },
-        { value: "generative_design", label: "Exploring how to approach a problem" },
-        { value: "values_dominant", label: "Weighing a values / life question" },
+        { value: "structured_enumerable", label: "Choose between specific options" },
+        { value: "generative_design", label: "Figure out where to start" },
+        { value: "values_dominant", label: "Think through a life or career question" },
       ],
     },
   };
@@ -202,9 +215,13 @@ Modes:
 - generative_design: user is exploring without options ("free up 8 hours a week, where do I start?"). Output later: a 1-page brief, not a ranked list.
 - values_dominant: non-optimization question (retire when, change careers, have kids). Output later: a values map — fundamental objectives + tensions, not a recommendation.
 
-Critical: TOPSIS-style ranking on a values_dominant question is harmful. Bias toward values_dominant when in doubt about a life-stage question; bias toward generative_design when there are no options named.
+CRITICAL RULES:
+1. TOPSIS-style ranking on a values_dominant question is harmful. Bias toward values_dominant when in doubt about a life-stage question.
+2. If the heuristic already matched a template (capacity / pricing / admin-hire), DO NOT override — confirm structured_enumerable. The template path is the highest-quality output the system has; refusing to use it on a known-good signal hurts the user.
+3. If the message is gibberish (made-up words, single character, no recognizable English structure), return confidence ≤ 0.4. NEVER classify nonsense at high confidence — the chat will surface a clarifier instead.
+4. Your rationale must be ONE complete sentence in plain English written FOR THE USER. NO words like "structured_enumerable", "TOPSIS", "MCDA", "template", "mode", "router". Translate concepts into plain language.
 
-Return JSON: {"mode":"...", "confidence": 0-1, "rationale": "1 sentence why"}`;
+Return JSON: {"mode":"...", "confidence": 0-1, "rationale": "1 plain-English sentence the user will see"}`;
 
   const user = `Heuristic first-pass: ${JSON.stringify({
     mode: heuristic.mode,
@@ -217,7 +234,7 @@ User message:
 ${message}
 """
 
-Confirm or override. If you override, your confidence must be ≥ 0.7.`;
+Confirm or refine. Per rule 2 above: if the heuristic returned templateMatch:${heuristic.templateMatch ?? "null"}, you MUST keep mode=structured_enumerable. Per rule 3: if this looks like nonsense, return confidence ≤ 0.4.`;
 
   try {
     const { answer } = await callStage({
@@ -228,14 +245,26 @@ Confirm or override. If you override, your confidence must be ≥ 0.7.`;
     });
     const parsed = LLM_ROUTER_RESPONSE_SCHEMA.safeParse(safeJson(answer));
     if (!parsed.success) return heuristic;
+    // GUARD: never let the LLM strip a template match. If heuristic matched a
+    // template, force mode = structured_enumerable regardless of LLM verdict.
+    const finalMode: DecisionMode = heuristic.templateMatch
+      ? "structured_enumerable"
+      : parsed.data.mode;
+    // GUARD: also never let the LLM give nonsense high confidence. The system
+    // prompt asks for ≤0.4 on gibberish; if the LLM disobeys, clamp here.
+    // Heuristic returns confidence 0.2 for very-short input; trust that.
+    const looksLikeGibberish = heuristic.confidence <= 0.3 && !heuristic.templateMatch;
+    const finalConfidence = looksLikeGibberish
+      ? Math.min(parsed.data.confidence, 0.45)
+      : parsed.data.confidence;
     return {
       ...heuristic,
-      mode: parsed.data.mode,
-      confidence: parsed.data.confidence,
+      mode: finalMode,
+      confidence: finalConfidence,
       rationale: parsed.data.rationale,
       // If LLM is confident, the clarifying question becomes optional.
       clarifyingQuestion:
-        parsed.data.confidence >= 0.7 ? undefined : heuristic.clarifyingQuestion,
+        finalConfidence >= 0.7 ? undefined : heuristic.clarifyingQuestion,
     };
   } catch {
     return heuristic;
