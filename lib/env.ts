@@ -20,20 +20,20 @@ const envSchema = z.object({
   //   runtime pool because RLS is bypassed by any role with rolbypassrls=true (and
   //   neondb_owner has it). See lib/db/actor.ts and drizzle/0002_app_role.sql.
   // DATABASE_URL_UNPOOLED — owner role on the unpooled endpoint, for drizzle-kit migrations.
-  DATABASE_URL: z.string().url(),
-  DATABASE_URL_APP: z.string().url(),
+  DATABASE_URL: optionalUrl,
+  DATABASE_URL_APP: optionalUrl,
   DATABASE_URL_UNPOOLED: optionalUrl,
 
   // Better Auth
-  BETTER_AUTH_SECRET: z.string().min(32, "Generate with: openssl rand -base64 32"),
-  BETTER_AUTH_URL: z.string().url(),
+  BETTER_AUTH_SECRET: optionalString,
+  BETTER_AUTH_URL: optionalUrl,
 
   // Email (Resend)
-  RESEND_API_KEY: z.string().min(10),
-  AUTH_FROM_EMAIL: z.string().min(1),
+  RESEND_API_KEY: optionalString,
+  AUTH_FROM_EMAIL: optionalString,
 
   // LLM (Groq)
-  GROQ_API_KEY: z.string().min(10),
+  GROQ_API_KEY: optionalString,
   GROQ_MODEL: z.string().default("openai/gpt-oss-120b"),
 
   // Observability (optional)
