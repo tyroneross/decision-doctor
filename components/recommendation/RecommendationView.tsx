@@ -119,11 +119,17 @@ export function RecommendationView({ row }: { row: Decision }) {
         </div>
       </div>
 
-      {/* PYRAMID TIER 1 — TIME-SAVED HERO */}
-      <section
-        aria-label="Recommendation"
-        className="grad-coral relative overflow-hidden rounded-3xl p-7 text-white sm:p-9"
-      >
+      {/* PYRAMID TIER 1 — TIME-SAVED HERO + RANKED-DRAINS SIDEBAR
+          E1 — Ranked drains right-column layout. The hero stays the
+          primary signal; the right column surfaces every drain ranked by
+          impact × feasibility, replacing the prior "what changes" bury.
+          Mobile (<lg): the sidebar drops below the hero as a full-width
+          section (NOT a drawer — Calm Precision §"surface, don't bury"). */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px] lg:items-start lg:gap-5">
+        <section
+          aria-label="Recommendation"
+          className="grad-coral relative overflow-hidden rounded-3xl p-7 text-white sm:p-9"
+        >
         <div
           aria-hidden
           className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white opacity-15 blur-2xl"
@@ -175,7 +181,68 @@ export function RecommendationView({ row }: { row: Decision }) {
             </div>
           </div>
         </div>
-      </section>
+        </section>
+
+        {/* E1 — Ranked drains sidebar (right column on lg+, full-width below on mobile) */}
+        {reducers.length > 0 && (
+          <aside
+            aria-label="Ranked drains"
+            className="rounded-2xl border border-rule bg-white p-4 sm:p-5"
+          >
+            <header className="flex items-baseline justify-between gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-ink-500">
+                Ranked drains
+              </p>
+              <span className="text-[11.5px] text-ink-500">
+                {reducers.length}
+              </span>
+            </header>
+            <p className="mt-1 text-[12px] leading-relaxed text-ink-500">
+              Sorted by impact × AI feasibility — the math the engine used
+              to pick a top skill.
+            </p>
+            <ol className="mt-3 divide-y divide-rule">
+              {reducers.map((r, i) => (
+                <li
+                  key={i}
+                  className="flex items-start gap-2.5 py-2.5 first:pt-0 last:pb-0"
+                >
+                  <span
+                    aria-hidden
+                    className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cream-2 text-[11px] font-semibold text-ink-700"
+                  >
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-1.5">
+                      <p className="truncate text-[13px] font-semibold text-ink-900">
+                        {r.title}
+                      </p>
+                      <FeasibilityChip
+                        tier={r.aiFeasibility}
+                        variant="ghost"
+                      />
+                    </div>
+                    <p className="mt-0.5 text-[11.5px] text-ink-500">
+                      {r.estTimeSavingHrsPerWeek
+                        ? `~${formatHrs(r.estTimeSavingHrsPerWeek)}/wk`
+                        : "Time savings TBD"}
+                      {typeof r.combinedScore === "number" && (
+                        <>
+                          {" · "}
+                          <span className="text-ink-700">
+                            score {Math.round(r.combinedScore * 100)}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </aside>
+        )}
+      </div>
 
       {/* PYRAMID TIER 2 — 3 MECE SUPPORTING CARDS */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
