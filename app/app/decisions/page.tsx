@@ -51,6 +51,19 @@ export default async function DecisionsHistoryPage() {
           })
         : null;
     const reducerArr = Array.isArray(r.workloadReducers) ? r.workloadReducers : [];
+    // F-08: surface the top reducer's feasibility tier on the list row.
+    // Defensive — JSON shape is unknown; only the canonical enum values flow through.
+    const topReducer =
+      reducerArr.length > 0 && typeof reducerArr[0] === "object" && reducerArr[0] !== null
+        ? (reducerArr[0] as { aiFeasibility?: string | null })
+        : null;
+    const ALLOWED = ["skill", "plugin", "agent", "human"] as const;
+    type AllowedFeasibility = (typeof ALLOWED)[number];
+    const isAllowed = (v: unknown): v is AllowedFeasibility =>
+      typeof v === "string" && (ALLOWED as readonly string[]).includes(v);
+    const topReducerFeasibility = isAllowed(topReducer?.aiFeasibility)
+      ? topReducer.aiFeasibility
+      : null;
     return {
       id: r.id,
       title: r.title,
@@ -62,6 +75,7 @@ export default async function DecisionsHistoryPage() {
         typeof rec?.confidence === "number" ? rec.confidence : null,
       hoursSaved: totalHoursSaved(reducerArr),
       reducerCount: reducerArr.length,
+      topReducerFeasibility,
     };
   });
 

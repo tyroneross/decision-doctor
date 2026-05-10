@@ -6,16 +6,19 @@ import type { Decision } from "@/lib/db/schema";
 import {
   categoryFor,
   confidenceBand,
+  feasibilityFor,
   formatHrs,
   relativeDay,
   totalHoursSaved,
 } from "@/lib/decision-display";
+import type { AiFeasibility } from "@/shared/schema";
 
 // ─── JSON-column shapes (defensive — DB types are unknown at boundary) ──
 
 type Recommendation = {
   option: string;
-  confidence: number;
+  // F-11: confidence is OMITTED for VDD (values-dominant) outputs.
+  confidence?: number;
   rationale: string;
 };
 type Alternative = {
@@ -26,10 +29,14 @@ type Alternative = {
 type Robust = { option: string; rationale?: string; why?: string };
 type MethodTraceEntry = { stage: number; label: string; detail: string };
 type WorkloadReducer = {
-  type?: "prompt" | "playbook" | "skill";
+  type?: "prompt" | "playbook" | "skill" | "plugin" | "mcp_tool";
   title: string;
   description: string;
   estTimeSavingHrsPerWeek?: number;
+  // F-08 additive fields — render the chip when present.
+  aiFeasibility?: AiFeasibility;
+  feasibilityRationale?: string;
+  combinedScore?: number;
   artifact?: {
     promptText?: string;
     playbookSteps?: string[];
@@ -58,7 +65,9 @@ export function RecommendationView({ row }: { row: Decision }) {
   }
 
   const cat = categoryFor(row.templateId);
-  const band = confidenceBand(rec.confidence);
+  // F-11: VDD outputs omit confidence; band is suppressed in render below.
+  const band = confidenceBand(rec.confidence ?? null);
+  const hasConfidence = typeof rec.confidence === "number";
   const hoursBack = totalHoursSaved(reducers);
   const topReducer = reducers[0];
   const thisWeek = reducers.slice(0, 3);
@@ -136,9 +145,11 @@ export function RecommendationView({ row }: { row: Decision }) {
               </p>
             )}
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-white/20 px-2.5 text-[12px] font-semibold backdrop-blur">
-                {band.icon} {band.label} · {rec.confidence}%
-              </span>
+              {hasConfidence && (
+                <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-white/20 px-2.5 text-[12px] font-semibold backdrop-blur">
+                  {band.icon} {band.label} · {rec.confidence}%
+                </span>
+              )}
               {robust && (
                 <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-white/20 px-2.5 text-[12px] font-semibold backdrop-blur">
                   🛡️ Reversal point built in
@@ -169,12 +180,13 @@ export function RecommendationView({ row }: { row: Decision }) {
               className="grad-skill absolute -right-12 -top-12 h-40 w-40 rounded-full opacity-15 blur-2xl"
             />
             <div className="relative">
-              <div className="flex items-center justify-between">
-                <span className="grad-skill inline-flex h-7 items-center rounded-full px-2.5 text-[11px] font-semibold uppercase tracking-[.14em] text-white">
-                  🛠️ Skill ready
-                </span>
+              <div className="flex items-center justify-between gap-2">
+                <FeasibilityChip
+                  tier={topReducer.aiFeasibility}
+                  variant="filled"
+                />
                 <span className="text-[11px] font-semibold text-cat-skill-deep">
-                  ~1 min to ship
+                  {feasibilityFor(topReducer.aiFeasibility).ship}
                 </span>
               </div>
               <h3 className="mt-3 text-lg font-semibold leading-snug">
@@ -309,10 +321,8 @@ export function RecommendationView({ row }: { row: Decision }) {
                 key={i}
                 className="ease-soft lift rounded-2xl border border-rule bg-white p-4"
               >
-                <div className="flex items-start justify-between">
-                  <span className="text-[22px]" aria-hidden>
-                    {r.type === "playbook" ? "📋" : r.type === "skill" ? "🛠️" : "📝"}
-                  </span>
+                <div className="flex items-start justify-between gap-2">
+                  <FeasibilityChip tier={r.aiFeasibility} variant="ghost" />
                   <span className="grad-skill rounded-full px-2 py-0.5 text-[10.5px] font-semibold text-white">
                     ~{formatHrs(r.estTimeSavingHrsPerWeek ?? 0)}/wk
                   </span>
@@ -377,7 +387,10 @@ export function RecommendationView({ row }: { row: Decision }) {
                 {rec.option}
               </h4>
               <p className="mt-1 text-[13px] leading-relaxed text-ink-700">
-                +~{formatHrs(hoursBack)}/wk back · {band.label.toLowerCase()} ({rec.confidence}%)
+                +~{formatHrs(hoursBack)}/wk back
+                {hasConfidence
+                  ? ` · ${band.label.toLowerCase()} (${rec.confidence}%)`
+                  : ""}
               </p>
             </article>
             <article className="rounded-xl border border-rule bg-white p-5">
@@ -400,7 +413,7 @@ export function RecommendationView({ row }: { row: Decision }) {
 
       {/* SHOW THE MATH — disclosure */}
       <ShowTheMath
-        confidence={rec.confidence}
+        confidence={rec.confidence ?? null}
         alternatives={alternatives}
         trace={trace}
       />
@@ -451,6 +464,50 @@ export function RecommendationView({ row }: { row: Decision }) {
 }
 
 // ─── Sub-components ─────────────────────────────────────────────────────
+
+/**
+ * F-08 AI-feasibility chip. Sunrise tokens (`cat-skill` / `plum` / `cat-cap` /
+ * `ink-500`). Variant:
+ *   - "filled": white text on a tier-colored gradient (used in heroes).
+ *   - "ghost":  tier-colored text on a tier-colored tint (used on cards).
+ *
+ * Defensive: when `tier` is absent, falls back to "Human review" (per
+ * feasibilityFor() in decision-display) so legacy reducers without F-08
+ * scoring don't render an empty slot.
+ */
+function FeasibilityChip({
+  tier,
+  variant = "ghost",
+}: {
+  tier: AiFeasibility | undefined;
+  variant?: "filled" | "ghost";
+}) {
+  const style = feasibilityFor(tier);
+  if (variant === "filled") {
+    // Match the existing "🛠️ Skill ready" gradient pill on the hero card.
+    const bg = style.key === "skill" ? "grad-skill text-white"
+      : style.key === "plugin" ? "bg-plum text-white"
+      : style.key === "agent" ? "grad-coral text-white"
+      : "bg-ink-700 text-white";
+    return (
+      <span
+        className={`${bg} inline-flex h-7 items-center rounded-full px-2.5 text-[11px] font-semibold uppercase tracking-[.14em]`}
+        aria-label={`AI feasibility: ${style.label}`}
+      >
+        {style.icon} {style.label}
+      </span>
+    );
+  }
+  return (
+    <span
+      className={`${style.bg} ${style.fg} inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[11px] font-semibold uppercase tracking-wider`}
+      aria-label={`AI feasibility: ${style.label}`}
+    >
+      <span aria-hidden>{style.icon}</span>
+      {style.label}
+    </span>
+  );
+}
 
 function PrintButton() {
   return (
@@ -598,7 +655,7 @@ function ShowTheMath({
   alternatives,
   trace,
 }: {
-  confidence: number;
+  confidence: number | null;
   alternatives: Alternative[];
   trace: MethodTraceEntry[];
 }) {
@@ -627,9 +684,18 @@ function ShowTheMath({
       <div className="space-y-5 border-t border-rule px-6 pb-6 pt-4 sm:px-7">
         {/* Plain-language explainer FIRST */}
         <div className="rounded-xl bg-cream-2 p-4 text-[13px] leading-relaxed text-ink-700">
-          We compared {alternatives.length + 1} paths against your stated
-          priorities. The top option scored{" "}
-          <strong className="text-ink-900">{confidence}/100</strong>.
+          {typeof confidence === "number" ? (
+            <>
+              We compared {alternatives.length + 1} paths against your stated
+              priorities. The top option scored{" "}
+              <strong className="text-ink-900">{confidence}/100</strong>.
+            </>
+          ) : (
+            <>
+              This is a values-dominant question — the math surfaces the
+              tradeoffs without picking a single &ldquo;best&rdquo; option.
+            </>
+          )}
           {alternatives.filter((a) => a.eliminatedAtStage === 2).length > 0 && (
             <>
               {" "}

@@ -9,12 +9,14 @@ import { runStage2Constraints } from "@/lib/engine/stage2-constraints";
 import { runStage3Weights } from "@/lib/engine/stage3-weights";
 import { runStage4Outranking } from "@/lib/engine/stage4-outranking";
 import { runStage5Ranking } from "@/lib/engine/stage5-ranking";
+import { runStage6Feasibility } from "@/lib/engine/stage6-feasibility";
 import type { TemplateId } from "@/shared/schema";
 
 export interface RunDecisionResult {
   output: Omit<DecisionOutput, "decisionId" | "decidedAt">;
   // Token counts reported to the audit log + rate limiter.
-  llmCalls: Array<{ stage: 1 | 5; tokensIn: number; tokensOut: number }>;
+  // F-08 adds Stage 6 (feasibility classifier) — also LLM-driven.
+  llmCalls: Array<{ stage: 1 | 5 | 6; tokensIn: number; tokensOut: number }>;
 }
 
 export async function runDecision(
@@ -53,6 +55,22 @@ export async function runDecision(
     stage: 5,
     tokensIn: stage5.tokensIn,
     tokensOut: stage5.tokensOut,
+  });
+
+  // STAGE 6 (F-08): AI-feasibility classification. LLM emits categorical
+  // tiers + signals + rationale only; TS computes all numbers. Reducers are
+  // then re-sorted by combinedScore descending so the highest-impact /
+  // highest-feasibility reducer is first in the rendered list.
+  const stage6 = await runStage6Feasibility(stage5.workloadReducers);
+  llmCalls.push({
+    stage: 6,
+    tokensIn: stage6.tokensIn,
+    tokensOut: stage6.tokensOut,
+  });
+  const rankedReducers = [...stage6.reducers].sort((a, b) => {
+    const aScore = a.combinedScore ?? 0;
+    const bScore = b.combinedScore ?? 0;
+    return bScore - aScore;
   });
 
   // Assemble output. Alternatives = (Stage2 vetoes ∪ Stage4 outranked), excluding the top.
@@ -152,8 +170,24 @@ export async function runDecision(
           reasoning: stage5.reasoning,
         },
       },
+      {
+        stage: 6,
+        name: "feasibility",
+        output: {
+          // Per F-08: emit the categorical classification + scores so the
+          // UI can render the chip + ranked-drains panel from methodTrace.
+          classifications: rankedReducers.map((r) => ({
+            title: r.title,
+            aiFeasibility: r.aiFeasibility ?? null,
+            feasibilityScore: r.feasibilityScore ?? null,
+            impactScore: r.impactScore ?? null,
+            combinedScore: r.combinedScore ?? null,
+          })),
+          reasoning: stage6.reasoning,
+        },
+      },
     ],
-    workloadReducers: stage5.workloadReducers,
+    workloadReducers: rankedReducers,
     destinations: [
       {
         type: "user_ui",

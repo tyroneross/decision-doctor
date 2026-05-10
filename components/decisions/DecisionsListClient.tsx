@@ -5,10 +5,12 @@ import Link from "next/link";
 import {
   categoryFor,
   confidenceBand,
+  feasibilityFor,
   formatHrs,
   relativeDay,
   type DecisionCategory,
 } from "@/lib/decision-display";
+import type { AiFeasibility } from "@/shared/schema";
 
 // Server-side projection of a decisions row that we serialize down here.
 // Mirrors the columns selected in app/app/decisions/page.tsx — JSON cols
@@ -23,6 +25,8 @@ export interface DecisionRow {
   recommendationConfidence: number | null;
   hoursSaved: number; // computed server-side via totalHoursSaved()
   reducerCount: number;
+  // F-08: the top-ranked reducer's feasibility tier (or null for legacy rows).
+  topReducerFeasibility?: AiFeasibility | null;
 }
 
 export interface ListSummary {
@@ -325,6 +329,21 @@ function DecisionRowCard({ row }: { row: DecisionRow }) {
                   {band.icon} {band.label} · {row.recommendationConfidence}%
                 </span>
               )}
+              {/* F-08: feasibility chip on the top reducer (visible at list level). */}
+              {row.topReducerFeasibility ? (
+                (() => {
+                  const f = feasibilityFor(row.topReducerFeasibility);
+                  return (
+                    <span
+                      className={`inline-flex h-6 items-center gap-1 rounded-full px-2 text-[11px] font-semibold uppercase tracking-wider ${f.bg} ${f.fg}`}
+                      aria-label={`Top reducer feasibility: ${f.label}`}
+                    >
+                      <span aria-hidden>{f.icon}</span>
+                      {f.label}
+                    </span>
+                  );
+                })()
+              ) : null}
             </div>
             <h3 className="mt-2 text-[17px] font-semibold leading-snug sm:text-[18.5px]">
               {title}

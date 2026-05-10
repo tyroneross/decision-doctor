@@ -8,7 +8,7 @@
 // because the `Decision` row's JSON columns are typed `unknown` at the DB
 // boundary.
 
-import type { TemplateId } from "@/shared/schema";
+import type { AiFeasibility, TemplateId } from "@/shared/schema";
 
 // ─── Category mapping ───────────────────────────────────────────────────
 
@@ -80,6 +80,74 @@ export function categoryFor(templateId: string | null | undefined): CategoryStyl
   if (!templateId) return CATEGORY_STYLES.other;
   const c = CATEGORY_BY_TEMPLATE[templateId] ?? "other";
   return CATEGORY_STYLES[c];
+}
+
+// ─── F-08 AI feasibility chips ──────────────────────────────────────────
+//
+// The 4-tier prescriptive chip. Tells the user HOW to ship a reducer, not
+// just whether it's feasible. Tokens map to Sunrise palette already defined
+// in tailwind.config.ts (cat-skill / plum / cat-cap / ink-500).
+
+export interface FeasibilityStyle {
+  /** Enum key from shared/schema.ts AiFeasibilitySchema. */
+  key: AiFeasibility;
+  /** Plain-language label, no jargon. */
+  label: string;
+  /** Single emoji icon prefix — non-color semantics (a11y). */
+  icon: "🛠️" | "🧩" | "🤖" | "👤";
+  /** Tailwind text class for the foreground tone. */
+  fg: string;
+  /** Tailwind bg class for chip background. */
+  bg: string;
+  /** Hint for the "next step" the chip implies. */
+  ship: string;
+}
+
+const FEASIBILITY_STYLES: Record<AiFeasibility, FeasibilityStyle> = {
+  skill: {
+    key: "skill",
+    label: "Skill",
+    icon: "🛠️",
+    fg: "text-cat-skill-deep",
+    bg: "bg-cat-skill-bg",
+    ship: "Ship today",
+  },
+  plugin: {
+    key: "plugin",
+    label: "Plugin",
+    icon: "🧩",
+    fg: "text-plum",
+    bg: "bg-plum-bg",
+    ship: "Ship this week",
+  },
+  agent: {
+    key: "agent",
+    label: "Agent",
+    icon: "🤖",
+    fg: "text-cat-cap-deep",
+    bg: "bg-cat-cap-bg",
+    ship: "Ship this quarter",
+  },
+  human: {
+    key: "human",
+    label: "Human review",
+    icon: "👤",
+    fg: "text-ink-500",
+    bg: "bg-cream-2",
+    ship: "Not for AI",
+  },
+};
+
+/**
+ * Get the chip style for an aiFeasibility tier. Falls back to "human" for
+ * unknown / missing values (defensive: legacy reducers without the field
+ * render as needing human review rather than a fake AI tier).
+ */
+export function feasibilityFor(
+  tier: AiFeasibility | null | undefined,
+): FeasibilityStyle {
+  if (!tier) return FEASIBILITY_STYLES.human;
+  return FEASIBILITY_STYLES[tier] ?? FEASIBILITY_STYLES.human;
 }
 
 // ─── Confidence bands ───────────────────────────────────────────────────
