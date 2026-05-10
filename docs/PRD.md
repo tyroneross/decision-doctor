@@ -22,17 +22,36 @@ threat_model: "OWASP LLM Top 10 + OWASP Agentic Top 10 + Cisco DefenseClaw 3-pil
 
 ## 1. TL;DR
 
-A transparent decision engine for solo healthcare practitioners. Structured ~5-min input → one recommendation per high-stakes business decision, with the math made visible: alternatives considered, why each was eliminated, confidence, robust fallback if assumptions shift. Each recommendation ships with paste-ready prompts, playbooks, and MCP-tool hooks that turn the decision into action. v1 ships three decision templates — capacity, pricing, admin-hire — to a Next.js 16 mobile-first PWA. Single-user UX, multi-tenant-ready architecture, no PHI in v1.
+Decision Doctor helps solo practitioners pick the right AI use cases for their workflow and ship them — then provides a decision framework when AI alone can't solve the problem.
+
+**Primary path: "Find where AI saves you time."** A 5-minute conversation surfaces a ranked list of weekly capacity drains, scores each on AI feasibility (skill / plugin / agent / human-only), and **builds the starter tool** (paste-ready prompt, custom Claude Skill, MCP plugin, or agent recipe) for the top one. Time saved is the universal metric. Each week, the user gets a workflow audit: how their active AI tools performed + new recommendations + honest tradeoffs between custom tools the app built and public tools they could leverage instead.
+
+**Secondary path: "Help me decide given my constraints."** When AI can't directly solve the problem (raise prices? cap intakes? hire admin?), the same engine runs a transparent MCDA pipeline: alternatives considered, why each was eliminated, confidence band, robust fallback if assumptions shift, paired-path anti-nudge framing. Math is collapsed under a "Show the math" disclosure — visible on demand, not in the way. v1 ships three decision templates — capacity, pricing, admin-hire — to a Next.js 16 mobile-first PWA. Single-user UX, multi-tenant-ready architecture, no PHI in v1.
 
 ## 2. Context & North-Star
 
-**Problem.** Solo healthcare practitioners face recurring high-stakes business decisions (hire? raise prices? cap intakes?) with no CFO, consultant, or analyst. Existing AI tools give confident answers without provenance — disqualifying in a healthcare-adjacent context.
+**Problem.** Businesses, enterprises, and individuals recognize AI's value but get stuck in two places: (a) selecting which use cases to implement, and (b) gaining traction after selection. Most users know prompting; far fewer know how to leverage the advanced surface — agent skills, plugins, MCP tools, multi-step agents. **Small business owners are at the steepest disadvantage** because they have fewer resources than enterprises to learn AI effectively, which compounds their gap.
 
-**Target user.** Solo psychiatry private practice owner. Demo anchor: Tyrone's wife. Wedge expands to LCSWs/LMFTs, solo primary care, nutritionists, PTs/OTs.
+Solo healthcare practitioners are an acute case. They want time with patients, but every week pulls them into administrative work that scales linearly with practice growth: insurance pre-authorizations, pharmacy callbacks, referral-network coordination, keeping up with academic research, patient and client emails, billing, clinical notes, calendar triage, plus the long-cycle business decisions (should I raise prices? when? how many more patients can I take? expand or cap?). The challenges concentrate on the business side — which medical training does not cover. The result is that the practitioners with the most leverage to gain from AI have the least bandwidth to adopt it.
 
-**North-star metric.** A practitioner makes 3 high-stakes decisions in 20 minutes that she'd been putting off for months. Reported in her own words: "the math made it feel safe."
+Existing AI tools either give confident answers without provenance (disqualifying in a healthcare-adjacent context) or require a level of technical fluency that most solo practitioners don't have time to acquire.
 
-**Why now.** MLT20 Buildathon Round 1 due 2026-05-12. Equity prompt rewards owner-operator ICP and named users.
+**Target user.** Solo practitioner psychiatrist (MD, MPH) — demo anchor: Tyrone's wife. Wedge expands to other solo primary care, therapists (LCSW/LMFT), and nutritionists. Each segment shares the same core profile: high-trust client work concentrated in 1:1 hours, business pulled into admin overflow, no in-house ops or consulting budget, consumer-grade app expectations carried over from daily life.
+
+**North-star.** A practitioner uses Decision Doctor daily as the framework for assessing short- and long-term decisions affecting their practice. Within 20 minutes on any given day, they can decide whether to raise prices (and when), how many additional patients they can take this quarter, and — most importantly — **receive customized AI plugins they actually deploy**: a referral-note summarizer, an email automation for routine patient messages, a pharmacy-callback tracker that flags likely follow-ups and refines outgoing requests to reduce resends. The freed hours go to clinical work; capacity expands beyond what they would have hit unaided.
+
+Each week, they get a **workflow audit**: how their active AI agents, plugins, and tools performed last week, what to keep, what to retire, and new recommendations. Where a public tool would beat what Decision Doctor builds, the audit says so — honest tradeoffs, no lock-in pressure.
+
+When a key business decision arises, they trust Decision Doctor to get them to the best option fast. They know it works. They know there's serious decision-science math under the hood — MCDA, ELECTRE, TOPSIS, sensitivity analysis — tuned to each decision after the AI ingests their initial guidance. The output is a decision in **10 minutes** that previously took hours or weeks of intermittent worry.
+
+**North-star metric.** Three layers, in priority order:
+1. **Weekly hours reclaimed** (primary): hours of admin/cognitive overhead removed by AI tools shipped through Decision Doctor. Target: ≥5 hrs/wk by week 4, ≥10 hrs/wk by week 12.
+2. **Time-to-decision** (secondary): time elapsed from "I have a question" to "I have a decision I trust." Target: ≤10 min for a templated decision, ≤20 min for a novel one.
+3. **Adoption depth** (compound): number of distinct AI artifacts active in the practitioner's weekly workflow (skills, prompts, plugins, agent recipes). Target: ≥3 active by week 2, ≥7 by week 8.
+
+User-reported success: "I got my Mondays back" and "the math made it feel safe."
+
+**Why now.** MLT20 Buildathon Round 1 due 2026-05-12. Equity prompt rewards owner-operator ICP and named users. Beyond the buildathon, the LLM capability curve has crossed the threshold where customized skills/plugins/agents for solo practitioners are technically feasible and economically rational at consumer pricing — a window that did not exist 12 months ago.
 
 ## 2A. How to execute this PRD (LLM context)
 
