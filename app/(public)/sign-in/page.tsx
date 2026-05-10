@@ -1,16 +1,28 @@
 import { SignInClient } from "./sign-in-client";
 
-export const metadata = { title: "Sign in · Decision Doctor" };
+export const metadata = { title: "Sign in or sign up · Decision Doctor" };
 
-export default function SignInPage() {
+interface PageProps {
+  searchParams: Promise<{ tab?: string }>;
+}
+
+export default async function SignInPage({ searchParams }: PageProps) {
+  const { tab } = await searchParams;
+  const initialMode =
+    tab === "signup" ? "signup" : tab === "password" ? "password" : "magic";
+  const isSignup = initialMode === "signup";
   return (
     <main className="min-h-screen flex items-start justify-center px-4 pt-12 pb-10">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold">Sign in</h1>
+        <h1 className="text-2xl font-semibold">
+          {isSignup ? "Create your account" : "Sign in"}
+        </h1>
         <p className="mt-2 text-sm text-ink-subtle">
-          Use a magic link or your email and password. Both work.
+          {isSignup
+            ? "Free. No card. We never ask for patient information."
+            : "Use a magic link or your email and password. Both work."}
         </p>
-        <SignInClient />
+        <SignInClient initialMode={initialMode} />
       </div>
     </main>
   );

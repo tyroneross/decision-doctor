@@ -3,7 +3,17 @@ import Link from "next/link";
 export default function LandingPage() {
   return (
     <main className="min-h-screen flex flex-col">
-      <header className="px-6 pt-10 pb-4">
+      {/* Top-right Sign in link (returning users skip the marketing flow) */}
+      <div className="px-6 pt-4 flex justify-end">
+        <Link
+          href="/sign-in"
+          className="text-sm text-ink underline min-h-[44px] inline-flex items-center"
+        >
+          Sign in
+        </Link>
+      </div>
+
+      <header className="px-6 pt-6 pb-4">
         <div className="text-sm tracking-wide uppercase text-ink-muted">Decision Doctor</div>
         <h1 className="mt-2 text-3xl sm:text-4xl font-semibold leading-tight max-w-xl">
           A second opinion for the business decisions you keep putting off.
@@ -30,17 +40,13 @@ export default function LandingPage() {
 
       <div className="px-6 mt-auto pt-10 pb-10">
         <Link
-          href="/app"
+          href="/sign-up"
           className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-ink text-white font-medium min-h-[48px] min-w-[160px]"
         >
-          Get started
+          Get started — it's free
         </Link>
         <p className="mt-3 text-xs text-ink-muted">
-          Already have an account?{" "}
-          <Link href="/sign-in" className="underline">
-            Sign in
-          </Link>
-          .
+          Takes 30 seconds. We never ask for patient information.
         </p>
       </div>
     </main>

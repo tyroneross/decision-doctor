@@ -65,86 +65,100 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
         <p className="mt-2 text-sm text-ink-subtle">{decision.robustAlternative.why}</p>
       </section>
 
-      {/* Workload reducers carousel */}
+      {/* Next steps (was: workload reducers — chips removed; verb-only context) */}
       {decision.workloadReducers.length > 0 && reducer && (
         <section className="rounded-2xl border border-slate-200 bg-canvas-raised p-5">
           <div className="flex items-center justify-between">
-            <div className="text-xs uppercase tracking-wide text-ink-muted">Make it actionable</div>
-            <div className="text-xs text-ink-muted">
-              {reducerIdx + 1} / {decision.workloadReducers.length}
-            </div>
+            <h3 className="text-base font-semibold">Next step</h3>
+            {decision.workloadReducers.length > 1 && (
+              <div className="text-xs text-ink-muted">
+                {reducerIdx + 1} of {decision.workloadReducers.length}
+              </div>
+            )}
           </div>
-          <div className="mt-2 text-base font-semibold">{reducer.title}</div>
+          <div className="mt-2 text-base font-medium">{reducer.title}</div>
           <p className="mt-1 text-sm text-ink-subtle">{reducer.description}</p>
-          <div className="mt-3 text-xs text-ink-muted flex flex-wrap gap-2">
-            <Tag>{reducer.type}</Tag>
-            <Tag>{reducer.automationLevel}</Tag>
-            <Tag>{reducer.coverage}</Tag>
-            <Tag>{reducer.permission_tier}</Tag>
-          </div>
           <ReducerArtifact
             reducer={reducer}
             copy={copy}
+            copyId={`r-${reducerIdx}`}
             copied={copyState.id === `r-${reducerIdx}` && copyState.ok === true}
           />
-          <div className="mt-4 flex justify-between text-sm">
-            <button
-              type="button"
-              onClick={() => setReducerIdx((i) => Math.max(0, i - 1))}
-              disabled={reducerIdx === 0}
-              className="px-3 py-2 rounded-lg border border-slate-300 disabled:opacity-40"
-            >
-              ← Previous
-            </button>
-            <button
-              type="button"
-              onClick={() => setReducerIdx((i) => Math.min(decision.workloadReducers.length - 1, i + 1))}
-              disabled={reducerIdx === decision.workloadReducers.length - 1}
-              className="px-3 py-2 rounded-lg border border-slate-300 disabled:opacity-40"
-            >
-              Next →
-            </button>
-          </div>
+          {decision.workloadReducers.length > 1 && (
+            <div className="mt-4 flex justify-between text-sm">
+              <button
+                type="button"
+                onClick={() => setReducerIdx((i) => Math.max(0, i - 1))}
+                disabled={reducerIdx === 0}
+                className="px-3 py-2 rounded-lg border border-slate-300 disabled:opacity-40 min-h-[44px]"
+                aria-label="Previous next step"
+              >
+                ← Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setReducerIdx((i) => Math.min(decision.workloadReducers.length - 1, i + 1))}
+                disabled={reducerIdx === decision.workloadReducers.length - 1}
+                className="px-3 py-2 rounded-lg border border-slate-300 disabled:opacity-40 min-h-[44px]"
+                aria-label="Next step"
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </section>
       )}
 
-      {/* Alternatives */}
-      <section className="rounded-2xl border border-slate-200 bg-canvas-raised p-5">
-        <div className="text-xs uppercase tracking-wide text-ink-muted">Alternatives considered</div>
+      {/* Alternatives — collapsible by default; shown only on demand */}
+      <details className="rounded-2xl border border-slate-200 bg-canvas-raised p-5 group">
+        <summary className="cursor-pointer list-none flex items-center justify-between">
+          <h3 className="text-base font-semibold">What about the other options?</h3>
+          <span className="text-xs text-ink-muted group-open:hidden">Show {decision.alternatives.length}</span>
+          <span className="text-xs text-ink-muted hidden group-open:inline">Hide</span>
+        </summary>
         <ul className="mt-3 divide-y divide-slate-200">
           {decision.alternatives.map((a, i) => (
             <li key={i} className="py-3">
               <div className="text-sm font-medium">{a.option}</div>
-              <div className="mt-0.5 text-xs text-ink-muted">
-                Eliminated at Stage {a.eliminatedAtStage}
+              <div className="mt-1 text-sm text-ink-subtle">
+                <span className="text-ink-muted">Why this didn't win: </span>
+                {a.reason}
               </div>
-              <div className="mt-1 text-sm text-ink-subtle">{a.reason}</div>
             </li>
           ))}
         </ul>
-      </section>
+      </details>
 
-      {/* Show the work */}
-      <section>
+      {/* Show the work — human summary first; raw trace behind a second toggle */}
+      <section className="no-print">
         <button
           type="button"
           onClick={() => setShowWork((s) => !s)}
-          className="text-sm text-ink underline no-print"
+          className="text-sm text-ink underline min-h-[24px]"
+          aria-expanded={showWork}
         >
-          {showWork ? "Hide the work" : "Show the work"}
+          {showWork ? "Hide reasoning" : "How was this decided?"}
         </button>
         {showWork && (
           <div className="mt-3 space-y-3">
-            {decision.methodTrace.map((entry, i) => (
-              <details key={i} open={i === 4} className="rounded-xl border border-slate-200 bg-canvas-raised p-4">
-                <summary className="cursor-pointer text-sm font-medium">
-                  Stage {entry.stage} · {entry.name}
-                </summary>
-                <pre className="mt-3 overflow-auto text-xs leading-relaxed text-ink-subtle whitespace-pre-wrap">
-                  {JSON.stringify(entry.output, null, 2)}
-                </pre>
-              </details>
-            ))}
+            <MethodTraceSummary trace={decision.methodTrace} />
+            <details className="rounded-xl border border-slate-200 bg-canvas-raised p-4">
+              <summary className="cursor-pointer text-sm text-ink-subtle">
+                Show raw reasoning data (for advanced users)
+              </summary>
+              <div className="mt-3 space-y-3">
+                {decision.methodTrace.map((entry, i) => (
+                  <details key={i} className="rounded-lg border border-slate-200 p-3">
+                    <summary className="cursor-pointer text-xs font-medium text-ink-subtle">
+                      {entry.name}
+                    </summary>
+                    <pre className="mt-2 overflow-auto text-xs leading-relaxed text-ink-muted whitespace-pre-wrap">
+                      {JSON.stringify(entry.output, null, 2)}
+                    </pre>
+                  </details>
+                ))}
+              </div>
+            </details>
           </div>
         )}
       </section>
@@ -174,36 +188,31 @@ export function RecommendationView({ decision, shareToken, publicView }: Props) 
   );
 }
 
-function Tag({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-ink-subtle">
-      {children}
-    </span>
-  );
-}
-
 function ReducerArtifact({
   reducer,
   copy,
+  copyId,
   copied,
 }: {
   reducer: DecisionOutput["workloadReducers"][number];
   copy: (text: string, id: string) => void;
+  copyId: string;
   copied: boolean;
 }) {
   const a = reducer.artifact;
   if (a.promptText) {
     return (
       <div className="mt-3">
+        <div className="text-xs text-ink-muted mb-1">Paste this into ChatGPT, Claude, or your AI assistant:</div>
         <pre className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs leading-relaxed whitespace-pre-wrap text-ink">
           {a.promptText}
         </pre>
         <button
           type="button"
-          onClick={() => copy(a.promptText!, `r-${0}`)}
-          className="mt-2 text-xs text-ink underline"
+          onClick={() => copy(a.promptText!, copyId)}
+          className="mt-2 inline-flex items-center px-3 py-2 rounded-lg border border-slate-300 text-sm text-ink min-h-[40px]"
         >
-          {copied ? "Copied" : "Copy prompt"}
+          {copied ? "Copied ✓" : "Copy this text"}
         </button>
       </div>
     );
@@ -217,28 +226,41 @@ function ReducerArtifact({
       </ol>
     );
   }
-  if (a.skillName) {
-    return (
-      <div className="mt-3 text-sm text-ink-subtle">
-        Try the <code className="px-1 py-0.5 rounded bg-slate-100 text-ink">{a.skillName}</code> skill.
-      </div>
-    );
-  }
   if (a.pluginUrl) {
     return (
       <div className="mt-3 text-sm">
         <a href={a.pluginUrl} target="_blank" rel="noopener noreferrer" className="text-ink underline">
-          {a.pluginUrl}
+          Open: {a.pluginUrl}
         </a>
       </div>
     );
   }
-  if (a.mcpServer) {
-    return (
-      <div className="mt-3 text-sm text-ink-subtle">
-        MCP server: <code className="px-1 py-0.5 rounded bg-slate-100 text-ink">{a.mcpServer}</code>
-      </div>
-    );
-  }
+  // Internal-only artifact types (skillName, mcpServer) hidden from end users — these
+  // are taxonomy holdovers from the engine schema and don't show actionable UI.
   return null;
+}
+
+function MethodTraceSummary({
+  trace,
+}: {
+  trace: DecisionOutput["methodTrace"];
+}) {
+  // Translate each engine stage to a one-line plain-English summary.
+  const labels: Record<string, string> = {
+    values: "Listed what matters most based on your answers.",
+    constraints: "Removed options that broke a hard limit you set.",
+    weights: "Weighed each remaining option against your priorities.",
+    outranking: "Ranked the contenders head-to-head on the criteria that mattered.",
+    ranking: "Picked the top option and the safest fallback if assumptions shift.",
+  };
+  return (
+    <ol className="rounded-xl border border-slate-200 bg-canvas-raised p-4 space-y-2 text-sm text-ink-subtle">
+      {trace.map((entry) => (
+        <li key={entry.stage} className="flex gap-3">
+          <span className="text-ink-muted text-xs mt-0.5">{entry.stage}.</span>
+          <span>{labels[entry.name] ?? entry.name}</span>
+        </li>
+      ))}
+    </ol>
+  );
 }

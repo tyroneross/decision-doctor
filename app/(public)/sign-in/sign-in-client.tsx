@@ -5,8 +5,8 @@ import { authClient } from "@/lib/auth-client";
 
 type Mode = "magic" | "password" | "signup";
 
-export function SignInClient() {
-  const [mode, setMode] = useState<Mode>("magic");
+export function SignInClient({ initialMode = "magic" }: { initialMode?: Mode } = {}) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");

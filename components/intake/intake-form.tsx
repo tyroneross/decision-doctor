@@ -13,13 +13,37 @@ interface Props {
 
 const FIRST_RUN_FLAG = "dd:firstRunHintDismissed";
 
+// Honest progress copy — engine takes ~9-12s. Rotating messages keep the wait
+// from feeling like a crash. Tied to actual MCDA stages so a power user could
+// follow along, but plain enough for a non-technical user.
+const PROGRESS_STAGES = [
+  "Reading your answers…",
+  "Listing alternatives we should consider…",
+  "Removing options that break your limits…",
+  "Weighing each remaining option…",
+  "Picking the top choice and a safer fallback…",
+];
+
 export function IntakeForm({ templateId, fields, title }: Props) {
   const router = useRouter();
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<{ kind: "idle" | "submitting" | "queued" | "error"; msg?: string }>({ kind: "idle" });
   const [showHint, setShowHint] = useState(true);
+  const [progressIdx, setProgressIdx] = useState(0);
   const initialized = useRef(false);
+
+  // Rotate progress copy every ~2s while submitting so the wait feels alive.
+  useEffect(() => {
+    if (status.kind !== "submitting") {
+      setProgressIdx(0);
+      return;
+    }
+    const t = setInterval(() => {
+      setProgressIdx((i) => Math.min(i + 1, PROGRESS_STAGES.length - 1));
+    }, 2000);
+    return () => clearInterval(t);
+  }, [status.kind]);
 
   // Load draft + hint state on mount.
   useEffect(() => {
@@ -177,10 +201,18 @@ export function IntakeForm({ templateId, fields, title }: Props) {
         <button
           type="submit"
           disabled={status.kind === "submitting"}
-          className="inline-flex items-center justify-center px-4 py-3 rounded-xl bg-ink text-white font-medium min-h-[48px] disabled:opacity-50"
+          className="inline-flex items-center justify-center px-4 py-3 rounded-xl bg-ink text-white font-medium min-h-[48px] disabled:opacity-60"
+          aria-live="polite"
         >
-          {status.kind === "submitting" ? "Working — usually under 6 seconds…" : "Get my recommendation"}
+          {status.kind === "submitting"
+            ? PROGRESS_STAGES[progressIdx]
+            : "Get my recommendation"}
         </button>
+        {status.kind === "submitting" && (
+          <div className="text-xs text-ink-muted text-center" aria-live="polite">
+            Usually 8–12 seconds. We're walking through the math.
+          </div>
+        )}
         {status.kind === "queued" && (
           <div className="text-xs text-confidence-mid">{status.msg}</div>
         )}
