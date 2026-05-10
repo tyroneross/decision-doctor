@@ -5,6 +5,7 @@ import "server-only";
 import type { DecisionInput, DecisionOutput } from "@/shared/schema";
 import { loadTemplate } from "@/lib/engine/templates";
 import { runStage1Values } from "@/lib/engine/stage1-values";
+import { runStage1bAhp } from "@/lib/engine/stage1b-ahp";
 import { runStage2Constraints } from "@/lib/engine/stage2-constraints";
 import { runStage3Weights } from "@/lib/engine/stage3-weights";
 import { runStage4Outranking } from "@/lib/engine/stage4-outranking";
@@ -26,19 +27,58 @@ export async function runDecision(
   // Token telemetry — populated by callStage()-using stages.
   const llmCalls: RunDecisionResult["llmCalls"] = [];
 
-  // STAGE 1: LLM extracts values, suggests weight adjustments.
-  const stage1 = await runStage1Values(input, template);
-  llmCalls.push({
-    stage: 1,
-    tokensIn: stage1.tokensIn,
-    tokensOut: stage1.tokensOut,
-  });
+  // STAGE 1 / 1B (F-10): weight elicitation. Branch on input.weightSource.
+  // Default ("llm" or omitted) uses Stage 1's LLM-driven path.
+  // "ahp" uses user-supplied pairwise comparisons (Stage 1B). Both produce
+  // a normalized weight map for Stage 3.
+  const useAhp =
+    input.weightSource === "ahp" &&
+    !!input.ahpComparisons &&
+    Object.keys(input.ahpComparisons).length > 0;
+
+  let stage1Weights: Record<string, number>;
+  let stage1Values: string[];
+  let stage1Rationale: string;
+  let stage1Reasoning: string | null;
+  let weightSource: "llm" | "ahp" = "llm";
+  let ahpResult: ReturnType<typeof runStage1bAhp> | null = null;
+
+  if (useAhp) {
+    // F-10: Stage 1B — deterministic eigenvector solve, no LLM call.
+    const criterionIds = template.criteria.map((c) => c.id);
+    ahpResult = runStage1bAhp({
+      criterionIds,
+      comparisons: input.ahpComparisons!,
+    });
+    stage1Weights = ahpResult.weights;
+    stage1Values = []; // AHP doesn't extract values — user owns the weights directly.
+    stage1Rationale = ahpResult.consistent
+      ? `You set the weights yourself via pairwise comparison (Consistency Ratio ${(
+          ahpResult.CR * 100
+        ).toFixed(1)}%, within Saaty's 10% threshold).`
+      : `You set the weights yourself; your comparisons show some inconsistency (CR ${(
+          ahpResult.CR * 100
+        ).toFixed(1)}%, above Saaty's 10% threshold). The math still proceeded but consider revising the flagged pair.`;
+    stage1Reasoning = null;
+    weightSource = "ahp";
+  } else {
+    const stage1 = await runStage1Values(input, template);
+    llmCalls.push({
+      stage: 1,
+      tokensIn: stage1.tokensIn,
+      tokensOut: stage1.tokensOut,
+    });
+    stage1Weights = stage1.adjustedWeights;
+    stage1Values = stage1.values;
+    stage1Rationale = stage1.rationale;
+    stage1Reasoning = stage1.reasoning;
+  }
 
   // STAGE 2: deterministic veto filtering.
   const stage2 = runStage2Constraints(template, input.fields as Record<string, unknown>);
 
   // STAGE 3: deterministic weight finalization.
-  const stage3 = runStage3Weights(template, stage1.adjustedWeights);
+  const stage3 = runStage3Weights(template, stage1Weights);
 
   // STAGE 4: ELECTRE-style outranking on stage2's surviving candidates.
   const stage4 = runStage4Outranking(stage2.filtered, stage3.weights);
@@ -49,7 +89,7 @@ export async function runDecision(
     stage4.dominant,
     stage3.weights,
     input,
-    stage1.values,
+    stage1Values,
   );
   llmCalls.push({
     stage: 5,
@@ -118,16 +158,36 @@ export async function runDecision(
       why: stage5.robustWhy,
     },
     methodTrace: [
-      {
-        stage: 1,
-        name: "values",
-        output: {
-          values: stage1.values,
-          adjustedWeights: stage1.adjustedWeights,
-          rationale: stage1.rationale,
-          reasoning: stage1.reasoning,
-        },
-      },
+      // F-10: surface either Stage 1 (LLM) or Stage 1B (AHP) — never both —
+      // so the methodTrace shows the actual elicitation path the user took.
+      ...(useAhp && ahpResult
+        ? ([
+            {
+              stage: "1B" as const,
+              name: "ahp-weights" as const,
+              output: {
+                weights: ahpResult.weights,
+                lambdaMax: Number(ahpResult.lambdaMax.toFixed(6)),
+                CI: Number(ahpResult.CI.toFixed(6)),
+                CR: Number(ahpResult.CR.toFixed(6)),
+                consistent: ahpResult.consistent,
+                worstPair: ahpResult.worstPair,
+                rationale: stage1Rationale,
+              },
+            },
+          ] as const)
+        : ([
+            {
+              stage: 1 as const,
+              name: "values" as const,
+              output: {
+                values: stage1Values,
+                adjustedWeights: stage1Weights,
+                rationale: stage1Rationale,
+                reasoning: stage1Reasoning,
+              },
+            },
+          ] as const)),
       {
         stage: 2,
         name: "constraints",
@@ -195,6 +255,7 @@ export async function runDecision(
         deliveredAt: new Date(),
       },
     ],
+    weightSource,
   };
 
   return { output, llmCalls };

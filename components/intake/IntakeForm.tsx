@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AhpPairwise, type AhpCriterion } from "@/components/elicitation/AhpPairwise";
 
 type FieldKind = "number" | "text" | "select" | "boolean";
 type Field = {
@@ -21,6 +22,8 @@ type PublicTemplate = {
   label: string;
   description: string;
   fields: Field[];
+  // F-10: surface the template's criteria so the AHP path can render labels.
+  criteria?: AhpCriterion[];
 };
 
 const cacheKey = (id: string) => `dd:intake:draft:${id}`;
@@ -30,6 +33,10 @@ export function IntakeForm({ template }: { template: PublicTemplate }) {
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // F-10: weight-elicitation toggle. Default "llm" — Stage 1 LLM-driven path.
+  // "ahp" surfaces the pairwise grid; user-supplied comparisons drive Stage 1B.
+  const [weightSource, setWeightSource] = useState<"llm" | "ahp">("llm");
+  const [ahpComparisons, setAhpComparisons] = useState<Record<string, number>>({});
 
   // Restore IndexedDB-style draft (we use localStorage; the cache acts as a
   // fast IndexedDB-equivalent for a tiny single-page form. Background sync
@@ -77,6 +84,11 @@ export function IntakeForm({ template }: { template: PublicTemplate }) {
           userId: "00000000-0000-0000-0000-000000000000",
           tenantId: "00000000-0000-0000-0000-000000000000",
         },
+        // F-10: route to Stage 1B (AHP) only when the user opted in AND filled
+        // enough pairs. Otherwise the server-side default LLM path runs.
+        ...(weightSource === "ahp" && Object.keys(ahpComparisons).length > 0
+          ? { weightSource: "ahp" as const, ahpComparisons }
+          : {}),
       };
       const res = await fetch("/api/decisions", {
         method: "POST",
@@ -122,6 +134,70 @@ export function IntakeForm({ template }: { template: PublicTemplate }) {
           onChange={(v) => update(f.name, v)}
         />
       ))}
+
+      {/* F-10: weight-elicitation branch toggle. Only render when the template
+          ships criteria. AHP is opt-in — the default LLM path covers the
+          large majority of users; AHP is for high-trust SED/VDD decisions. */}
+      {template.criteria && template.criteria.length >= 3 && (
+        <section
+          aria-label="Weight elicitation method"
+          className="rounded-2xl border border-rule bg-cream-2 p-4 sm:p-5"
+        >
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-ink-500">
+                Who sets the weights?
+              </p>
+              <p className="mt-0.5 text-[14px] font-semibold leading-snug">
+                {weightSource === "llm"
+                  ? "Let the AI propose weights (default)"
+                  : "Set the weights yourself (AHP)"}
+              </p>
+            </div>
+            <div
+              role="tablist"
+              aria-label="Weight source"
+              className="inline-flex h-9 items-center rounded-full border border-rule bg-white p-0.5 text-[12.5px] font-medium"
+            >
+              <button
+                role="tab"
+                type="button"
+                aria-selected={weightSource === "llm"}
+                onClick={() => setWeightSource("llm")}
+                className={`ease-soft inline-flex h-8 items-center rounded-full px-3 ${
+                  weightSource === "llm"
+                    ? "bg-cream-2 text-ink-900"
+                    : "text-ink-500 hover:text-ink-700"
+                }`}
+              >
+                AI proposes
+              </button>
+              <button
+                role="tab"
+                type="button"
+                aria-selected={weightSource === "ahp"}
+                onClick={() => setWeightSource("ahp")}
+                className={`ease-soft inline-flex h-8 items-center rounded-full px-3 ${
+                  weightSource === "ahp"
+                    ? "bg-cream-2 text-ink-900"
+                    : "text-ink-500 hover:text-ink-700"
+                }`}
+              >
+                I'll set them
+              </button>
+            </div>
+          </div>
+          {weightSource === "ahp" && (
+            <div className="mt-4">
+              <AhpPairwise
+                criteria={template.criteria}
+                comparisons={ahpComparisons}
+                onChange={(next) => setAhpComparisons(next)}
+              />
+            </div>
+          )}
+        </section>
+      )}
 
       <button
         type="submit"

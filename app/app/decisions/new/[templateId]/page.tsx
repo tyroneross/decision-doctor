@@ -14,11 +14,17 @@ export default async function IntakePage({ params }: Props) {
   }
 
   // Public-safe slice — same shape as /api/templates?id=
+  // F-10: also expose criteria so the AHP toggle can render pair labels.
   const publicTemplate = {
     id: template.id,
     label: template.label,
     description: template.description,
     fields: template.fields,
+    criteria: template.criteria.map((c) => ({
+      id: c.id,
+      label: c.label,
+      description: c.description,
+    })),
   };
 
   return (

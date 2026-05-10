@@ -31,11 +31,24 @@ export const DecisionContextSchema = z.object({
   previousDecisionIds: z.array(z.string().uuid()).optional(),
 });
 
+// F-10 (AHP): optional user-supplied pairwise comparisons of criteria.
+// Keyed `${i}:${j}` where i < j and both refer to indices into the template's
+// criteria array (in declaration order). Values on Saaty's 1/9 .. 9 scale.
+// Empty object or missing → engine takes the default LLM weight-elicitation
+// path (Stage 1).
+export const AhpComparisonsSchema = z.record(
+  z.string().regex(/^\d+:\d+$/),
+  z.number().finite().positive(),
+);
+
 export const DecisionInputSchema = z.object({
   templateId: TemplateIdSchema,
   source: DecisionSourceSchema,
   fields: z.record(z.string(), FieldValueSchema),
   context: DecisionContextSchema,
+  // F-10: optional alternative weight elicitation path.
+  weightSource: z.enum(["llm", "ahp"]).optional(),
+  ahpComparisons: AhpComparisonsSchema.optional(),
 });
 export type DecisionInput = z.infer<typeof DecisionInputSchema>;
 
