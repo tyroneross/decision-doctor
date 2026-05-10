@@ -7,12 +7,12 @@ import { listTemplates } from "@/lib/engine/templates";
 describe("templates registry (T-02)", () => {
   const templates = listTemplates();
 
-  it("ships exactly 3 templates per PRD §F-01", () => {
-    expect(templates.map((t) => t.id).sort()).toEqual([
-      "admin-hire",
-      "capacity",
-      "pricing",
-    ]);
+  it("ships the AI-leverage finder as the user-visible template (PRD v2 §F-01)", () => {
+    // v1 had 3 templates (capacity / pricing / admin-hire); v2 collapses the
+    // user-facing entry to a single AI-leverage week-audit template. The id
+    // is "capacity" for back-compat with existing decision rows.
+    expect(templates.map((t) => t.id)).toEqual(["capacity"]);
+    expect(templates[0]!.title).toMatch(/AI|free up/i);
   });
 
   for (const t of listTemplates()) {

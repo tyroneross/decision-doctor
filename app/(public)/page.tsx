@@ -16,25 +16,26 @@ export default function LandingPage() {
       <header className="px-6 pt-6 pb-4">
         <div className="text-sm tracking-wide uppercase text-ink-muted">Decision Doctor</div>
         <h1 className="mt-2 text-3xl sm:text-4xl font-semibold leading-tight max-w-xl">
-          A second opinion for the business decisions you keep putting off.
+          Find the AI that frees the most hours in your week.
         </h1>
         <p className="mt-4 text-ink-subtle max-w-xl text-base sm:text-lg">
-          Five minutes of structured input. One recommendation, with the math made
-          visible. Built for solo healthcare practitioners.
+          For solo healthcare practitioners. Five minutes of conversation, then a
+          ranked stack of tools to deploy — with hours saved, monthly cost, and
+          step-by-step setup.
         </p>
       </header>
 
       <section className="px-6 mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl">
-        <Card title="Capacity" body="Cap intake, raise prices, or hire admin help." />
-        <Card title="Pricing" body="Decide how much to raise without losing the patients you'd keep." />
-        <Card title="Hire" body="Pick the right shape of help for your actual bottleneck." />
+        <Card title="Clinical notes" body="AI scribes for SOAP and dictation — typically 5–10 hr/wk back." />
+        <Card title="Patient comms" body="Secure messaging + AI replies for the FAQs you answer 30x/week." />
+        <Card title="Billing &amp; admin" body="Claims automation, prior-auth drafting, intake doc generators." />
       </section>
 
       <section className="px-6 mt-10 max-w-xl">
         <ol className="space-y-2 text-ink-subtle text-sm leading-relaxed">
-          <li>1. Pick a decision template.</li>
-          <li>2. Answer up to seven questions. No PHI — none asked, none stored.</li>
-          <li>3. Get one recommendation with alternatives, confidence, and a robust fallback.</li>
+          <li>1. Tell us where your time goes each week — clinical notes, comms, billing, admin.</li>
+          <li>2. We rank a curated set of AI tools by hours saved, cost, HIPAA fit, and setup effort.</li>
+          <li>3. Get the deploy stack — top 2–4 tools with paste-ready setup steps. No PHI asked or stored.</li>
         </ol>
       </section>
 
@@ -43,10 +44,10 @@ export default function LandingPage() {
           href="/sign-up?next=/app/chat"
           className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-ink text-white font-medium min-h-[48px] min-w-[200px]"
         >
-          Start a decision
+          Audit my week
         </Link>
         <p className="mt-3 text-xs text-ink-muted">
-          Free. ~5 minutes. Describe your decision in your own words — we never ask for patient information.
+          Free. ~5 minutes. We never ask for patient information.
         </p>
       </div>
     </main>

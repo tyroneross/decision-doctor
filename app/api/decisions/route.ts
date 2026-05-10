@@ -6,6 +6,10 @@ import { runWithActor, withActor } from "@/lib/db/actor";
 import { decisions, auditEvents } from "@/lib/db/schema";
 import { DecisionInputSchema, type DecisionInput } from "@/shared/schema";
 import { runDecision } from "@/lib/engine/orchestrator";
+import {
+  runAiLeverageDecision,
+  isAiLeverageTemplate,
+} from "@/lib/engine/ai-leverage-orchestrator";
 import { getActorSession } from "@/lib/session";
 import { checkAndConsume } from "@/lib/rate-limit";
 import { signShareToken } from "@/lib/share";
@@ -73,9 +77,14 @@ export async function POST(req: Request) {
 
   // Run the engine in actor context so auditEvents writes also enforce RLS.
   return runWithActor({ userId: session.userId, tenantId: session.tenantId }, async () => {
+    // Dispatch to the right orchestrator based on the template's candidate set.
+    const tpl = loadTemplate(input.templateId);
+    const useAiLeverage = isAiLeverageTemplate(tpl.candidates);
     let result;
     try {
-      result = await runDecision(input, { decisionId: crypto.randomUUID(), now: new Date() });
+      result = useAiLeverage
+        ? await runAiLeverageDecision(input, { decisionId: crypto.randomUUID(), now: new Date() })
+        : await runDecision(input, { decisionId: crypto.randomUUID(), now: new Date() });
     } catch (err) {
       console.error("[decisions] engine failed:", err);
       return Response.json(

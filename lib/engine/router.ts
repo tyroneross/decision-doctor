@@ -46,10 +46,19 @@ export interface RouterOutput {
 // Tuned from the digest's signal table; adjust when persona retests show drift.
 // ---------------------------------------------------------------------------
 
+// Template patterns route a free-form message to the matching template.
+// "capacity" is the id used by the v2 AI-leverage finder template (back-compat).
+// The pattern catches BOTH v2 framing ("find AI", "free up my time", "audit
+// my week", "automate workflow", "what AI helps") AND v1 business-decision
+// framing ("cap intakes", "burned out", "waitlist") so users describing the
+// problem either way land in the same chat flow.
 const TEMPLATE_PATTERNS = {
-  capacity: /\b(cap intakes?|panel|caseload|patient load|burn(?:ed)? out|workload|too many patients|waitlist|see fewer)\b/i,
-  pricing: /\b(raise (?:my )?(?:prices|rates)|cash[- ]pay|self[- ]pay|insurance panel|drop (?:a |my )?payer|reimbursement|fee schedule)\b/i,
-  "admin-hire": /\b(hire (?:an? )?(?:admin|VA|virtual assistant|associate|biller)|outsource (?:my )?billing|admin help|front desk)\b/i,
+  capacity:
+    /\b(find ai|audit (?:my )?week|free up (?:my )?(?:time|hours|week)|automate (?:my )?(?:workflow|admin|notes|comms)|streamline (?:my )?(?:workflow|practice|notes|admin)|cap intakes?|panel|caseload|patient load|burn(?:ed)? out|workload|too many patients|waitlist|see fewer|spend too much time on (?:notes|charting|comms|messaging|billing|admin)|patient (?:messaging|comms) eats|what ai (?:helps|tools|can))\b/i,
+  pricing:
+    /\b(raise (?:my )?(?:prices|rates)|cash[- ]pay|self[- ]pay|insurance panel|drop (?:a |my )?payer|reimbursement|fee schedule)\b/i,
+  "admin-hire":
+    /\b(hire (?:an? )?(?:admin|VA|virtual assistant|associate|biller)|outsource (?:my )?billing|admin help|front desk)\b/i,
 };
 
 const ENUMERABLE_PATTERNS: RegExp[] = [

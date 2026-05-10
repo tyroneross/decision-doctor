@@ -17,6 +17,10 @@ import {
 } from "@/shared/schema";
 import { processChatTurn } from "@/lib/engine/chat-orchestrator";
 import { runDecision } from "@/lib/engine/orchestrator";
+import {
+  runAiLeverageDecision,
+  isAiLeverageTemplate,
+} from "@/lib/engine/ai-leverage-orchestrator";
 import { getActorSession } from "@/lib/session";
 import { checkAndConsume } from "@/lib/rate-limit";
 import { signShareToken } from "@/lib/share";
@@ -231,9 +235,16 @@ export async function POST(req: Request) {
         );
       }
 
+      // Dispatch to the right orchestrator based on template's candidate set:
+      // AI-leverage templates use the deterministic-first pipeline (~2s);
+      // legacy MCDA templates use the full 5-LLM-call pipeline (~9s).
+      const tpl = loadTemplate(tplId);
+      const useAiLeverage = isAiLeverageTemplate(tpl.candidates);
       let result;
       try {
-        result = await runDecision(decisionInput, { decisionId, now: new Date() });
+        result = useAiLeverage
+          ? await runAiLeverageDecision(decisionInput, { decisionId, now: new Date() })
+          : await runDecision(decisionInput, { decisionId, now: new Date() });
       } catch (err) {
         console.error("[chat] engine failed:", err);
         return Response.json(

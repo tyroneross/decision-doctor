@@ -25,10 +25,13 @@ interface ChatResponse {
   note?: string;
 }
 
+// v2: chips seed the AI-leverage finder. Each chip's value is a one-liner
+// the router pattern-matches into the AI-leverage template, so the chat goes
+// straight into the week-audit.
 const TEMPLATE_CHIPS: ChipChoice[] = [
-  { value: "I'm trying to decide whether to cap intakes, raise prices, or hire admin help.", label: "Capacity" },
-  { value: "I'm thinking about raising my rates and need to figure out by how much.", label: "Pricing" },
-  { value: "I'm trying to decide whether to hire admin help and what kind.", label: "Hire" },
+  { value: "I want to find AI tools to free up my time — let's audit my week.", label: "Audit my week" },
+  { value: "I spend too much time on clinical notes — what AI helps?", label: "Clinical notes" },
+  { value: "Patient messaging and scheduling eats my evenings — what can automate it?", label: "Patient comms" },
 ];
 
 export function ChatClient() {
@@ -37,7 +40,7 @@ export function ChatClient() {
     {
       role: "assistant",
       content:
-        "Tell me about a decision you're trying to make. One sentence is enough — no patient names, just the situation.",
+        "Where does your time go each week? I'll find AI tools you can deploy to free up the biggest hours — no patient names, just the situation.",
     },
   ]);
   const [decisionId, setDecisionId] = useState<string | null>(null);
