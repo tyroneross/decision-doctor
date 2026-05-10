@@ -35,8 +35,13 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
     if (!row || row.id !== payload.decisionId) {
       return Response.json({ error: "Not found" }, { status: 404 });
     }
-    // Redact owner identity from the public payload.
-    const { userId: _u, tenantId: _t, ...publicRow } = row;
+    // Redact owner identity AND raw intake data from the public payload.
+    // (Maya persona retest 2026-05-10: shared link's underlying API was
+    // exposing the user's stated hours / budget / specialty — fine for the
+    // user, not appropriate for the accountant/spouse the link is shared with.
+    // The rendered share page already only shows the recommendation, but
+    // anyone curling the API was getting the raw intake. Now they don't.)
+    const { userId: _u, tenantId: _t, intake: _i, transcript: _tr, ...publicRow } = row;
     return Response.json({ decision: publicRow });
   });
 }

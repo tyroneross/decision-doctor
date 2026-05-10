@@ -134,9 +134,16 @@ export function StackRecommendationView({ decision, shareToken, publicView }: Pr
           <Metric label="Monthly cost" value={`$${totalCost.toFixed(0)}`} sub="all tools" tone="neutral" />
           <Metric label="Setup" value={`${maxSetupDays}`} sub="days max" tone="neutral" />
         </div>
-        <div className={cn("mt-4 inline-flex items-center gap-2 text-sm font-medium", confColor)}>
-          <span className={cn("h-2 w-2 rounded-full", confDot)} aria-hidden="true" />
-          {confLabel} · covers ~{conf}% of your stated time
+        <div className={cn("mt-4 flex flex-col gap-1 text-sm", confColor)}>
+          <span className="inline-flex items-center gap-2 font-medium">
+            <span className={cn("h-2 w-2 rounded-full", confDot)} aria-hidden="true" />
+            {confLabel} · covers ~{conf}% of the hours you told me about
+          </span>
+          {conf < 100 && (
+            <span className="text-ink-muted text-xs ml-4">
+              The remaining ~{(100 - conf).toFixed(0)}% stays with you — these tools target where AI helps most, not everything.
+            </span>
+          )}
         </div>
       </section>
 
