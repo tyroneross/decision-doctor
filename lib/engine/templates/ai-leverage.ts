@@ -55,8 +55,8 @@ export const aiLeverageTemplate: DecisionTemplate = {
     },
     {
       id: "monthlyToolBudget",
-      label: "Monthly budget for new tools (USD)?",
-      hint: "Drag both ends — the engine treats this as a range so you don't have to be exact.",
+      label: "What's your monthly budget for new tools (USD)?",
+      hint: "A rough range is fine — type something like '100-300' or '200'.",
       kind: {
         type: "range",
         min: 0,

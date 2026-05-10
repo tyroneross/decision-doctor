@@ -226,13 +226,25 @@ export async function POST(req: Request) {
         context: { userId: session.userId, tenantId: session.tenantId },
       };
       // Validate the extracted fields against the template's strict schema.
+      // If validation fails (e.g. user gave a budget the parser couldn't shape),
+      // surface a friendly retry message in the chat — NEVER bubble the raw
+      // Zod error to the user. (Maya persona retest 2026-05-10: a raw red
+      // bubble saying "Extracted fields invalid" was where she closed the tab.)
       try {
         loadTemplate(tplId).buildZodSchema().parse(turn.transcript.extractedFields);
-      } catch (e) {
-        return Response.json(
-          { error: "Extracted fields invalid", details: (e as Error).message, transcript: turn.transcript },
-          { status: 400 },
-        );
+      } catch {
+        const friendly = {
+          role: "assistant" as const,
+          content:
+            "I lost track of one of your answers — could you tell me again, in your own words? Most often it's a number or range I didn't quite catch.",
+          timestamp: new Date(),
+        };
+        return Response.json({
+          decisionId,
+          status: "chatting",
+          assistant: friendly,
+          transcript: turn.transcript,
+        });
       }
 
       // Dispatch to the right orchestrator based on template's candidate set:

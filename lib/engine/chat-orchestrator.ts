@@ -340,12 +340,45 @@ async function extractFieldValue(
   const t = userText.trim();
   if (t.length === 0) return undefined;
 
-  // Chip clicks come in as the chip's `value`. Match exactly first.
+  // Chip clicks come in as the chip's `value`. Match exactly first; then
+  // fuzzy-match free-text answers ("yes please" → yes_baa_ok / "no thanks" → no_baa).
+  // (Maya persona retest 2026-05-10: "yes if it's a real company" was silently
+  // re-asking forever because no exact match.)
   if (field.kind.type === "select") {
     const exact = field.kind.options.find(
       (o) => o.value === t || o.label === t,
     );
     if (exact) return exact.value;
+    // Fuzzy match — token-overlap with each option's value/label
+    const lo = t.toLowerCase();
+    const fuzzy = field.kind.options.find((o) => {
+      const v = o.value.toLowerCase().replace(/_/g, " ");
+      const l = o.label.toLowerCase();
+      return lo.includes(v) || lo.includes(l) ||
+             v.split(" ").every((tok) => tok.length > 2 && lo.includes(tok));
+    });
+    if (fuzzy) return fuzzy.value;
+    // Yes/no synonym fallback for binary-feeling selects (e.g. phiPosture)
+    const yesSynonyms = /^(yes|yeah|sure|ok|yep|y)\b/i;
+    const noSynonyms = /^(no|nope|nah|don't|do not|n)\b/i;
+    const selectiveSynonyms = /(only|selective|some|few|maybe|sometimes|case)/i;
+    if (selectiveSynonyms.test(t)) {
+      const m = field.kind.options.find((o) => /selective|some/i.test(o.value));
+      if (m) return m.value;
+    }
+    if (yesSynonyms.test(t)) {
+      // Pick the most-positive option (heuristic: shortest "yes" or "ok" containing value)
+      const m = field.kind.options.find((o) =>
+        /^(yes|ok|allow|accept)|baa_ok$/i.test(o.value),
+      );
+      if (m) return m.value;
+    }
+    if (noSynonyms.test(t)) {
+      const m = field.kind.options.find((o) =>
+        /^(no|deny|skip)|no_baa$/i.test(o.value),
+      );
+      if (m) return m.value;
+    }
   }
   if (field.kind.type === "boolean") {
     const lo = t.toLowerCase();
@@ -353,19 +386,21 @@ async function extractFieldValue(
     if (lo === "no" || lo === "false" || lo.startsWith("n")) return false;
   }
   if (field.kind.type === "number" || field.kind.type === "slider" || field.kind.type === "number-picker") {
-    const m = t.match(/-?\d+(?:\.\d+)?/);
+    // Match POSITIVE digit groups only — never `-300` from "100-300".
+    const m = t.match(/\d+(?:\.\d+)?/);
     if (m) return Number(m[0]);
   }
   if (field.kind.type === "range") {
-    const matches = t.match(/-?\d+(?:\.\d+)?/g);
-    if (matches && matches.length >= 2) {
-      const a = Number(matches[0]);
-      const b = Number(matches[1]);
-      return [Math.min(a, b), Math.max(a, b)];
+    // Parse range expressions: "100-300", "100 to 300", "100–300", "$100 to $300/mo".
+    // Use POSITIVE digit groups only — never `-300` from "100-300" subtraction
+    // (Maya persona retest 2026-05-10: "100-300" was being parsed as `[-300, 100]`).
+    const positives = Array.from(t.matchAll(/\d+(?:\.\d+)?/g)).map((m) => Number(m[0]));
+    if (positives.length >= 2) {
+      return [Math.min(positives[0]!, positives[1]!), Math.max(positives[0]!, positives[1]!)];
     }
-    if (matches && matches.length === 1) {
-      const n = Number(matches[0]);
-      return [Math.max(0, n - n * 0.15), n + n * 0.15]; // ±15% as a default range
+    if (positives.length === 1) {
+      const n = positives[0]!;
+      return [Math.max(0, Math.round(n - n * 0.15)), Math.round(n + n * 0.15)];
     }
   }
   if (field.kind.type === "multiselect") {
