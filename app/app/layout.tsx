@@ -159,7 +159,9 @@ export default async function AppLayout({
 
       <MobileBottomNav />
       <ServiceWorkerRegister />
-      <CommandPalette />
+      {/* ⌘K palette hits /api/search which 401s for guests; hide rather
+          than wire a noisy fetch the user can't act on. */}
+      {!guest && <CommandPalette />}
       {guest && <GuestBanner />}
     </div>
   );
