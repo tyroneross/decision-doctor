@@ -32,6 +32,13 @@ export const viewport: Viewport = {
   themeColor: "#9a3412",
 };
 
+// Inline pre-hydration script — runs synchronously before first paint to
+// apply the user's saved theme from localStorage. Falls back to F (default)
+// when no preference is stored. Wrapped in try/catch so a hostile or
+// disabled storage backend never breaks paint. See
+// components/settings/ThemePicker.tsx for the write side.
+const themeInitScript = `(function(){try{var t=localStorage.getItem("dd:theme");if(t==="A"||t==="B"||t==="F"){document.documentElement.setAttribute("data-theme",t);}}catch(_){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -39,6 +46,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       data-theme="F"
       className={`${inter.variable} ${plexMono.variable}`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-screen bg-bg text-text">{children}</body>
     </html>
   );
