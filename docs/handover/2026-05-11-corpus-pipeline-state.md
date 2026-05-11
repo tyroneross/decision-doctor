@@ -111,26 +111,78 @@ existing: rss-fetch / anthropic-news-fetch / arxiv-fetch
 
 ### File targets
 
-- `workers/src/adapters/content-extract.ts` (NEW) — HTTP fetch + cheerio for Anthropic-style SSR sources; tolerates JS-rendered (OpenAI) by leaving body as-is. CDP fallback deferred.
-- `workers/src/adapters/ai-summarize.ts` (NEW) — Groq call with `temperature: 0` + structured JSON: `{tl_dr, novel_capability, risks, automation_candidates, who_should_care_level, est_skill_level}`.
-- `workers/src/adapters/kg-extract.ts` (NEW) — Groq call extracting `{entities: [{type, canonical_name, aliases}], relationships: [{source, target, type}]}`. Canonicalizes against existing `ai_entities` (pg_trgm fuzzy match); INSERTs new entities + mentions + relationships.
-- `workers/src/queue.ts` — register 3 new queues + handlers + chain logic from `corpus_documents` INSERT.
-- `workers/tests/content-extract.test.ts`, `ai-summarize.test.ts`, `kg-extract.test.ts` (NEW)
+- `workers/src/cdp/{browser,connection,page,runtime,wait}.ts` (NEW — **copied from `~/dev/git-folder/interface-built-right/src/engine/cdp/`**). User-owned project; zero external deps (only Node built-ins). Strip UI-testing files (accessibility, css, dom, input, emulation, network, console, snapshot, target). ~28 KB of TS total.
+- `workers/src/cdp/extract-content.ts` (NEW, ~50 lines) — thin wrapper exposing `async extractRenderedHtml(url): Promise<string>`. Reuses IBR's BrowserManager + PageDomain + Runtime.evaluate.
+- `workers/nixpacks.toml` (NEW) — add `chromium` to `nixPkgs`. IBR's `browser.ts` already checks `/usr/bin/chromium-browser` (Linux/Nixpacks path).
+- `workers/src/adapters/content-extract.ts` (NEW) — per-source path selection:
+  - arxiv → no-op (abstract is already content)
+  - anthropic-news → HTTP + cheerio extract `<article>`
+  - openai-news → CDP via `cdp/extract-content.ts` (JS-rendered, HTTP returns ~10KB shell)
+  - default → HTTP + cheerio; if body < 500 chars, fallback to CDP
+  - Writes `metadata.content_extract.{method, fetched_at, body_chars}` for observability
+- `workers/src/adapters/ai-summarize.ts` (NEW) — Groq Llama 3.3 70B via OpenAI SDK with `baseURL: 'https://api.groq.com/openai/v1'` (no new dep). `temperature: 0` + structured JSON: `{tl_dr, novel_capability, risks, automation_candidates, who_should_care_level, est_skill_level}`. SMB-persona constraint in system prompt (no PHI references, generic application framing for solo-practitioner).
+- `workers/src/adapters/kg-extract.ts` (NEW) — Groq Llama 3.3 70B extracting `{entities: [{type, canonical_name, aliases}], relationships: [{source, target, type}]}`. Canonicalization: pg_trgm similarity ≥ 0.7 + alias array intersection (Atomize pattern). INSERTs to `ai_entities` (ON CONFLICT bump `mention_count`), `ai_document_entity_mentions`, `ai_relationships`.
+- `workers/src/queue.ts` — register 4 new queues (`content-extract` + 3 enrichment) + chain logic. Existing `rss-fetch`/`anthropic-news-fetch`/`arxiv-fetch` handlers re-pointed to enqueue `content-extract` (not `arxiv-embed`). content-extract then fans out to ai-summarize + kg-extract + arxiv-embed in parallel.
+- `workers/src/seed-sources.ts` (NEW) — idempotent `ON CONFLICT DO NOTHING` INSERT of 3 source registry rows: arxiv-cs-ai (tier=1, source_kind=`paper_index`), openai-news (tier=1, `lab_news`), anthropic-news (tier=1, `lab_news`). Run-once during deploy.
+- `workers/tests/{cdp,content-extract,ai-summarize,kg-extract}.test.ts` (NEW)
 
 ### Critical invariants for the dispatch
 
 1. **LLM classifies + proposes; TS computes** — ai-summarize and kg-extract both `temperature: 0` + structured JSON. No numeric scoring inside the LLM call.
-2. **Idempotent** — each job is re-runnable. ai-summarize checks `metadata.ai_summary.generated_at`; kg-extract checks `ai_document_entity_mentions` join.
-3. **Atomize lessons:**
+2. **Idempotent** — each job is re-runnable. Idempotency markers:
+   - `metadata.content_extract.{method, fetched_at, body_chars, prompt_version?}` — content-extract skip if recent + same method
+   - `metadata.ai_summary.{generated_at, prompt_version}` — ai-summarize re-runs only on prompt_version bump
+   - kg-extract checks `ai_document_entity_mentions` join for existing extractions
+3. **Pipeline ordering (CORRECTED from earlier ASCII diagram):**
+   ```
+   ingest → corpus_documents INSERT (stub body)
+            ↓
+            content-extract  (updates body in place, idempotent)
+            ↓
+            ┌──────────────┬──────────────┬──────────────┐
+            ↓              ↓              ↓
+       ai-summarize    kg-extract     arxiv-embed
+       (full body)     (full body)    (re-embed full body)
+   ```
+   All three enrichments run **after** content-extract so they see the same enriched body.
+4. **Atomize lessons:**
    - One canonical writer pattern (don't fan-out writes to entities)
-   - 1 req/sec rate limit on outbound fetches if content-extract does per-article HTML fetch
-   - Graceful degrade: if Groq is down, set `metadata.ai_summary.degraded=true` and continue chain (don't block)
-4. **Chain triggers:** the rss-fetch / anthropic-news-fetch / arxiv-fetch handlers should be edited to enqueue `content-extract` (not just `arxiv-embed`) for each new doc. content-extract then fans out to ai-summarize + kg-extract + arxiv-embed in parallel.
-5. **No new deps** unless required. cheerio is OK if absolutely needed for content-extract (Atomize pattern); otherwise prefer regex for known shapes (Anthropic SSR).
+   - 1 req/sec rate limit on outbound fetches (HTTP and CDP both)
+   - Graceful degrade: each handler marks its own degraded state in metadata; chain CONTINUES on individual handler failure (Groq down → ai_summary.degraded=true; CDP crash → content_extract.degraded=true; never blocks downstream)
+5. **CDP integration (per user's IBR-is-mine clarification):**
+   - Copy 5 files from `~/dev/git-folder/interface-built-right/src/engine/cdp/` to `workers/src/cdp/`
+   - Add `chromium` to `workers/nixpacks.toml` (Nixpacks installs Chrome system-wide; IBR's browser.ts finds it via path detection)
+   - Memory: ~200 MB sustained for Chrome process; lifecycle managed by `BrowserManager`
+   - Only fires for OpenAI articles in current source list; SSR sources (Anthropic et al.) use HTTP+cheerio
+6. **LLM client setup (no new dep):**
+   - Workers already have `openai` package (used for embeddings).
+   - For Groq calls, instantiate same SDK with `baseURL: 'https://api.groq.com/openai/v1'` + `apiKey: GROQ_API_KEY`. Groq's API is OpenAI-compatible.
+   - Models per ADR-013: `llama-3.3-70b-versatile` for both ai-summarize and kg-extract (user-resolved; ADR-013 GPT-OSS-20B routing deferred until taxonomy stabilizes).
+7. **SMB-persona constraint** in ai-summarize prompt: "Frame applications generically — no patient-specific examples, no PHI references, treat the user as a solo practitioner evaluating AI tools."
+8. **kg-extract canonicalization strategy** (Atomize pattern):
+   - Trigram similarity ≥ 0.7 against `ai_entities.canonical_name` (lowered)
+   - PLUS alias array intersection (`aliases && ARRAY[$1]`)
+   - If both match → use existing entity (bump mention_count + last_seen_at)
+   - If neither → INSERT new entity
+   - Ambiguous (multiple matches) → use highest-mention-count winner
 
 ### Backfill plan
 
-Once handlers land, enqueue all 3 jobs for the 18 existing rows in `corpus_documents` to populate KG + summaries retroactively. Cost estimate: ~$0.02 total (Groq Llama 3.3 70B at $0.59/M in, ~3k tokens per doc × 23 docs × 3 calls each).
+**Verify row count first:** `SELECT count(*) FROM corpus_documents` (was 23 per this session's latest check; handover originally said 18 — 23 is correct).
+
+Once handlers land, enqueue 3 chained jobs for each existing row:
+- content-extract (fetches full body; for OpenAI uses CDP, for Anthropic uses cheerio, for arxiv no-op)
+- ai-summarize (Groq call with full body)
+- kg-extract (Groq call with full body)
+- arxiv-embed re-runs on the updated body
+
+**Cost estimate (corrected):** 23 docs × 2 LLM calls × ~3k tokens in + ~500 out on Llama 3.3 70B:
+- Input: 23 × 2 × 3000 × $0.59/M = **$0.0815**
+- Output: 23 × 2 × 500 × $0.79/M = **$0.0182**
+- **Total: ~$0.10** (the earlier handover's $0.02 was off by 5×; the new session's $0.15 is closer)
+- CDP-fetched OpenAI articles will pass much more input (full article ~10k tokens). 10 OpenAI docs × 10k tokens × 2 calls × $0.59/M = ~$0.12 additional. **Grand total backfill: ~$0.22.**
+
+Still trivial; just be accurate.
 
 ---
 
