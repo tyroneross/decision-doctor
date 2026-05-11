@@ -241,7 +241,7 @@ Round-1 (`buildathon-round-1.2`) shipped F-08/F-09/F-10/F-11. Round-2 introduces
 **F-30/31/32/33 acceptance (locked):**
 
 - **F-30** — ≥100 docs indexed across ≥2 sources; dedup verified (re-fetch yields zero new rows); `scope` column on every row with RLS `(scope = 'global') OR (user_id = current_user_id())`; user can ingest a private RSS feed and see it scoped to their account only; embeddings use `text-embedding-3-small` at **768 dims** (locked via ADR-007).
-- **F-31** — hybrid recall on a 20-query eval set beats pure-vector by ≥10 pp; RRF `k=60`; ⌘K palette opens in <100 ms; results render citation chips opening source URL in a new tab; per-result "use as context" injects the doc as a system message into the next chat turn.
+- **F-31** — hybrid recall on a 20-query eval set beats pure-vector by ≥10 pp; **three-leg retrieval: BM25 (pg_search) + vector (pgvector HNSW) + KG expansion (ai_entities/ai_relationships)**; RRF `k=60`; BGE-v2-m3 cross-encoder rerank top-20 → top-5; ⌘K palette opens in <100 ms; results render citation chips opening source URL in a new tab; per-result "use as context" injects the doc as a system message into the next chat turn; **`ai_search_queries` row written for every search with per-stage timings** (lexical_ms / vector_ms / kg_ms / rerank_ms / total_ms / degraded flag).
 - **F-32** — post-auth landing at `/app` shows the chat composer; `/app/decisions` 301-redirects to `/history`; ⌘K palette is reachable from every authed page; existing decision detail pages keep working at their current URLs.
 - **F-33** — worker idle cost ≤ $5/mo on Railway baseline; `/health` endpoint returns Postgres connectivity + last job timestamp; pg-boss queue visible in Neon (`pgboss.job` schema); node-cron schedules tagged with `concurrency=1` semantics.
 
@@ -252,6 +252,8 @@ Round-1 (`buildathon-round-1.2`) shipped F-08/F-09/F-10/F-11. Round-2 introduces
 | T-30 | arXiv adapter ingests 10 known papers, dedup zero on re-run, RLS isolates per-user docs | integration |
 | T-31 | RRF beats pure-vector on 20-query eval; ⌘K palette renders + filters in JSDOM | integration + unit |
 | T-32 | `/app` post-auth lands on chat; `/app/decisions` redirects; decision detail still works | e2e |
+| T-34 | **Knowledge graph** — KG expansion adds ≥3 related entities for queries containing ≥1 known lab/model name; ai_entities + ai_relationships seeded with ≥20 entities + ≥10 edges from initial arXiv corpus; entity canonicalization (fuzzy + alias match) returns the canonical entity for "GPT-4o", "gpt 4o", "gpt-iv" | integration |
+| T-35 | **Search observability** — every `/api/search` request writes one `ai_search_queries` row with lexical_ms / vector_ms / kg_ms / rerank_ms / total_ms populated; degraded path (BGE unreachable → gpt-4o-mini fallback per ADR-010) sets `degraded=true` with `degraded_reason='rerank_fallback'` | integration |
 | T-33 | Worker container starts, connects to Neon, registers pg-boss queue, processes a fixture job | integration in Railway preview |
 
 **New ADRs supporting this wave:**
