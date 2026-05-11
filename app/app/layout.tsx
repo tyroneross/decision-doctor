@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 import { auth } from "@/lib/auth";
+import { isGuestRequest, GUEST_USER } from "@/lib/auth-guest";
 import { decisions } from "@/lib/db/schema";
 import { runWithActor, withActor } from "@/lib/db/actor";
 import { getSessionActor } from "@/lib/auth-session";
@@ -12,6 +13,7 @@ import { MobileBottomNav } from "./_components/MobileBottomNav";
 import { DesktopSidebar } from "./_components/DesktopSidebar";
 import { SkillPanel, type SkillSummary } from "./_components/SkillPanel";
 import { CommandPalette } from "@/components/ui/CommandPalette";
+import { GuestBanner } from "@/components/GuestBanner";
 import { desc } from "drizzle-orm";
 
 // Auth gate for everything under /app/*. SSR redirect — no client flash.
@@ -31,25 +33,28 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) redirect("/sign-in");
+  const guest = !session?.user && (await isGuestRequest());
+  if (!session?.user && !guest) redirect("/sign-in");
 
-  const email = session.user.email ?? "";
-  const initials =
-    email
-      .split("@")[0]!
-      .split(/[._-]/)
-      .map((p) => p[0]?.toUpperCase() ?? "")
-      .join("")
-      .slice(0, 2) || "?";
+  const email = session?.user?.email ?? GUEST_USER.email;
+  const initials = guest
+    ? GUEST_USER.initials
+    : email
+        .split("@")[0]!
+        .split(/[._-]/)
+        .map((p) => p[0]?.toUpperCase() ?? "")
+        .join("")
+        .slice(0, 2) || "?";
 
   // Best-effort sidebar + skill-panel data. Failure here must NOT block
-  // layout render (auth gate above is the load-bearing piece).
+  // layout render (auth gate above is the load-bearing piece). Skipped
+  // entirely in guest mode — no DB queries, empty state.
   let totalHrs = 0;
   let skillCount = 0;
   let recent: { id: string; title: string }[] = [];
   let skills: SkillSummary[] = [];
   try {
-    const actor = await getSessionActor();
+    const actor = guest ? null : await getSessionActor();
     if (actor) {
       const rows = await runWithActor(
         { userId: actor.userId, tenantId: actor.tenantId },
@@ -155,6 +160,7 @@ export default async function AppLayout({
       <MobileBottomNav />
       <ServiceWorkerRegister />
       <CommandPalette />
+      {guest && <GuestBanner />}
     </div>
   );
 }

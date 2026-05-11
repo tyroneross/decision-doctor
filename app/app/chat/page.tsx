@@ -8,6 +8,7 @@
 
 import { redirect } from "next/navigation";
 import { getSessionActor } from "@/lib/auth-session";
+import { isGuestRequest } from "@/lib/auth-guest";
 import { Chat } from "@/components/chat/Chat";
 
 // Next.js 16 server-component searchParams shape: a Promise of the resolved
@@ -18,7 +19,9 @@ export default async function ChatPage({
   searchParams: Promise<{ seed?: string | string[] }>;
 }) {
   const actor = await getSessionActor();
-  if (!actor) redirect("/sign-in?next=/app/chat");
+  if (!actor && !(await isGuestRequest())) {
+    redirect("/sign-in?next=/app/chat");
+  }
 
   const sp = await searchParams;
   const rawSeed = sp.seed;

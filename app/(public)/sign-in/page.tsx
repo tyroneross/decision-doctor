@@ -131,6 +131,30 @@ export default function SignInPage() {
         Magic links expire in 60 min. Sessions are 7-day rolling. SSO is
         post-MVP.
       </p>
+
+      <div className="mt-6 border-t border-line pt-6">
+        <button
+          type="button"
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await fetch("/api/auth/guest", { method: "POST" });
+              router.push("/app");
+            } catch (e) {
+              setErr(e instanceof Error ? e.message : String(e));
+              setBusy(false);
+            }
+          }}
+          disabled={busy}
+          className="text-[13px] font-medium text-ink underline-offset-2 hover:underline disabled:opacity-50"
+        >
+          Browse as guest &rarr;
+        </button>
+        <p className="mt-1 text-[12px] text-mute">
+          Explore the interface without signing in. Your work won&rsquo;t be
+          saved.
+        </p>
+      </div>
     </main>
   );
 }

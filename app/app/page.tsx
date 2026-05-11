@@ -3,6 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { desc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { isGuestRequest } from "@/lib/auth-guest";
 import { decisions } from "@/lib/db/schema";
 import { runWithActor, withActor } from "@/lib/db/actor";
 import { getSessionActor } from "@/lib/auth-session";
@@ -24,12 +25,13 @@ export default async function HomePage() {
   // SSR-redirects — confirm here too. (Belt-and-suspenders: layout
   // does redirect, so this is defensive.)
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) redirect("/sign-in");
+  const guest = !session?.user && (await isGuestRequest());
+  if (!session?.user && !guest) redirect("/sign-in");
 
-  // Recent decisions — best-effort, silent degrade.
+  // Recent decisions — best-effort, silent degrade. Skipped in guest mode.
   let recent: { id: string; title: string; templateId: string | null }[] = [];
   try {
-    const actor = await getSessionActor();
+    const actor = guest ? null : await getSessionActor();
     if (actor) {
       const rows = await runWithActor(
         { userId: actor.userId, tenantId: actor.tenantId },
