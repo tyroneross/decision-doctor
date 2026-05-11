@@ -11,6 +11,7 @@
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
     "enqueue:arxiv": "tsx src/cli/enqueue-arxiv.ts",
+    "enqueue:rss": "tsx src/cli/enqueue-rss.ts",
     "test": "vitest run"
   },
   "dependencies": {
