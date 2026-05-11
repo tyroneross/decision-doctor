@@ -32,6 +32,7 @@ vi.mock("openai", () => ({
 const { handleArxivEmbed } = await import("../src/adapters/arxiv-embed.js");
 const { disposeEncoder } = await import("../src/embed-chunker.js");
 const { getPool } = await import("../src/db.js");
+const { EXTRACTOR_VERSION, sha256 } = await import("../src/ingestion/quality.js");
 
 const describeIfDb = HAS_DB ? describe : describe.skip;
 
@@ -61,14 +62,22 @@ beforeAll(async () => {
   fixtureDocId = randomUUID();
   await pool.query(
     `INSERT INTO corpus_documents
-       (id, scope, source_type, source_id, source_url, title, body, content_hash)
-     VALUES ($1, 'global', 'test-arxiv-embed', $2, 'https://example.invalid/test', $3, $4, $5)`,
+       (id, scope, source_type, source_id, source_url, title, body, content_hash, metadata)
+     VALUES ($1, 'global', 'test-arxiv-embed', $2, 'https://example.invalid/test', $3, $4, $5, $6::jsonb)`,
     [
       fixtureDocId,
       `arxiv-embed-test-${Date.now()}`,
       "fixture",
       FIXTURE_BODY,
-      "fixture-hash",
+      sha256(FIXTURE_BODY),
+      JSON.stringify({
+        content_extract: {
+          extractor_version: EXTRACTOR_VERSION,
+          body_kind: "full_text",
+          output_hash: sha256(FIXTURE_BODY),
+          degraded: false,
+        },
+      }),
     ],
   );
 });
@@ -118,6 +127,46 @@ describeIfDb("handleArxivEmbed", () => {
     expect(r.cached_chunks).toBe(r.chunks);
     expect(r.fresh_chunks).toBe(0);
     expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("re-running after a body change re-embeds changed chunks", async () => {
+    const changedBody = `${FIXTURE_BODY} changed-body-sentinel `.repeat(2);
+    const changedHash = sha256(changedBody);
+    await pool!.query(
+      `UPDATE corpus_documents
+          SET body = $1,
+              content_hash = $2,
+              metadata = COALESCE(metadata, '{}'::jsonb)
+                         || jsonb_build_object('content_extract', $3::jsonb)
+        WHERE id = $4`,
+      [
+        changedBody,
+        changedHash,
+        JSON.stringify({
+          extractor_version: EXTRACTOR_VERSION,
+          body_kind: "full_text",
+          output_hash: changedHash,
+          degraded: false,
+        }),
+        fixtureDocId,
+      ],
+    );
+
+    mockCreate.mockClear();
+    const r = await handleArxivEmbed({ documentId: fixtureDocId });
+    expect(r.status).toBe("embedded");
+    expect(r.fresh_chunks).toBeGreaterThanOrEqual(1);
+    expect(mockCreate).toHaveBeenCalled();
+
+    const q = await pool!.query<{ chunk_text: string }>(
+      `SELECT chunk_text
+         FROM corpus_embeddings
+        WHERE document_id = $1
+        ORDER BY chunk_index
+        LIMIT 1`,
+      [fixtureDocId],
+    );
+    expect(q.rows[0]!.chunk_text).toContain("changed-body-sentinel");
   });
 
   it("skips an unknown documentId gracefully", async () => {

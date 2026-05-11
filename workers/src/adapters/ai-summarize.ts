@@ -17,6 +17,11 @@
 
 import { getPool } from "../db.js";
 import { getGroqClient } from "../llm/groq-client.js";
+import {
+  documentBodyKind,
+  isFullTextDocument,
+  type BodyKind,
+} from "../ingestion/quality.js";
 
 export const AI_SUMMARIZE_PROMPT_VERSION = "2026-05-11.1";
 const MODEL = "llama-3.3-70b-versatile";
@@ -47,6 +52,7 @@ interface DocumentRow {
   scope: string;
   title: string;
   body: string;
+  content_hash: string;
   metadata: Record<string, unknown>;
 }
 
@@ -59,6 +65,7 @@ export interface AiSummarizeResult {
   status:
     | "summarized"
     | "skipped-already-summarized"
+    | "skipped-ineligible-body"
     | "skipped-not-found"
     | "degraded";
   prompt_version: string;
@@ -135,7 +142,7 @@ export async function handleAiSummarize(
   const client = await pool.connect();
   try {
     const docQ = await client.query<DocumentRow>(
-      `SELECT id, scope, title, body, metadata
+      `SELECT id, scope, title, body, content_hash, metadata
          FROM corpus_documents
         WHERE id = $1
         LIMIT 1`,
@@ -150,13 +157,52 @@ export async function handleAiSummarize(
       };
     }
     const doc = docQ.rows[0]!;
+    const bodyKind: BodyKind | undefined = documentBodyKind(doc.metadata);
+    if (!isFullTextDocument(doc.metadata)) {
+      const skippedMeta = {
+        skipped: true,
+        skipped_reason: "body_kind_not_full_text",
+        input_content_hash: doc.content_hash,
+        body_kind: bodyKind ?? "metadata_only",
+        prompt_version: AI_SUMMARIZE_PROMPT_VERSION,
+        generated_at: new Date().toISOString(),
+      };
+      await client.query("BEGIN");
+      await client.query(
+        "SELECT set_config('app.current_user_id', $1, true)",
+        [doc.scope],
+      );
+      await client.query(
+        `UPDATE corpus_documents
+            SET metadata = COALESCE(metadata, '{}'::jsonb)
+                           || jsonb_build_object('ai_summary', $1::jsonb)
+          WHERE id = $2`,
+        [JSON.stringify(skippedMeta), doc.id],
+      );
+      await client.query("COMMIT");
+      return {
+        documentId: doc.id,
+        status: "skipped-ineligible-body",
+        prompt_version: AI_SUMMARIZE_PROMPT_VERSION,
+        latency_ms: Date.now() - t0,
+      };
+    }
     const existing = (doc.metadata?.ai_summary ?? null) as
-      | { generated_at?: string; prompt_version?: string }
+      | {
+          generated_at?: string;
+          prompt_version?: string;
+          input_content_hash?: string;
+          skipped?: boolean;
+          degraded?: boolean;
+        }
       | null;
     if (
       existing?.generated_at &&
       typeof existing.prompt_version === "string" &&
-      existing.prompt_version >= AI_SUMMARIZE_PROMPT_VERSION
+      existing.prompt_version >= AI_SUMMARIZE_PROMPT_VERSION &&
+      existing.input_content_hash === doc.content_hash &&
+      existing.skipped !== true &&
+      existing.degraded !== true
     ) {
       return {
         documentId: doc.id,
@@ -173,6 +219,8 @@ export async function handleAiSummarize(
       payloadMeta = {
         ...summary,
         prompt_version: AI_SUMMARIZE_PROMPT_VERSION,
+        input_content_hash: doc.content_hash,
+        body_kind: bodyKind ?? "full_text",
         generated_at: new Date().toISOString(),
       };
     } catch (e) {
@@ -180,6 +228,8 @@ export async function handleAiSummarize(
       payloadMeta = {
         degraded: true,
         prompt_version: AI_SUMMARIZE_PROMPT_VERSION,
+        input_content_hash: doc.content_hash,
+        body_kind: bodyKind ?? "full_text",
         generated_at: new Date().toISOString(),
       };
       degraded = true;

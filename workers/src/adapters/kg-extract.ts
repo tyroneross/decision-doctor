@@ -16,13 +16,19 @@
 // Relationship upsert: ON CONFLICT (scope, source_entity_id, target_entity_id, relationship_type)
 //   DO NOTHING
 //
-// Doc-level idempotency: skip if any mention row already exists for this doc.
-// Graceful degrade: Groq error → metadata.kg_extract = { degraded: true, ... }
-// and zero DB writes for entities/mentions/relationships.
+// Doc-level idempotency: skip only if metadata.kg_extract.input_content_hash
+// matches the current corpus_documents.content_hash.
+// Graceful degrade or ineligible body → prune stale doc-level mentions and
+// stamp metadata.kg_extract with the current input hash.
 
 import { getPool } from "../db.js";
 import { getGroqClient } from "../llm/groq-client.js";
 import type { PoolClient } from "pg";
+import {
+  documentBodyKind,
+  isFullTextDocument,
+  type BodyKind,
+} from "../ingestion/quality.js";
 
 export const KG_EXTRACT_PROMPT_VERSION = "2026-05-11.1";
 const MODEL = "llama-3.3-70b-versatile";
@@ -98,6 +104,8 @@ interface DocumentRow {
   scope: string;
   title: string;
   body: string;
+  content_hash: string;
+  metadata: Record<string, unknown>;
 }
 
 export interface KgExtractPayload {
@@ -109,6 +117,7 @@ export interface KgExtractResult {
   status:
     | "extracted"
     | "skipped-already-extracted"
+    | "skipped-ineligible-body"
     | "skipped-not-found"
     | "degraded";
   entity_count: number;
@@ -298,6 +307,53 @@ async function canonicalizeEntity(
   return { id: ins.rows[0]!.id };
 }
 
+async function pruneDocumentKg(
+  client: PoolClient,
+  documentId: string,
+): Promise<void> {
+  await client.query(
+    `UPDATE ai_entities e
+        SET mention_count = GREATEST(0, e.mention_count - m.mention_count)
+       FROM ai_document_entity_mentions m
+      WHERE m.document_id = $1
+        AND m.entity_id = e.id`,
+    [documentId],
+  );
+  await client.query(
+    `DELETE FROM ai_relationships WHERE evidence_document_id = $1`,
+    [documentId],
+  );
+  await client.query(
+    `DELETE FROM ai_document_entity_mentions WHERE document_id = $1`,
+    [documentId],
+  );
+}
+
+function kgMeta(args: {
+  inputContentHash: string;
+  bodyKind: BodyKind | string;
+  entityCount: number;
+  relationshipCount: number;
+  degraded?: boolean;
+  skippedReason?: string;
+  ambiguousNotes?: AmbiguousNote[];
+}): Record<string, unknown> {
+  const meta: Record<string, unknown> = {
+    generated_at: new Date().toISOString(),
+    prompt_version: KG_EXTRACT_PROMPT_VERSION,
+    input_content_hash: args.inputContentHash,
+    body_kind: args.bodyKind,
+    entity_count: args.entityCount,
+    relationship_count: args.relationshipCount,
+  };
+  if (args.degraded) meta.degraded = true;
+  if (args.skippedReason) meta.skipped_reason = args.skippedReason;
+  if (args.ambiguousNotes && args.ambiguousNotes.length > 0) {
+    meta.ambiguous_canonicalization = args.ambiguousNotes;
+  }
+  return meta;
+}
+
 export async function handleKgExtract(
   payload: KgExtractPayload,
 ): Promise<KgExtractResult> {
@@ -306,7 +362,10 @@ export async function handleKgExtract(
   const client = await pool.connect();
   try {
     const docQ = await client.query<DocumentRow>(
-      `SELECT id, scope, title, body FROM corpus_documents WHERE id = $1 LIMIT 1`,
+      `SELECT id, scope, title, body, content_hash, metadata
+         FROM corpus_documents
+        WHERE id = $1
+        LIMIT 1`,
       [payload.documentId],
     );
     if (docQ.rows.length === 0) {
@@ -320,13 +379,62 @@ export async function handleKgExtract(
       };
     }
     const doc = docQ.rows[0]!;
+    const bodyKind = documentBodyKind(doc.metadata) ?? "metadata_only";
+    const existingMeta = (doc.metadata?.kg_extract ?? null) as
+      | {
+          generated_at?: string;
+          prompt_version?: string;
+          input_content_hash?: string;
+          degraded?: boolean;
+          skipped_reason?: string;
+        }
+      | null;
 
-    // Doc-level idempotency: if any mention row exists for this doc, skip.
-    const existing = await client.query(
-      `SELECT 1 FROM ai_document_entity_mentions WHERE document_id = $1 LIMIT 1`,
-      [doc.id],
-    );
-    if ((existing.rowCount ?? 0) > 0) {
+    if (!isFullTextDocument(doc.metadata)) {
+      await client.query("BEGIN");
+      await client.query(
+        "SELECT set_config('app.current_user_id', $1, true)",
+        [doc.scope],
+      );
+      await pruneDocumentKg(client, doc.id);
+      await client.query(
+        `UPDATE corpus_documents
+            SET metadata = COALESCE(metadata, '{}'::jsonb)
+                           || jsonb_build_object('kg_extract', $1::jsonb)
+          WHERE id = $2`,
+        [
+          JSON.stringify(
+            kgMeta({
+              inputContentHash: doc.content_hash,
+              bodyKind,
+              entityCount: 0,
+              relationshipCount: 0,
+              degraded: true,
+              skippedReason: "body_kind_not_full_text",
+            }),
+          ),
+          doc.id,
+        ],
+      );
+      await client.query("COMMIT");
+      return {
+        documentId: doc.id,
+        status: "skipped-ineligible-body",
+        entity_count: 0,
+        relationship_count: 0,
+        prompt_version: KG_EXTRACT_PROMPT_VERSION,
+        latency_ms: Date.now() - t0,
+      };
+    }
+
+    if (
+      existingMeta?.generated_at &&
+      existingMeta?.input_content_hash === doc.content_hash &&
+      typeof existingMeta.prompt_version === "string" &&
+      existingMeta.prompt_version >= KG_EXTRACT_PROMPT_VERSION &&
+      existingMeta.degraded !== true &&
+      !existingMeta.skipped_reason
+    ) {
       return {
         documentId: doc.id,
         status: "skipped-already-extracted",
@@ -358,6 +466,7 @@ export async function handleKgExtract(
         "SELECT set_config('app.current_user_id', $1, true)",
         [doc.scope],
       );
+      await pruneDocumentKg(client, doc.id);
 
       // Canonicalize each entity, build name → id map for relationship resolution.
       const nameToId = new Map<string, string>();
@@ -414,15 +523,13 @@ export async function handleKgExtract(
       }
 
       // Stamp metadata.kg_extract on the doc.
-      const meta: Record<string, unknown> = {
-        generated_at: new Date().toISOString(),
-        prompt_version: KG_EXTRACT_PROMPT_VERSION,
-        entity_count: entityCount,
-        relationship_count: relCount,
-      };
-      if (ambiguousNotes.length > 0) {
-        meta.ambiguous_canonicalization = ambiguousNotes;
-      }
+      const meta = kgMeta({
+        inputContentHash: doc.content_hash,
+        bodyKind,
+        entityCount,
+        relationshipCount: relCount,
+        ambiguousNotes,
+      });
       await client.query(
         `UPDATE corpus_documents
             SET metadata = COALESCE(metadata, '{}'::jsonb)
@@ -438,6 +545,7 @@ export async function handleKgExtract(
         "SELECT set_config('app.current_user_id', $1, true)",
         [doc.scope],
       );
+      await pruneDocumentKg(client, doc.id);
       await client.query(
         `UPDATE corpus_documents
             SET metadata = COALESCE(metadata, '{}'::jsonb)
@@ -445,11 +553,13 @@ export async function handleKgExtract(
           WHERE id = $2`,
         [
           JSON.stringify({
-            degraded: true,
-            generated_at: new Date().toISOString(),
-            prompt_version: KG_EXTRACT_PROMPT_VERSION,
-            entity_count: 0,
-            relationship_count: 0,
+            ...kgMeta({
+              inputContentHash: doc.content_hash,
+              bodyKind,
+              entityCount: 0,
+              relationshipCount: 0,
+              degraded: true,
+            }),
           }),
           doc.id,
         ],

@@ -16,10 +16,10 @@ import { getPool } from "../db.js";
 import { chunkBody } from "../embed-chunker.js";
 import {
   getOrCreateEmbeddingsBatch,
-  sha256,
   toPgVector,
   type EmbeddingInput,
 } from "../embed.js";
+import { isFullTextDocument, sha256 } from "../ingestion/quality.js";
 
 export interface ArxivEmbedPayload {
   documentId: string;
@@ -27,7 +27,11 @@ export interface ArxivEmbedPayload {
 
 export interface ArxivEmbedResult {
   documentId: string;
-  status: "embedded" | "skipped-not-found" | "skipped-already-embedded";
+  status:
+    | "embedded"
+    | "skipped-not-found"
+    | "skipped-already-embedded"
+    | "skipped-ineligible-body";
   chunks: number;
   cached_chunks: number;
   fresh_chunks: number;
@@ -48,8 +52,9 @@ export async function handleArxivEmbed(
       scope: string;
       body: string;
       content_hash: string;
+      metadata: Record<string, unknown>;
     }>(
-      `SELECT id, scope, body, content_hash
+      `SELECT id, scope, body, content_hash, metadata
          FROM corpus_documents
         WHERE id = $1
         LIMIT 1`,
@@ -68,6 +73,25 @@ export async function handleArxivEmbed(
     }
 
     const doc = docQ.rows[0]!;
+    if (!isFullTextDocument(doc.metadata)) {
+      await client.query("BEGIN");
+      await client.query(
+        "SELECT set_config('app.current_user_id', $1, true)",
+        [doc.scope],
+      );
+      await client.query("DELETE FROM corpus_embeddings WHERE document_id = $1", [
+        doc.id,
+      ]);
+      await client.query("COMMIT");
+      return {
+        documentId: doc.id,
+        status: "skipped-ineligible-body",
+        chunks: 0,
+        cached_chunks: 0,
+        fresh_chunks: 0,
+        latency_ms: Date.now() - t0,
+      };
+    }
 
     // 2. Skip if chunks already exist whose content_hash matches the document's
     //    overall content_hash AND the chunk count matches the chunker's output.

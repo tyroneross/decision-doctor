@@ -18,6 +18,7 @@ import {
   type SitemapAdapterConfig,
 } from "./adapters/sitemap-adapter.js";
 import { getPool } from "./db.js";
+import { bodyKindAllowsFullEnrichment } from "./ingestion/quality.js";
 
 let _boss: PgBoss | null = null;
 let _started = false;
@@ -95,6 +96,7 @@ export async function startQueue(): Promise<PgBoss> {
   // Idempotent — safe to re-run.
   await boss.createQueue("arxiv-fetch");
   await boss.createQueue("arxiv-embed");
+  await boss.createQueue("embed-document");
   await boss.createQueue("rss-fetch");
   await boss.createQueue("anthropic-news-fetch");
   await boss.createQueue("sitemap-fetch");
@@ -141,28 +143,33 @@ export async function startQueue(): Promise<PgBoss> {
     },
   );
 
-  // arxiv-embed: chunk + embed a single corpus_documents row.
+  // arxiv-embed: compatibility alias for embed-document.
+  // embed-document: chunk + embed a single corpus_documents row.
   // Payload: { documentId: string }
   // Default batchSize=1; opt-in parallelism via EMBED_BATCH env (typically 3-5).
   // OpenAI text-embedding-3-small allows 3000 RPM; even at EMBED_BATCH=10
   // we're at ~600 RPM with 4 chunks/doc avg — comfortable margin.
-  await boss.work<{ documentId: string }>(
-    "arxiv-embed",
-    { batchSize: EMBED_BATCH },
-    async (jobs) => {
-      return await Promise.all(
-        jobs.map(async (job) => {
-          const r = await handleArxivEmbed({ documentId: job.data.documentId });
-          return { id: job.id, ...r };
-        }),
-      );
-    },
-  );
+  const workEmbedQueue = async (queueName: "arxiv-embed" | "embed-document") => {
+    await boss.work<{ documentId: string }>(
+      queueName,
+      { batchSize: EMBED_BATCH },
+      async (jobs) => {
+        return await Promise.all(
+          jobs.map(async (job) => {
+            const r = await handleArxivEmbed({ documentId: job.data.documentId });
+            return { id: job.id, ...r };
+          }),
+        );
+      },
+    );
+  };
+  await workEmbedQueue("arxiv-embed");
+  await workEmbedQueue("embed-document");
 
   // content-extract: per-source body enrichment (cheerio / CDP / noop).
   // Payload: { documentId: string }
-  // Chains: arxiv-embed after the body is updated. ai-summarize + kg-extract
-  // are added in later chunks; they fan out from here once registered.
+  // Chains: embed-document, ai-summarize, and kg-extract after the body and
+  // content_extract metadata are updated.
   await boss.work<{ documentId: string }>(
     "content-extract",
     { batchSize: 1 },
@@ -170,8 +177,21 @@ export async function startQueue(): Promise<PgBoss> {
       const out = [];
       for (const job of jobs) {
         const r = await handleContentExtract({ documentId: job.data.documentId });
-        // Fan out downstream — all three run against the enriched body.
-        await boss.send("arxiv-embed", { documentId: job.data.documentId });
+        // Fan out to downstream gatekeepers for every completed extraction.
+        // The handlers only enrich full_text bodies; for summaries/blocked/
+        // degraded bodies they stamp skipped metadata and clear stale KG or
+        // embedding artifacts. This keeps old enrichments from surviving a
+        // later degraded re-extraction.
+        if (bodyKindAllowsFullEnrichment(r.body_kind)) {
+          console.log(
+            `[content-extract] downstream enrichment queued for ${job.data.documentId}`,
+          );
+        } else {
+          console.warn(
+            `[content-extract] downstream cleanup queued for ${job.data.documentId}: body_kind=${r.body_kind}`,
+          );
+        }
+        await boss.send("embed-document", { documentId: job.data.documentId });
         await boss.send("ai-summarize", { documentId: job.data.documentId });
         await boss.send("kg-extract", { documentId: job.data.documentId });
         out.push({ id: job.id, ...r });
@@ -200,7 +220,8 @@ export async function startQueue(): Promise<PgBoss> {
   // kg-extract: Groq Llama 3.3 70B JSON-mode entity + relationship
   // extraction. Canonicalizes against ai_entities via (exact → pg_trgm ≥ 0.7
   // → alias overlap → insert). Writes mentions + relationships in one txn.
-  // Doc-level idempotent: skip if any mention row already exists.
+  // Doc-level idempotent: skip only when kg_extract.input_content_hash matches
+  // the current corpus_documents.content_hash.
   // Default batchSize=1; opt-in parallelism via KG_EXTRACT_BATCH (typically 3
   // — slower per-job than ai-summarize, so smaller fan-out keeps Groq happy).
   await boss.work<{ documentId: string }>(
@@ -354,6 +375,7 @@ export async function queueCount(): Promise<number> {
   const queues = [
     "arxiv-fetch",
     "arxiv-embed",
+    "embed-document",
     "rss-fetch",
     "anthropic-news-fetch",
     "sitemap-fetch",
