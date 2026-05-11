@@ -11,6 +11,7 @@ import { ServiceWorkerRegister } from "./_components/sw-register";
 import { MobileBottomNav } from "./_components/MobileBottomNav";
 import { DesktopSidebar } from "./_components/DesktopSidebar";
 import { SkillPanel, type SkillSummary } from "./_components/SkillPanel";
+import { CommandPalette } from "@/components/ui/CommandPalette";
 import { desc } from "drizzle-orm";
 
 // Auth gate for everything under /app/*. SSR redirect — no client flash.
@@ -153,6 +154,7 @@ export default async function AppLayout({
 
       <MobileBottomNav />
       <ServiceWorkerRegister />
+      <CommandPalette />
     </div>
   );
 }
