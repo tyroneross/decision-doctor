@@ -10,12 +10,31 @@ import {
 } from "@/lib/decision-display";
 import { Chip } from "@/components/ui/Chip";
 import { PillSearchBar } from "@/components/ui/PillSearchBar";
+import type {
+  ClarifierWidget,
+  ClarifierSubmission,
+} from "@/components/chat/widgets/types";
+import { InChatSlider } from "@/components/chat/widgets/InChatSlider";
+import { InChatStepper } from "@/components/chat/widgets/InChatStepper";
+import { InChatRangePicker } from "@/components/chat/widgets/InChatRangePicker";
+import { InChatChips } from "@/components/chat/widgets/InChatChips";
+import { FormFallbackLink } from "@/components/chat/widgets/FormFallbackLink";
 
 // ─── Types (mirror /api/chat response shape) ────────────────────────────
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  /** C6b — optional clarifier widget attached to an assistant message.
+   *  Persisted into localStorage; once submitted, the message remains in the
+   *  log with `clarifierResolved: true` so we don't re-render the widget. */
+  clarifier?: ClarifierWidget;
+  /** Inferred template id at the time this clarifier was emitted — drives
+   *  the FormFallbackLink inside the FIRST clarifier bubble. */
+  inferredTemplateId?: "capacity" | "pricing" | "admin-hire" | null;
+  /** Set to true once the user has submitted (or skipped) the clarifier so
+   *  the widget UI is no longer interactive on this message. */
+  clarifierResolved?: boolean;
 }
 
 interface DecisionPayload {
@@ -169,6 +188,12 @@ export function Chat({ seed }: { seed?: string } = {}) {
               reframeChips?: string[];
             }
           | {
+              status: "clarifier";
+              reply: string;
+              widget: ClarifierWidget;
+              inferredTemplateId?: "capacity" | "pricing" | "admin-hire" | null;
+            }
+          | {
               status: "ready";
               reply: string;
               decision: DecisionPayload;
@@ -176,13 +201,25 @@ export function Chat({ seed }: { seed?: string } = {}) {
               templateId?: string;
             };
 
-        setThread((t) => ({
-          ...t,
-          messages: [...t.messages, { role: "assistant", content: data.reply }],
-          decision: data.status === "ready" ? data.decision : undefined,
-          painPoints: data.status === "ready" ? data.painPoints : undefined,
-          templateId: data.status === "ready" ? data.templateId : undefined,
-        }));
+        setThread((t) => {
+          const newMessage: ChatMessage = {
+            role: "assistant",
+            content: data.reply,
+            ...(data.status === "clarifier"
+              ? {
+                  clarifier: data.widget,
+                  inferredTemplateId: data.inferredTemplateId ?? null,
+                }
+              : {}),
+          };
+          return {
+            ...t,
+            messages: [...t.messages, newMessage],
+            decision: data.status === "ready" ? data.decision : undefined,
+            painPoints: data.status === "ready" ? data.painPoints : undefined,
+            templateId: data.status === "ready" ? data.templateId : undefined,
+          };
+        });
         // F-11: surface reframe chips when present (else clear stale ones).
         const showingChips =
           data.status === "asking" &&
@@ -209,6 +246,49 @@ export function Chat({ seed }: { seed?: string } = {}) {
 
   const isEmptyState =
     thread.messages.length === 1 && thread.messages[0]?.role === "assistant";
+
+  // C6b — clarifier widget submission. Marks the source message as resolved
+  // (so the widget UI freezes), then posts the value as a normal user
+  // message. Display string is what the user sees in their bubble; raw value
+  // is unused here since /api/chat operates on the message log alone.
+  const submitClarifier = useCallback(
+    (sourceMessageIndex: number, sub: ClarifierSubmission) => {
+      setThread((t) => {
+        const next = [...t.messages];
+        const src = next[sourceMessageIndex];
+        if (src) {
+          next[sourceMessageIndex] = { ...src, clarifierResolved: true };
+        }
+        return { ...t, messages: next };
+      });
+      runQuery(`${sub.fieldId}: ${sub.display}`);
+    },
+    [runQuery],
+  );
+
+  const skipClarifier = useCallback(
+    (sourceMessageIndex: number) => {
+      setThread((t) => {
+        const next = [...t.messages];
+        const src = next[sourceMessageIndex];
+        if (src) {
+          next[sourceMessageIndex] = { ...src, clarifierResolved: true };
+        }
+        return { ...t, messages: next };
+      });
+      // Hand the conversation back to free-text — the LLM will re-ask in a
+      // sentence. Posting "I'm not sure on that one" gives it a clean signal.
+      runQuery("I'm not sure on that one — can you ask differently?");
+    },
+    [runQuery],
+  );
+
+  // First clarifier in the thread = the earliest assistant message that has
+  // a clarifier attached. Used to hide the form-fallback link on subsequent
+  // clarifiers.
+  const firstClarifierIndex = thread.messages.findIndex(
+    (m) => m.role === "assistant" && m.clarifier,
+  );
 
   // Seed handling: when arriving via /app/chat?seed=<text>, auto-submit once
   // on the opening assistant message. Ref guard prevents re-fire on remount
@@ -282,8 +362,8 @@ export function Chat({ seed }: { seed?: string } = {}) {
           <li
             key={i}
             className={
-              "dd-fade-up flex " +
-              (m.role === "user" ? "justify-end" : "justify-start")
+              "dd-fade-up flex flex-col gap-0 " +
+              (m.role === "user" ? "items-end" : "items-start")
             }
           >
             <div
@@ -294,6 +374,24 @@ export function Chat({ seed }: { seed?: string } = {}) {
             >
               {m.content}
             </div>
+
+            {/* C6b — render the clarifier widget below the assistant text.
+                Hidden once resolved; freezes after submission so users can
+                see what they answered without being able to re-edit. */}
+            {m.role === "assistant" && m.clarifier && !m.clarifierResolved && (
+              <div className="w-full max-w-[85%]">
+                <ClarifierRenderer
+                  widget={m.clarifier}
+                  disabled={busy}
+                  onSubmit={(sub) => submitClarifier(i, sub)}
+                  onUnsure={() => skipClarifier(i)}
+                />
+                <FormFallbackLink
+                  inferredTemplateId={m.inferredTemplateId}
+                  isFirstClarifier={i === firstClarifierIndex}
+                />
+              </div>
+            )}
           </li>
         ))}
 
@@ -438,6 +536,62 @@ export function Chat({ seed }: { seed?: string } = {}) {
       </div>
     </main>
   );
+}
+
+// ─── C6b — Clarifier widget dispatcher ──────────────────────────────────
+//
+// Discriminates on widget.kind and renders the matching In-chat widget. Kept
+// inline here so the message-map stays readable.
+
+function ClarifierRenderer({
+  widget,
+  onSubmit,
+  onUnsure,
+  disabled,
+}: {
+  widget: ClarifierWidget;
+  onSubmit: (s: ClarifierSubmission) => void;
+  onUnsure: () => void;
+  disabled?: boolean;
+}) {
+  switch (widget.kind) {
+    case "slider":
+      return (
+        <InChatSlider
+          widget={widget}
+          onSubmit={onSubmit}
+          onUnsure={onUnsure}
+          disabled={disabled}
+        />
+      );
+    case "stepper":
+      return (
+        <InChatStepper
+          widget={widget}
+          onSubmit={onSubmit}
+          onUnsure={onUnsure}
+          disabled={disabled}
+        />
+      );
+    case "range":
+      return (
+        <InChatRangePicker
+          widget={widget}
+          onSubmit={onSubmit}
+          onUnsure={onUnsure}
+          disabled={disabled}
+        />
+      );
+    case "chips":
+      return (
+        <InChatChips
+          widget={widget}
+          onSubmit={onSubmit}
+          onUnsure={onUnsure}
+          disabled={disabled}
+        />
+      );
+  }
 }
 
 // ─── In-thread Decision card ────────────────────────────────────────────

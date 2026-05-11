@@ -55,10 +55,83 @@ const FieldValueSchema = z.union([
   z.array(z.number().finite()),
 ]);
 
+// C6b — clarifier widget schema. Mirrors components/chat/widgets/types.ts.
+// The discriminated union below is what the LLM may emit when status="clarifier";
+// values flow back as plain user messages so the existing `messages` log stays
+// the only chat state.
+//
+// Hard ceilings on every numeric/string field. The LLM is the only producer of
+// this payload, so zod is the prompt-injection backstop: any out-of-bounds value
+// the LLM would invent gets rejected and the user sees the "lost the thread"
+// fallback instead of a malformed widget.
+const ClarifierWidgetSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("slider"),
+    fieldId: z.string().min(1).max(64),
+    label: z.string().min(1).max(120),
+    hint: z.string().max(200).optional(),
+    min: z.number().finite(),
+    max: z.number().finite(),
+    step: z.number().positive().finite().optional(),
+    defaultValue: z.number().finite(),
+    unit: z.string().max(24).optional(),
+  }),
+  z.object({
+    kind: z.literal("stepper"),
+    fieldId: z.string().min(1).max(64),
+    label: z.string().min(1).max(120),
+    hint: z.string().max(200).optional(),
+    min: z.number().finite(),
+    max: z.number().finite(),
+    step: z.number().positive().finite().optional(),
+    defaultValue: z.number().finite(),
+    unit: z.string().max(24).optional(),
+  }),
+  z.object({
+    kind: z.literal("range"),
+    fieldId: z.string().min(1).max(64),
+    label: z.string().min(1).max(120),
+    hint: z.string().max(200).optional(),
+    min: z.number().finite(),
+    max: z.number().finite(),
+    step: z.number().positive().finite().optional(),
+    defaultLo: z.number().finite(),
+    defaultHi: z.number().finite(),
+    unit: z.string().max(24).optional(),
+  }),
+  z.object({
+    kind: z.literal("chips"),
+    fieldId: z.string().min(1).max(64),
+    label: z.string().min(1).max(120),
+    hint: z.string().max(200).optional(),
+    options: z
+      .array(
+        z.object({
+          value: z.string().min(1).max(64),
+          label: z.string().min(1).max(80),
+        }),
+      )
+      .min(2)
+      .max(8),
+    defaultValue: z.string().max(64).optional(),
+  }),
+]);
+
 const AssistantPayloadSchema = z.discriminatedUnion("status", [
   z.object({
     status: z.literal("asking"),
     reply: z.string().min(1).max(2000),
+  }),
+  // C6b — structured clarifier. Replaces a free-text question with an
+  // inline widget the user fills directly. The orchestrator keeps emitting
+  // these until it has enough fields, then flips to status:"ready".
+  z.object({
+    status: z.literal("clarifier"),
+    reply: z.string().min(1).max(2000),
+    widget: ClarifierWidgetSchema,
+    /** Inferred template id, if known. Drives the "use the survey form
+     *  instead" link inside the FIRST clarifier bubble of the thread. */
+    inferredTemplateId: TemplateIdSchema.nullable().optional(),
   }),
   z.object({
     status: z.literal("ready"),
@@ -139,6 +212,18 @@ export async function POST(req: Request) {
     return NextResponse.json({
       status: "asking",
       reply: parsedAssistant.reply,
+    });
+  }
+
+  // C6b — Phase A' — the model is asking for ONE structured value via a
+  // clarifier widget. The frontend renders the widget; the user's submission
+  // comes back as a normal user-message in the next request. No engine call.
+  if (parsedAssistant.status === "clarifier") {
+    return NextResponse.json({
+      status: "clarifier",
+      reply: parsedAssistant.reply,
+      widget: parsedAssistant.widget,
+      inferredTemplateId: parsedAssistant.inferredTemplateId ?? null,
     });
   }
 
