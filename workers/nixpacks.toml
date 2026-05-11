@@ -1,14 +1,13 @@
-# Railway Nixpacks build config for decision-doctor-workers.
+# Railway Nixpacks build config — adds Chromium for the content-extract CDP path.
 #
-# We add `chromium` to the Nix package set so the content-extract handler's
-# CDP path (used for JS-rendered sources like openai-news) can spawn a system
-# Chrome. BrowserManager (src/cdp/browser.ts) finds it via /usr/bin/chromium
-# path detection.
+# The "..." spread is REQUIRED: Nixpacks auto-detects nodejs + pnpm + cacert
+# from the Node provider. Without "...", this list REPLACES the defaults and
+# strips packages needed for HTTPS/TLS during `pnpm install`, causing build
+# failure with no clear message.
 #
-# Start command keeps the Atomize-verified `node --import tsx` pattern.
+# Start command is set in workers/railway.json (deploy.startCommand) — do NOT
+# duplicate here. Railway honors the JSON; a duplicate cmd causes silent
+# overrides and bricked deploys.
 
 [phases.setup]
-nixPkgs = ["nodejs_22", "pnpm", "chromium"]
-
-[start]
-cmd = "node --import tsx src/index.ts"
+nixPkgs = ["...", "chromium"]
