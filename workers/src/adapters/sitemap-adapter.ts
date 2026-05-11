@@ -233,18 +233,26 @@ export function deriveSlug(url: string, stripPrefix?: string): string {
   }
 }
 
-/** Extract readable text from article HTML. */
+/** Extract readable text from article HTML.
+ *
+ * Picks the LONGEST candidate across all <article>/<main>/<body> matches.
+ * Some SPAs (e.g. platform.claude.com docs) nest two <article> tags — one is a
+ * "Loading…" skeleton (~120 chars), the other has the real content. Picking
+ * `.first()` would return the skeleton; the longest wins.
+ */
 function extractArticleText(html: string): string {
   const $ = cheerio.load(html);
   $("script, style, nav, header, footer, aside, noscript").remove();
+  let best = "";
   for (const sel of ["article", "main", "body"]) {
-    const el = $(sel).first();
-    if (el.length > 0) {
-      const txt = el.text().replace(/\s+/g, " ").trim();
-      if (txt.length > 0) return txt;
-    }
+    $(sel).each((_, el) => {
+      const txt = $(el).text().replace(/\s+/g, " ").trim();
+      if (txt.length > best.length) best = txt;
+    });
+    // If we found a usable article/main extraction, prefer it over body.
+    if (best.length >= 200 && sel !== "body") return best;
   }
-  return "";
+  return best;
 }
 
 interface ArticleMeta {
