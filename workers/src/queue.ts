@@ -12,6 +12,7 @@ import { fetchRssFeed } from "./adapters/rss.js";
 import { fetchAnthropicNews } from "./adapters/anthropic-sitemap.js";
 import { handleContentExtract } from "./adapters/content-extract.js";
 import { handleAiSummarize } from "./adapters/ai-summarize.js";
+import { handleKgExtract } from "./adapters/kg-extract.js";
 
 let _boss: PgBoss | null = null;
 let _started = false;
@@ -53,6 +54,7 @@ export async function startQueue(): Promise<PgBoss> {
   await boss.createQueue("anthropic-news-fetch");
   await boss.createQueue("content-extract");
   await boss.createQueue("ai-summarize");
+  await boss.createQueue("kg-extract");
   await boss.createQueue("test-job");
 
   // ---- Register handlers --------------------------------------------------
@@ -113,6 +115,7 @@ export async function startQueue(): Promise<PgBoss> {
         // Fan out downstream — all three run against the enriched body.
         await boss.send("arxiv-embed", { documentId: job.data.documentId });
         await boss.send("ai-summarize", { documentId: job.data.documentId });
+        await boss.send("kg-extract", { documentId: job.data.documentId });
         out.push({ id: job.id, ...r });
       }
       return out;
@@ -129,6 +132,23 @@ export async function startQueue(): Promise<PgBoss> {
       const out = [];
       for (const job of jobs) {
         const r = await handleAiSummarize({ documentId: job.data.documentId });
+        out.push({ id: job.id, ...r });
+      }
+      return out;
+    },
+  );
+
+  // kg-extract: Groq Llama 3.3 70B JSON-mode entity + relationship
+  // extraction. Canonicalizes against ai_entities via (exact → pg_trgm ≥ 0.7
+  // → alias overlap → insert). Writes mentions + relationships in one txn.
+  // Doc-level idempotent: skip if any mention row already exists.
+  await boss.work<{ documentId: string }>(
+    "kg-extract",
+    { batchSize: 1 },
+    async (jobs) => {
+      const out = [];
+      for (const job of jobs) {
+        const r = await handleKgExtract({ documentId: job.data.documentId });
         out.push({ id: job.id, ...r });
       }
       return out;
@@ -224,6 +244,7 @@ export async function queueCount(): Promise<number> {
     "anthropic-news-fetch",
     "content-extract",
     "ai-summarize",
+    "kg-extract",
     "test-job",
   ];
   let total = 0;

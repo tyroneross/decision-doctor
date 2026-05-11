@@ -12,6 +12,7 @@ import { pingPostgres, closePool } from "./db.js";
 import { startQueue, stopQueue } from "./queue.js";
 import { registerSchedules } from "./cron.js";
 import { startHealthServer } from "./health.js";
+import { seedSources } from "./seed-sources.js";
 
 loadEnv();
 
@@ -30,6 +31,14 @@ async function main(): Promise<void> {
   console.log("[worker] Postgres reachable");
 
   await startQueue();
+
+  // Seed global lab sources idempotently. Non-fatal if it fails — log + continue.
+  try {
+    await seedSources();
+  } catch (e) {
+    console.error("[worker] seedSources failed (non-fatal):", e);
+  }
+
   registerSchedules();
   startHealthServer(PORT);
 
