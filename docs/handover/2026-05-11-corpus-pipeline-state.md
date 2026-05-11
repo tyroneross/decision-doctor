@@ -5,6 +5,11 @@
 **Live Railway worker:** `https://decision-doctor-workers-production.up.railway.app` — `● Online`, `/health` returns 200
 **Live Vercel app:** `decision-doctor-xi.vercel.app` (unchanged this session)
 
+**Crawler-build supersession note:** for the next crawler/KG implementation pass, use
+`docs/handover/2026-05-11-claude-code-crawler-build-brief.md` as the authoritative
+brief. This file remains useful historical state, but its older CDP/Nixpacks notes are
+superseded by the newer Railway-safe guidance.
+
 ---
 
 ## What's live in production right now
@@ -113,7 +118,7 @@ existing: rss-fetch / anthropic-news-fetch / arxiv-fetch
 
 - `workers/src/cdp/{browser,connection,page,runtime,wait}.ts` (NEW — **copied from `~/dev/git-folder/interface-built-right/src/engine/cdp/`**). User-owned project; zero external deps (only Node built-ins). Strip UI-testing files (accessibility, css, dom, input, emulation, network, console, snapshot, target). ~28 KB of TS total.
 - `workers/src/cdp/extract-content.ts` (NEW, ~50 lines) — thin wrapper exposing `async extractRenderedHtml(url): Promise<string>`. Reuses IBR's BrowserManager + PageDomain + Runtime.evaluate.
-- `workers/nixpacks.toml` (NEW) — add `chromium` to `nixPkgs`. IBR's `browser.ts` already checks `/usr/bin/chromium-browser` (Linux/Nixpacks path).
+- `workers/nixpacks.toml` (ONLY IF CDP IS IMPLEMENTED) — do **not** add Chromium through `nixPkgs`. If render fallback is needed, use Railway apt/prebuilt Chromium packaging per `docs/handover/2026-05-11-claude-code-crawler-build-brief.md`.
 - `workers/src/adapters/content-extract.ts` (NEW) — per-source path selection:
   - arxiv → no-op (abstract is already content)
   - anthropic-news → HTTP + cheerio extract `<article>`
@@ -151,7 +156,7 @@ existing: rss-fetch / anthropic-news-fetch / arxiv-fetch
    - Graceful degrade: each handler marks its own degraded state in metadata; chain CONTINUES on individual handler failure (Groq down → ai_summary.degraded=true; CDP crash → content_extract.degraded=true; never blocks downstream)
 5. **CDP integration (per user's IBR-is-mine clarification):**
    - Copy 5 files from `~/dev/git-folder/interface-built-right/src/engine/cdp/` to `workers/src/cdp/`
-   - Add `chromium` to `workers/nixpacks.toml` (Nixpacks installs Chrome system-wide; IBR's browser.ts finds it via path detection)
+   - Do not add Chromium via `nixPkgs`; if CDP ships, use apt/prebuilt Chromium packaging and keep render concurrency at 1 until measured
    - Memory: ~200 MB sustained for Chrome process; lifecycle managed by `BrowserManager`
    - Only fires for OpenAI articles in current source list; SSR sources (Anthropic et al.) use HTTP+cheerio
 6. **LLM client setup (no new dep):**
@@ -222,10 +227,11 @@ All ADRs in `docs/PRD.md` §P0++.
 
 ## How to pick up cleanly in the new terminal
 
-1. **First message in new session:** "Continue from `docs/handover/2026-05-11-corpus-pipeline-state.md` — dispatch the build-loop for content-extract + ai-summarize + kg-extract scaffold."
+1. **First message in new session:** "Continue from `docs/handover/2026-05-11-claude-code-crawler-build-brief.md` — implement the next Railway worker chunk for source seeding, content-extract, ai-summarize, kg-extract, and queue chaining."
 
 2. **First action of new session:**
-   - Read this file
+   - Read `docs/handover/2026-05-11-claude-code-crawler-build-brief.md`
+   - Read this file for historical state only
    - Read `docs/PRD.md` §P0++ (F-30 status, F-31 prerequisites, ADRs 006–013)
    - Read `workers/src/queue.ts` (current handler shape — extend this)
    - Read `workers/src/adapters/anthropic-sitemap.ts` (the pattern to mirror for content-extract)
@@ -235,7 +241,7 @@ All ADRs in `docs/PRD.md` §P0++.
 3. **Dispatch build-loop** for the work in §"Build-loop dispatch payload" above.
 
 4. **After build-loop returns:**
-   - Backfill 23 existing docs via the new jobs (~$0.02)
+   - Count current `corpus_documents` rows, then backfill via the new jobs
    - Verify entities are populating in `ai_entities` + relationships in `ai_relationships`
    - Then F-31 (hybrid search + ⌘K palette + retrieval) is the next big chunk
 
