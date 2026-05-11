@@ -56,20 +56,22 @@ interface DocumentRow {
   metadata: Record<string, unknown>;
 }
 
-/** Pull readable text from an article-ish HTML document. Falls back through
- *  <article>, <main>, <body> in order. Returns trimmed text or empty string. */
+/** Pull readable text from an article-ish HTML document. Picks the LONGEST
+ *  candidate across all <article>/<main>/<body> matches — some SPAs (e.g.
+ *  platform.claude.com docs) nest two <article> tags where the first is a
+ *  loading skeleton; `.first()` would return the skeleton. */
 function extractArticleText(html: string): string {
   const $ = cheerio.load(html);
-  // Strip noisy elements that pollute text extraction.
   $("script, style, nav, header, footer, aside, noscript").remove();
+  let best = "";
   for (const sel of ["article", "main", "body"]) {
-    const el = $(sel).first();
-    if (el.length > 0) {
-      const txt = el.text().replace(/\s+/g, " ").trim();
-      if (txt.length > 0) return txt;
-    }
+    $(sel).each((_, el) => {
+      const txt = $(el).text().replace(/\s+/g, " ").trim();
+      if (txt.length > best.length) best = txt;
+    });
+    if (best.length >= 200 && sel !== "body") return best;
   }
-  return "";
+  return best;
 }
 
 async function fetchHtml(url: string): Promise<string> {
