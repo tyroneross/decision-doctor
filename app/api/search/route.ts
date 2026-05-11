@@ -143,7 +143,10 @@ export async function GET(req: Request) {
         tx.execute(sql`
           SELECT id, title, source_url, body
             FROM corpus_documents
-           WHERE id = ANY(${candidateIds}::uuid[])
+           WHERE id IN (${sql.join(
+             candidateIds.map((id) => sql`${id}::uuid`),
+             sql`, `,
+           )})
         `),
       ),
   );
@@ -167,7 +170,12 @@ export async function GET(req: Request) {
         query: q,
         docs: candidateIds.flatMap((id) => {
           const row = hydrated.get(id);
-          return row ? [{ id, text: row.body }] : [];
+          // Many openai-news docs have body=58 chars (CDP loader placeholder)
+          // while title carries real signal. Always prepend title so the
+          // cross-encoder / listwise judge has something to anchor on.
+          return row
+            ? [{ id, text: `${row.title}\n\n${row.body}`.slice(0, 1500) }]
+            : [];
         }),
       },
       gpt4oRerank,

@@ -6,9 +6,16 @@
 // why we substituted paradedb's pg_search (deprecated on Neon as of
 // 2026-05-11).
 //
-// Uses `body_tsv` (body-only) per the F-1 pivot brief. The live DB also
-// exposes `search_tsv` (title-weighted A + body-weighted B), which is a
-// fallback target if F-12 recall@10 falls short.
+// Uses `search_tsv` (setweight(title,'A') || setweight(body,'B')), NOT
+// `body_tsv`. The original F-1 pivot memo defaulted to body_tsv, but
+// inspection of the live corpus (2026-05-11) showed 50 of 121 documents
+// (openai-news source) have body length = 58 chars — CDP load
+// placeholder, not the article text. body_tsv would give zero lexical
+// signal for those rows. search_tsv is the title-weighted variant that
+// also lives in the live DB (corpus_documents_search_idx GIN), so the
+// swap is one identifier change. See
+// .build-loop/memory/pattern_tsvector_rank_query.md for the column
+// discovery + rationale.
 //
 // Runs inside the caller's actor transaction (set_config('app.current_user_id', ...))
 // so RLS on corpus_documents is enforced.
@@ -41,9 +48,9 @@ export async function bm25Search(
   const rows = await tx.execute(sql`
     WITH tsq AS (SELECT websearch_to_tsquery('english', ${trimmed}) AS q)
     SELECT id AS doc_id,
-           ts_rank_cd(body_tsv, tsq.q, 32) AS rank
+           ts_rank_cd(search_tsv, tsq.q, 32) AS rank
       FROM corpus_documents, tsq
-     WHERE body_tsv @@ tsq.q
+     WHERE search_tsv @@ tsq.q
      ORDER BY rank DESC
      LIMIT ${limit}
   `);

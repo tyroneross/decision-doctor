@@ -44,6 +44,13 @@ export async function kgSearch(
 ): Promise<KGHit[]> {
   const tokens = tokenize(query);
   if (tokens.length === 0) return [];
+  // Drizzle's tagged-template array binding emits a record tuple, not
+  // text[] — we have to build the array literal explicitly via sql.join.
+  // ARRAY[<tok1>, <tok2>, ...]::text[] is the equivalent form.
+  const tokenArr = sql`ARRAY[${sql.join(
+    tokens.map((t) => sql`${t}`),
+    sql`, `,
+  )}]::text[]`;
   // Single SQL pass: resolve seed entities, 1-hop expansion, mention rollup.
   // We use UNION ALL to merge seeds + 1-hop neighbors before joining
   // through mentions so a doc that mentions both a seed AND a neighbor
@@ -52,10 +59,10 @@ export async function kgSearch(
     WITH seed AS (
       SELECT DISTINCT id
         FROM ai_entities
-       WHERE lower(canonical_name) = ANY(${tokens}::text[])
-          OR aliases && ${tokens}::text[]
+       WHERE lower(canonical_name) = ANY(${tokenArr})
+          OR aliases && ${tokenArr}
           OR EXISTS (
-               SELECT 1 FROM unnest(${tokens}::text[]) AS t(tok)
+               SELECT 1 FROM unnest(${tokenArr}) AS t(tok)
                 WHERE similarity(lower(canonical_name), t.tok) > 0.5
              )
     ),
