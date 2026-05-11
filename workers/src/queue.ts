@@ -10,6 +10,9 @@ import { fetchArxivQuery } from "./adapters/arxiv.js";
 import { handleArxivEmbed } from "./adapters/arxiv-embed.js";
 import { fetchRssFeed } from "./adapters/rss.js";
 import { fetchAnthropicNews } from "./adapters/anthropic-sitemap.js";
+import { handleContentExtract } from "./adapters/content-extract.js";
+import { handleAiSummarize } from "./adapters/ai-summarize.js";
+import { handleKgExtract } from "./adapters/kg-extract.js";
 
 let _boss: PgBoss | null = null;
 let _started = false;
@@ -49,6 +52,9 @@ export async function startQueue(): Promise<PgBoss> {
   await boss.createQueue("arxiv-embed");
   await boss.createQueue("rss-fetch");
   await boss.createQueue("anthropic-news-fetch");
+  await boss.createQueue("content-extract");
+  await boss.createQueue("ai-summarize");
+  await boss.createQueue("kg-extract");
   await boss.createQueue("test-job");
 
   // ---- Register handlers --------------------------------------------------
@@ -70,7 +76,7 @@ export async function startQueue(): Promise<PgBoss> {
         // Idempotent at the handler level — replays hit the content_hash
         // cache and insert zero new chunks.
         for (const docId of r.ingestedIds) {
-          await boss.send("arxiv-embed", { documentId: docId });
+          await boss.send("content-extract", { documentId: docId });
         }
         results.push({ id: job.id, ...r });
       }
@@ -89,6 +95,60 @@ export async function startQueue(): Promise<PgBoss> {
       const out = [];
       for (const job of jobs) {
         const r = await handleArxivEmbed({ documentId: job.data.documentId });
+        out.push({ id: job.id, ...r });
+      }
+      return out;
+    },
+  );
+
+  // content-extract: per-source body enrichment (cheerio / CDP / noop).
+  // Payload: { documentId: string }
+  // Chains: arxiv-embed after the body is updated. ai-summarize + kg-extract
+  // are added in later chunks; they fan out from here once registered.
+  await boss.work<{ documentId: string }>(
+    "content-extract",
+    { batchSize: 1 },
+    async (jobs) => {
+      const out = [];
+      for (const job of jobs) {
+        const r = await handleContentExtract({ documentId: job.data.documentId });
+        // Fan out downstream — all three run against the enriched body.
+        await boss.send("arxiv-embed", { documentId: job.data.documentId });
+        await boss.send("ai-summarize", { documentId: job.data.documentId });
+        await boss.send("kg-extract", { documentId: job.data.documentId });
+        out.push({ id: job.id, ...r });
+      }
+      return out;
+    },
+  );
+
+  // ai-summarize: Groq Llama 3.3 70B JSON-mode summary written into
+  // metadata.ai_summary. SMB-persona constrained; graceful-degrade on
+  // Groq error. Payload: { documentId: string }
+  await boss.work<{ documentId: string }>(
+    "ai-summarize",
+    { batchSize: 1 },
+    async (jobs) => {
+      const out = [];
+      for (const job of jobs) {
+        const r = await handleAiSummarize({ documentId: job.data.documentId });
+        out.push({ id: job.id, ...r });
+      }
+      return out;
+    },
+  );
+
+  // kg-extract: Groq Llama 3.3 70B JSON-mode entity + relationship
+  // extraction. Canonicalizes against ai_entities via (exact → pg_trgm ≥ 0.7
+  // → alias overlap → insert). Writes mentions + relationships in one txn.
+  // Doc-level idempotent: skip if any mention row already exists.
+  await boss.work<{ documentId: string }>(
+    "kg-extract",
+    { batchSize: 1 },
+    async (jobs) => {
+      const out = [];
+      for (const job of jobs) {
+        const r = await handleKgExtract({ documentId: job.data.documentId });
         out.push({ id: job.id, ...r });
       }
       return out;
@@ -118,7 +178,7 @@ export async function startQueue(): Promise<PgBoss> {
           maxItems: job.data.maxItems,
         });
         for (const docId of r.ingestedIds) {
-          await boss.send("arxiv-embed", { documentId: docId });
+          await boss.send("content-extract", { documentId: docId });
         }
         results.push({ id: job.id, ...r });
       }
@@ -146,7 +206,7 @@ export async function startQueue(): Promise<PgBoss> {
           maxArticles: job.data.maxArticles,
         });
         for (const docId of r.ingestedIds) {
-          await boss.send("arxiv-embed", { documentId: docId });
+          await boss.send("content-extract", { documentId: docId });
         }
         results.push({ id: job.id, ...r });
       }
@@ -182,6 +242,9 @@ export async function queueCount(): Promise<number> {
     "arxiv-embed",
     "rss-fetch",
     "anthropic-news-fetch",
+    "content-extract",
+    "ai-summarize",
+    "kg-extract",
     "test-job",
   ];
   let total = 0;

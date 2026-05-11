@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "_comment": "Workers-only service. Don't override install (Railpack's default copies root package.json + pnpm-lock + workers/ for caching). DO override build: skip `next build` (would fail without web-app env vars) and install workers deps. Start command launches workers from workers/.",
+  "steps": {
+    "build": {
+      "commands": [
+        "cd workers && pnpm install --frozen-lockfile"
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "cd workers && node --import tsx src/index.ts",
+    "aptPackages": ["chromium"]
+  }
+}

@@ -76,3 +76,6 @@ public/workbox-*.js.map
 # --- Build-loop scratch + Claude session state ---
 .build-loop/
 .claude/
+
+# Integration status — regenerated each check, not tracked
+docs/handover/integration-status.md
