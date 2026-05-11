@@ -219,6 +219,138 @@ export const corpusEmbeddings = pgTable(
   }),
 );
 
+// --- Library tables (V2 P0: pain-to-AI-recommendation) ---
+// Scope-keyed: 'global' for curated content; user_id::text for saved/promoted artifacts.
+// RLS lives in drizzle/0007_library.sql (same scope-based pattern as corpus_documents).
+// pain_path + starting_level are CHECK-constrained at the DB level — Drizzle has no
+// first-class enum helper that mirrors a Postgres CHECK constraint, so the constraint
+// stays SQL-side and we surface it as a TS union type below.
+
+export type PainPath =
+  | "referrals"
+  | "research"
+  | "admin"
+  | "capacity_growth"
+  | "follow_up"
+  | "custom";
+
+export type StartingLevel =
+  | "prompt"
+  | "checklist"
+  | "skill"
+  | "plugin"
+  | "agent";
+
+export const libraryUseCases = pgTable(
+  "library_use_cases",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    scope: text("scope").notNull(),
+    painPath: text("pain_path").$type<PainPath>().notNull(),
+    startingLevel: text("starting_level").$type<StartingLevel>().notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    rationale: text("rationale").notNull().default(""),
+    estimatedMinutesSavedPerWeek: integer("estimated_minutes_saved_per_week"),
+    metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    scopeIdx: index("library_use_cases_scope_idx").on(t.scope),
+    pathIdx: index("library_use_cases_path_idx").on(t.painPath),
+    pathScopeIdx: index("library_use_cases_path_scope_idx").on(
+      t.painPath,
+      t.scope,
+    ),
+  }),
+);
+
+export const libraryPrompts = pgTable(
+  "library_prompts",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    scope: text("scope").notNull(),
+    painPath: text("pain_path").$type<PainPath>().notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    description: text("description").notNull().default(""),
+    metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    scopeIdx: index("library_prompts_scope_idx").on(t.scope),
+    pathIdx: index("library_prompts_path_idx").on(t.painPath),
+  }),
+);
+
+export const librarySkills = pgTable(
+  "library_skills",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    scope: text("scope").notNull(),
+    painPath: text("pain_path").$type<PainPath>().notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    sourceRecommendationId: uuid("source_recommendation_id"),
+    qualityDiagnostic: jsonb("quality_diagnostic")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    scopeIdx: index("library_skills_scope_idx").on(t.scope),
+    pathIdx: index("library_skills_path_idx").on(t.painPath),
+    sourceRecIdx: index("library_skills_source_rec_idx").on(
+      t.sourceRecommendationId,
+    ),
+  }),
+);
+
+export const libraryPlugins = pgTable(
+  "library_plugins",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    scope: text("scope").notNull(),
+    painPath: text("pain_path").$type<PainPath>().notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    sourceRecommendationId: uuid("source_recommendation_id"),
+    qualityDiagnostic: jsonb("quality_diagnostic")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    scopeIdx: index("library_plugins_scope_idx").on(t.scope),
+    pathIdx: index("library_plugins_path_idx").on(t.painPath),
+    sourceRecIdx: index("library_plugins_source_rec_idx").on(
+      t.sourceRecommendationId,
+    ),
+  }),
+);
+
 // Type exports — plural matches DB; type names stay singular for ergonomics.
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -230,3 +362,11 @@ export type CorpusDocument = typeof corpusDocuments.$inferSelect;
 export type NewCorpusDocument = typeof corpusDocuments.$inferInsert;
 export type CorpusEmbedding = typeof corpusEmbeddings.$inferSelect;
 export type NewCorpusEmbedding = typeof corpusEmbeddings.$inferInsert;
+export type LibraryUseCase = typeof libraryUseCases.$inferSelect;
+export type NewLibraryUseCase = typeof libraryUseCases.$inferInsert;
+export type LibraryPrompt = typeof libraryPrompts.$inferSelect;
+export type NewLibraryPrompt = typeof libraryPrompts.$inferInsert;
+export type LibrarySkill = typeof librarySkills.$inferSelect;
+export type NewLibrarySkill = typeof librarySkills.$inferInsert;
+export type LibraryPlugin = typeof libraryPlugins.$inferSelect;
+export type NewLibraryPlugin = typeof libraryPlugins.$inferInsert;
