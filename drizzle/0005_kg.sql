@@ -23,7 +23,7 @@
 -- ai_sources — registry of crawl targets (global + per-user)
 -- ============================================================================
 
-CREATE TABLE ai_sources (
+CREATE TABLE IF NOT EXISTS ai_sources (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   scope           TEXT NOT NULL,                  -- 'global' or user_id::text
   source_kind     TEXT NOT NULL CHECK (source_kind IN (
@@ -46,23 +46,23 @@ CREATE TABLE ai_sources (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (scope, source_key)
 );
-CREATE INDEX ai_sources_scope_enabled_idx ON ai_sources (scope, enabled) WHERE enabled = true;
+CREATE INDEX IF NOT EXISTS ai_sources_scope_enabled_idx ON ai_sources (scope, enabled) WHERE enabled = true;
 
 ALTER TABLE ai_sources ENABLE ROW LEVEL SECURITY;
-CREATE POLICY ai_sources_scope_read ON ai_sources
+DO $$ BEGIN CREATE POLICY ai_sources_scope_read ON ai_sources
   FOR SELECT USING (
     scope = 'global' OR scope = current_setting('app.current_user_id', true)
-  );
-CREATE POLICY ai_sources_scope_write ON ai_sources
+  ); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY ai_sources_scope_write ON ai_sources
   FOR INSERT WITH CHECK (
     scope = 'global' OR scope = current_setting('app.current_user_id', true)
-  );
+  ); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============================================================================
 -- ai_entities — labs, models, products, people, benchmarks, techniques
 -- ============================================================================
 
-CREATE TABLE ai_entities (
+CREATE TABLE IF NOT EXISTS ai_entities (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   scope           TEXT NOT NULL,
   entity_type     TEXT NOT NULL CHECK (entity_type IN (
@@ -84,31 +84,35 @@ CREATE TABLE ai_entities (
   first_seen_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_seen_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   mention_count   INTEGER NOT NULL DEFAULT 0,     -- denormalized counter, updated by mention triggers
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (scope, entity_type, lower(canonical_name))
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Unique constraint with lower() expression — must be CREATE UNIQUE INDEX
+-- (inline UNIQUE in CREATE TABLE doesn't accept expressions in Postgres).
+CREATE UNIQUE INDEX IF NOT EXISTS ai_entities_canonical_unique
+  ON ai_entities (scope, entity_type, lower(canonical_name));
+
 -- Trigram indexes for fuzzy match — used by KG expansion + canonicalization
-CREATE INDEX ai_entities_name_trgm   ON ai_entities USING gin (lower(canonical_name) gin_trgm_ops);
-CREATE INDEX ai_entities_aliases_gin ON ai_entities USING gin (aliases);
-CREATE INDEX ai_entities_type_scope_idx ON ai_entities (entity_type, scope);
-CREATE INDEX ai_entities_last_seen_idx ON ai_entities (last_seen_at DESC);
+CREATE INDEX IF NOT EXISTS ai_entities_name_trgm   ON ai_entities USING gin (lower(canonical_name) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS ai_entities_aliases_gin ON ai_entities USING gin (aliases);
+CREATE INDEX IF NOT EXISTS ai_entities_type_scope_idx ON ai_entities (entity_type, scope);
+CREATE INDEX IF NOT EXISTS ai_entities_last_seen_idx ON ai_entities (last_seen_at DESC);
 
 ALTER TABLE ai_entities ENABLE ROW LEVEL SECURITY;
-CREATE POLICY ai_entities_scope_read ON ai_entities
+DO $$ BEGIN CREATE POLICY ai_entities_scope_read ON ai_entities
   FOR SELECT USING (
     scope = 'global' OR scope = current_setting('app.current_user_id', true)
-  );
-CREATE POLICY ai_entities_scope_write ON ai_entities
+  ); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY ai_entities_scope_write ON ai_entities
   FOR INSERT WITH CHECK (
     scope = 'global' OR scope = current_setting('app.current_user_id', true)
-  );
+  ); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============================================================================
 -- ai_document_entity_mentions — many-to-many: which entities appear in which docs
 -- ============================================================================
 
-CREATE TABLE ai_document_entity_mentions (
+CREATE TABLE IF NOT EXISTS ai_document_entity_mentions (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   document_id     UUID NOT NULL REFERENCES corpus_documents(id) ON DELETE CASCADE,
   entity_id       UUID NOT NULL REFERENCES ai_entities(id) ON DELETE CASCADE,
@@ -118,8 +122,8 @@ CREATE TABLE ai_document_entity_mentions (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (document_id, entity_id)
 );
-CREATE INDEX ai_mentions_document_idx ON ai_document_entity_mentions(document_id);
-CREATE INDEX ai_mentions_entity_idx   ON ai_document_entity_mentions(entity_id);
+CREATE INDEX IF NOT EXISTS ai_mentions_document_idx ON ai_document_entity_mentions(document_id);
+CREATE INDEX IF NOT EXISTS ai_mentions_entity_idx   ON ai_document_entity_mentions(entity_id);
 
 -- Mentions inherit visibility from corpus_documents (no own RLS — joins enforce it)
 
@@ -127,7 +131,7 @@ CREATE INDEX ai_mentions_entity_idx   ON ai_document_entity_mentions(entity_id);
 -- ai_relationships — typed edges between entities
 -- ============================================================================
 
-CREATE TABLE ai_relationships (
+CREATE TABLE IF NOT EXISTS ai_relationships (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   scope                 TEXT NOT NULL,
   source_entity_id      UUID NOT NULL REFERENCES ai_entities(id) ON DELETE CASCADE,
@@ -142,25 +146,25 @@ CREATE TABLE ai_relationships (
   CHECK (source_entity_id <> target_entity_id),
   UNIQUE (scope, source_entity_id, target_entity_id, relationship_type)
 );
-CREATE INDEX ai_relationships_source_idx ON ai_relationships(source_entity_id);
-CREATE INDEX ai_relationships_target_idx ON ai_relationships(target_entity_id);
-CREATE INDEX ai_relationships_type_idx   ON ai_relationships(relationship_type);
+CREATE INDEX IF NOT EXISTS ai_relationships_source_idx ON ai_relationships(source_entity_id);
+CREATE INDEX IF NOT EXISTS ai_relationships_target_idx ON ai_relationships(target_entity_id);
+CREATE INDEX IF NOT EXISTS ai_relationships_type_idx   ON ai_relationships(relationship_type);
 
 ALTER TABLE ai_relationships ENABLE ROW LEVEL SECURITY;
-CREATE POLICY ai_relationships_scope_read ON ai_relationships
+DO $$ BEGIN CREATE POLICY ai_relationships_scope_read ON ai_relationships
   FOR SELECT USING (
     scope = 'global' OR scope = current_setting('app.current_user_id', true)
-  );
-CREATE POLICY ai_relationships_scope_write ON ai_relationships
+  ); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY ai_relationships_scope_write ON ai_relationships
   FOR INSERT WITH CHECK (
     scope = 'global' OR scope = current_setting('app.current_user_id', true)
-  );
+  ); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============================================================================
 -- ai_search_queries — per-query diagnostics for F-31 observability
 -- ============================================================================
 
-CREATE TABLE ai_search_queries (
+CREATE TABLE IF NOT EXISTS ai_search_queries (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID REFERENCES users(id) ON DELETE SET NULL,
   query_text      TEXT NOT NULL,
@@ -175,9 +179,9 @@ CREATE TABLE ai_search_queries (
   degraded_reason TEXT,                                     -- 'embedding_unavailable', 'rerank_unavailable', 'kg_skipped_low_confidence'
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX ai_search_queries_user_idx
+CREATE INDEX IF NOT EXISTS ai_search_queries_user_idx
   ON ai_search_queries(user_id, created_at DESC);
-CREATE INDEX ai_search_queries_degraded_idx
+CREATE INDEX IF NOT EXISTS ai_search_queries_degraded_idx
   ON ai_search_queries(created_at DESC) WHERE degraded = true;
 
 -- ============================================================================
