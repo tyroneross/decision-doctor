@@ -1,13 +1,15 @@
-# Railway Nixpacks build config — adds Chromium for the content-extract CDP path.
+# Railway Nixpacks build config — installs Chromium for the content-extract CDP path.
 #
-# The "..." spread is REQUIRED: Nixpacks auto-detects nodejs + pnpm + cacert
-# from the Node provider. Without "...", this list REPLACES the defaults and
-# strips packages needed for HTTPS/TLS during `pnpm install`, causing build
-# failure with no clear message.
+# Why aptPkgs not nixPkgs for chromium:
+# Nix's `chromium` package builds from source (10-20 min, often OOMs Railway's
+# builder). Debian's apt `chromium` is a prebuilt binary that installs in
+# seconds and lands at /usr/bin/chromium — which IBR's findChrome() already
+# discovers (workers/src/cdp/browser.ts:22). The Puppeteer-Railway recipe
+# (github.com/ryannono/Puppeteer-Railway-Buildpack) uses the same aptPkgs
+# approach.
 #
-# Start command is set in workers/railway.json (deploy.startCommand) — do NOT
-# duplicate here. Railway honors the JSON; a duplicate cmd causes silent
-# overrides and bricked deploys.
+# "..." preserves Nixpacks' auto-detected packages (nodejs, pnpm, cacert).
+# Start command is set in workers/railway.json — do not duplicate here.
 
 [phases.setup]
-nixPkgs = ["...", "chromium"]
+aptPkgs = ["...", "chromium"]
