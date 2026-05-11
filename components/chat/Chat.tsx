@@ -369,6 +369,7 @@ export function Chat({ seed }: { seed?: string } = {}) {
             <div
               className={
                 "max-w-[85%] rounded-2xl border border-line bg-paper px-4 py-2.5 text-[15px] leading-relaxed text-text " +
+                "whitespace-pre-wrap break-words " +
                 (m.role === "user" ? "rounded-tr-sm" : "rounded-tl-sm")
               }
             >
@@ -528,7 +529,9 @@ export function Chat({ seed }: { seed?: string } = {}) {
           onSubmit={(v) => runQuery(v)}
           placeholder="Tell me where the hours go…"
           disabled={busy}
-          ariaLabel="search"
+          ariaLabel="message"
+          multiline
+          maxRows={8}
         />
         <p className="mt-2 text-center text-[12px] text-mute">
           no PHI · responses use the math under "show the work"
