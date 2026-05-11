@@ -61,21 +61,33 @@ const REGISTRY: ScheduleDef[] = [
       );
     },
   },
-  // Placeholder schedules — adapters not yet built. They appear in
-  // /cron-status with last_fire:null so ops can see what's wired vs pending.
   {
     name: "anthropic-news-6h",
-    cron: "0 */6 * * *",
+    cron: "0 */6 * * *", // 00:00, 06:00, 12:00, 18:00 UTC
     fire: async () => {
-      // TODO(F-31): wire when the Anthropic adapter lands.
-      // Until then this is a no-op so the schedule itself is harmless.
+      const boss = getBoss();
+      await boss.send(
+        "anthropic-news-fetch",
+        { scope: "global", maxArticles: 20 },
+        { singletonKey: "anthropic-news-6h" },
+      );
     },
   },
   {
-    name: "openai-changelog-6h",
-    cron: "10 */6 * * *",
+    name: "openai-news-rss-6h",
+    cron: "10 */6 * * *", // 00:10, 06:10, 12:10, 18:10 UTC (offset to avoid pile-up with Anthropic)
     fire: async () => {
-      // TODO(F-31): wire when the OpenAI changelog adapter lands.
+      const boss = getBoss();
+      await boss.send(
+        "rss-fetch",
+        {
+          url: "https://openai.com/news/rss.xml",
+          sourceType: "openai-news",
+          scope: "global",
+          maxItems: 50,
+        },
+        { singletonKey: "openai-news-rss-6h" },
+      );
     },
   },
   {
@@ -83,6 +95,7 @@ const REGISTRY: ScheduleDef[] = [
     cron: "20 3 * * *",
     fire: async () => {
       // TODO(F-31): wire when the Perplexity hub adapter lands.
+      // Perplexity Hub may need scraping (need to verify feed availability).
     },
   },
 ];

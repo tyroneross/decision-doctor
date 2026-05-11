@@ -8,6 +8,8 @@
 import PgBoss from "pg-boss";
 import { fetchArxivQuery } from "./adapters/arxiv.js";
 import { handleArxivEmbed } from "./adapters/arxiv-embed.js";
+import { fetchRssFeed } from "./adapters/rss.js";
+import { fetchAnthropicNews } from "./adapters/anthropic-sitemap.js";
 
 let _boss: PgBoss | null = null;
 let _started = false;
@@ -45,6 +47,8 @@ export async function startQueue(): Promise<PgBoss> {
   // Idempotent — safe to re-run.
   await boss.createQueue("arxiv-fetch");
   await boss.createQueue("arxiv-embed");
+  await boss.createQueue("rss-fetch");
+  await boss.createQueue("anthropic-news-fetch");
   await boss.createQueue("test-job");
 
   // ---- Register handlers --------------------------------------------------
@@ -91,6 +95,66 @@ export async function startQueue(): Promise<PgBoss> {
     },
   );
 
+  // rss-fetch: generic RSS 2.0 ingest. Used by OpenAI news and any other
+  // source that publishes a standard RSS feed.
+  // Payload: { url: string; sourceType: string; scope?: string; maxItems?: number }
+  // Chains: each new corpus_documents row → arxiv-embed (handler is source-agnostic
+  //   despite its name; chunks + embeds the body of any document).
+  await boss.work<{
+    url: string;
+    sourceType: string;
+    scope?: string;
+    maxItems?: number;
+  }>(
+    "rss-fetch",
+    { batchSize: 1 },
+    async (jobs) => {
+      const results = [];
+      for (const job of jobs) {
+        const r = await fetchRssFeed({
+          url: job.data.url,
+          sourceType: job.data.sourceType,
+          scope: job.data.scope ?? "global",
+          maxItems: job.data.maxItems,
+        });
+        for (const docId of r.ingestedIds) {
+          await boss.send("arxiv-embed", { documentId: docId });
+        }
+        results.push({ id: job.id, ...r });
+      }
+      console.log("[rss-fetch] processed:", JSON.stringify(results));
+      return results;
+    },
+  );
+
+  // anthropic-news-fetch: discover via sitemap, fetch per-article og: meta,
+  // INSERT into corpus_documents. Rate-limited 1 req/sec per Atomize pattern.
+  // Payload: { scope?: string; sinceIso?: string; maxArticles?: number }
+  await boss.work<{
+    scope?: string;
+    sinceIso?: string;
+    maxArticles?: number;
+  }>(
+    "anthropic-news-fetch",
+    { batchSize: 1 },
+    async (jobs) => {
+      const results = [];
+      for (const job of jobs) {
+        const r = await fetchAnthropicNews({
+          scope: job.data.scope ?? "global",
+          sinceIso: job.data.sinceIso,
+          maxArticles: job.data.maxArticles,
+        });
+        for (const docId of r.ingestedIds) {
+          await boss.send("arxiv-embed", { documentId: docId });
+        }
+        results.push({ id: job.id, ...r });
+      }
+      console.log("[anthropic-news-fetch] processed:", JSON.stringify(results));
+      return results;
+    },
+  );
+
   // test-job: round-trips its payload. Used by tests and `pnpm enqueue:test`.
   await boss.work<{ echo: string }>("test-job", async (jobs) => {
     const out = jobs.map((j) => ({ ok: true, echo: j.data.echo, id: j.id }));
@@ -113,7 +177,13 @@ export async function stopQueue(): Promise<void> {
 export async function queueCount(): Promise<number> {
   if (!_boss || !_started) return 0;
   // pg-boss doesn't expose a single count; we approximate via the active queues.
-  const queues = ["arxiv-fetch", "arxiv-embed", "test-job"];
+  const queues = [
+    "arxiv-fetch",
+    "arxiv-embed",
+    "rss-fetch",
+    "anthropic-news-fetch",
+    "test-job",
+  ];
   let total = 0;
   for (const q of queues) {
     const size = await _boss.getQueueSize(q);
