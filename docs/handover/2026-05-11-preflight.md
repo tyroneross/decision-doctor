@@ -50,19 +50,22 @@ Two viable paths:
 - Unique key: `(scope, source_key)`
 - `trust_tier` default **2** (not 1) — seed must specify explicitly
 - `crawl_config jsonb` is the place to store per-source overrides (rate-limit ms, content-extract method override, etc.)
+- **`source_kind` CHECK constraint** allows only: `lab_news` · `lab_research` · `paper_index` · `industry_news` · `user_url` · `user_rss` · `user_file`. `source_kind` describes WHAT the source is (lab news / paper index / etc.) — NOT the transport (RSS / sitemap / API). Transport lives in `crawl_config.transport` if needed.
 
-**Seed payload (locked):**
+**Seed payload (locked — values match schema CHECK):**
+
+> ⚠️ The first draft of this doc encoded `arxiv` / `sitemap` / `rss` as `source_kind` values. Those VIOLATE the CHECK constraint. Build-loop on 2026-05-11 caught it by reading `drizzle/0005_kg.sql` and aligned to the schema-valid values below.
 
 ```sql
 INSERT INTO ai_sources (scope, source_kind, source_key, display_name, origin_url, trust_tier, crawl_config)
 VALUES
-  ('global', 'arxiv',          'arxiv-cs-ai',    'arXiv cs.AI',     'https://arxiv.org/list/cs.AI/recent',         1, '{"category":"lab_research"}'),
-  ('global', 'sitemap',        'anthropic-news', 'Anthropic News',  'https://www.anthropic.com/sitemap.xml',       1, '{"category":"lab_announcement","rate_limit_ms":1000}'),
-  ('global', 'rss',            'openai-news',    'OpenAI News',     'https://openai.com/news/rss.xml',             1, '{"category":"lab_announcement","content_extract":"cdp"}')
+  ('global', 'paper_index', 'arxiv-cs-ai',    'arXiv cs.AI',    'https://arxiv.org/list/cs.AI/recent',     1, '{"category":"lab_research"}'),
+  ('global', 'lab_news',    'anthropic-news', 'Anthropic News', 'https://www.anthropic.com/sitemap.xml',   1, '{"category":"lab_announcement","rate_limit_ms":1000}'),
+  ('global', 'lab_news',    'openai-news',    'OpenAI News',    'https://openai.com/news/rss.xml',         1, '{"category":"lab_announcement","content_extract":"cdp"}')
 ON CONFLICT (scope, source_key) DO NOTHING;
 ```
 
-Atomize-style `authority_tier` mapping (per plan §10) — lab announcements at tier 1, aggregators at tier 2, editorial at tier 3 — is reflected in `crawl_config.category`. Schema leaves room for tier=2/3 SMB sources later without rework.
+Atomize-style authority tiers — lab announcements at tier 1, aggregators at tier 2, editorial at tier 3 — live in `crawl_config.category` + `trust_tier`. Schema leaves room for tier=2/3 SMB sources later without rework.
 
 ### `ai_document_entity_mentions`
 - Unique key: `(document_id, entity_id)` — one mention row per doc/entity pair; if the LLM emits the same entity twice in one doc, MERGE evidence_text or pick the strongest
