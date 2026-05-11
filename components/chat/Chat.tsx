@@ -8,6 +8,8 @@ import {
   formatHrs,
   totalHoursSaved,
 } from "@/lib/decision-display";
+import { Chip } from "@/components/ui/Chip";
+import { PillSearchBar } from "@/components/ui/PillSearchBar";
 
 // ─── Types (mirror /api/chat response shape) ────────────────────────────
 
@@ -59,7 +61,7 @@ const QUICK_PROMPTS = [
 
 // ─── Component ──────────────────────────────────────────────────────────
 
-export function Chat() {
+export function Chat({ seed }: { seed?: string } = {}) {
   const [thread, setThread] = useState<ChatThread>({ messages: [OPENING] });
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -73,6 +75,7 @@ export function Chat() {
   // decline path. Cleared whenever the chips are dismissed.
   const [originalQuestion, setOriginalQuestion] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const seedFiredRef = useRef(false);
 
   // Restore prior thread on mount.
   useEffect(() => {
@@ -206,33 +209,38 @@ export function Chat() {
 
   const isEmptyState =
     thread.messages.length === 1 && thread.messages[0]?.role === "assistant";
-  const canSend = input.trim().length > 0 && !busy;
+
+  // Seed handling: when arriving via /app/chat?seed=<text>, auto-submit once
+  // on the opening assistant message. Ref guard prevents re-fire on remount
+  // (e.g., HMR or strict-mode double-invoke).
+  useEffect(() => {
+    if (!seed || seedFiredRef.current) return;
+    if (!isEmptyState) return;
+    seedFiredRef.current = true;
+    runQuery(seed);
+  }, [seed, isEmptyState, runQuery]);
 
   return (
     <main className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-3xl flex-col">
-      {/* HERO VALUE PROP — only on empty state, mockup v2-01 */}
+      {/* HERO VALUE PROP — only on empty state, ink-only */}
       {isEmptyState && (
-        <article className="dd-fade-up relative mb-6 overflow-hidden rounded-3xl border border-rule bg-white p-6 shadow-soft sm:p-8">
-          <div
-            aria-hidden
-            className="grad-coral absolute -right-12 -top-12 h-48 w-48 rounded-full opacity-20 blur-2xl"
-          />
-          <p className="grad-coral-text text-[11px] font-semibold uppercase tracking-[.14em] sm:text-[12px]">
+        <article className="dd-fade-up mb-6 rounded-2xl border border-line bg-paper p-6 sm:p-8">
+          <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-mute">
             Tell me what's eating your time
           </p>
-          <h1 className="mt-2 text-[26px] font-semibold leading-[1.1] tracking-tight sm:text-[32px]">
+          <h1 className="mt-2 text-[26px] font-semibold leading-[1.1] tracking-tight text-text sm:text-[32px]">
             I'll rank what AI can take off your plate, and build the skill to do it.
           </h1>
-          <p className="mt-3 max-w-xl text-[15px] leading-snug text-ink-700 sm:text-[16px]">
+          <p className="mt-3 max-w-xl text-[15px] leading-snug text-mute sm:text-[16px]">
             Five-minute conversation. You get a ranked list of capacity drains, an
             AI-feasibility score for each, and a paste-ready skill or playbook for
             the top one — so the time comes back this week, not "someday."
           </p>
-          <p className="mt-3 text-[12.5px] text-ink-500">
+          <p className="mt-3 text-[12.5px] text-mute">
             Already know the shape of it?{" "}
             <Link
               href="/app/decisions/new"
-              className="font-semibold text-ink-700 underline-offset-2 hover:text-coral hover:underline"
+              className="text-text underline decoration-line underline-offset-2 hover:text-ink"
             >
               Pick a template instead →
             </Link>
@@ -246,7 +254,7 @@ export function Chat() {
           <button
             type="button"
             onClick={reset}
-            className="ease-soft inline-flex items-center gap-1 rounded-full px-2 py-1 text-[12px] text-ink-500 hover:text-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[12px] text-mute transition-colors duration-150 hover:text-text focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
           >
             <svg
               viewBox="0 0 24 24"
@@ -274,24 +282,14 @@ export function Chat() {
           <li
             key={i}
             className={
-              "dd-fade-up flex items-end gap-2.5 " +
+              "dd-fade-up flex " +
               (m.role === "user" ? "justify-end" : "justify-start")
             }
           >
-            {m.role === "assistant" && (
-              <span
-                aria-hidden
-                className="grad-coral hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-white sm:flex"
-              >
-                DD
-              </span>
-            )}
             <div
               className={
-                "max-w-[85%] rounded-3xl px-5 py-3 text-[15px] leading-relaxed shadow-sm sm:text-[16px] " +
-                (m.role === "user"
-                  ? "grad-coral rounded-br-md text-white"
-                  : "rounded-bl-md bg-cream-2 text-ink-700")
+                "max-w-[85%] rounded-2xl border border-line bg-paper px-4 py-2.5 text-[15px] leading-relaxed text-text " +
+                (m.role === "user" ? "rounded-tr-sm" : "rounded-tl-sm")
               }
             >
               {m.content}
@@ -299,21 +297,51 @@ export function Chat() {
           </li>
         ))}
 
-        {/* Suggested-prompt chips — empty state only, three Miller-friendly */}
+        {/* Suggested-prompt chips — empty state only */}
         {isEmptyState && !busy && (
-          <li className="ml-0 flex flex-wrap gap-2 sm:ml-11">
+          <li className="flex flex-wrap gap-2">
             {QUICK_PROMPTS.map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => runQuery(t)}
-                className="dd-fade-up ease-soft min-h-11 rounded-full border border-rule bg-white px-4 text-[14px] text-ink-700 shadow-sm hover:-translate-y-0.5 hover:border-coral hover:text-coral hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 active:translate-y-0 active:scale-[0.98]"
-              >
+              <Chip key={t} tone="default" onClick={() => runQuery(t)}>
                 {t}
-              </button>
+              </Chip>
             ))}
           </li>
         )}
+
+        {/* Inline assistant action chips — visible after a real exchange,
+            three Miller-friendly options. Hidden during empty state, busy,
+            reframe-chip flow, and after a decision lands (the DecisionCard
+            carries its own actions). */}
+        {!isEmptyState &&
+          !busy &&
+          !reframeChips &&
+          !thread.decision && (
+            <li className="flex flex-wrap gap-2" aria-label="Quick actions">
+              <Link href="/app/decisions/new" tabIndex={-1}>
+                <Chip tone="default">Run the survey</Chip>
+              </Link>
+              <Chip
+                tone="default"
+                onClick={() => {
+                  setInput("");
+                  // Focus the composer by querying its input.
+                  document
+                    .querySelector<HTMLInputElement>('input[aria-label="search"]')
+                    ?.focus();
+                }}
+              >
+                Reframe
+              </Chip>
+              <Chip
+                tone="default"
+                onClick={() =>
+                  runQuery("Show me other angles on the same problem")
+                }
+              >
+                Show alternatives
+              </Chip>
+            </li>
+          )}
 
         {/* F-11 decline-and-reframe chips — surfaced when the classifier
             redirected an out-of-scope question (diagnostic / predictive /
@@ -327,50 +355,45 @@ export function Chat() {
             decline server-side and runs the closest-fit pipeline. The
             override is recorded in methodTrace. */}
         {reframeChips && reframeChips.length > 0 && !busy && (
-          <li className="ml-0 flex flex-wrap gap-2 sm:ml-11" aria-label="Reframe suggestions">
+          <li
+            className="flex flex-wrap gap-2"
+            aria-label="Reframe suggestions"
+          >
             {reframeChips.map((t) => (
-              <button
+              <Chip
                 key={t}
-                type="button"
+                tone="selected"
                 onClick={() => {
                   setReframeChips(null);
                   runQuery(t);
                 }}
-                className="dd-fade-up ease-soft min-h-11 rounded-full border border-cat-cap bg-cat-cap-bg px-4 text-[13.5px] font-semibold text-cat-cap-deep shadow-sm hover:-translate-y-0.5 hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
               >
                 {t}
-              </button>
+              </Chip>
             ))}
             {originalQuestion && (
-              <button
+              <Chip
                 key="__user-override"
-                type="button"
+                tone="default"
+                aria-label="Run my original question anyway"
                 onClick={() => {
                   const q = originalQuestion;
                   setReframeChips(null);
                   setOriginalQuestion(null);
                   runQuery(q, { userOverrode: true });
                 }}
-                aria-label="Run my original question anyway"
-                className="dd-fade-up ease-soft min-h-11 rounded-full border border-rule bg-white px-4 text-[13.5px] font-semibold text-ink-700 shadow-sm hover:-translate-y-0.5 hover:border-ink-200 hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
               >
                 Stay with my original question
-              </button>
+              </Chip>
             )}
           </li>
         )}
 
-        {/* Skeleton thinking state (NN/g: -40% perceived load vs spinner) */}
+        {/* Skeleton thinking state */}
         {busy && (
-          <li className="flex items-end gap-2.5">
-            <span
-              aria-hidden
-              className="grad-coral hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-white sm:flex"
-            >
-              DD
-            </span>
+          <li className="flex justify-start">
             <div
-              className="max-w-[85%] space-y-2 rounded-3xl rounded-bl-md bg-cream-2 px-5 py-4 shadow-sm"
+              className="max-w-[85%] space-y-2 rounded-2xl rounded-tl-sm border border-line bg-paper px-4 py-3"
               aria-label="Thinking"
             >
               <span className="skeleton block h-3 w-48 rounded-full" />
@@ -394,89 +417,34 @@ export function Chat() {
       </ul>
 
       {err && (
-        <p className="status-error mb-2 text-sm" role="alert">
+        <p className="mb-2 text-sm text-mute" role="alert">
           {err}
         </p>
       )}
 
-      {/* COMPOSER — sticky, rounded-pill, distinct enabled/disabled */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          runQuery();
-        }}
-        className="ease-soft sticky bottom-0 mt-3 flex items-center gap-2 rounded-full border border-rule bg-white pl-5 pr-2 py-1.5 shadow-sm focus-within:border-coral focus-within:ring-coral-glow"
-      >
-        <label htmlFor="chat-input" className="sr-only">
-          Type a message
-        </label>
-        <input
-          id="chat-input"
-          type="text"
+      {/* COMPOSER — PillSearchBar primitive (28px radius, 1.5px ink border) */}
+      <div className="sticky bottom-0 mt-3">
+        <PillSearchBar
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={setInput}
+          onSubmit={(v) => runQuery(v)}
           placeholder="Tell me where the hours go…"
           disabled={busy}
-          autoComplete="off"
-          className="block min-h-11 w-full bg-transparent text-[15px] text-ink-900 placeholder:text-ink-500 focus:outline-none focus:ring-0 border-0 sm:text-[16px]"
+          ariaLabel="search"
         />
-        <button
-          type="submit"
-          disabled={!canSend}
-          aria-label="Send message"
-          className={
-            "ease-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 " +
-            (canSend
-              ? "grad-coral text-white shadow-coral-press hover:-translate-y-0.5 hover:shadow-coral-hover active:translate-y-0 active:scale-[0.96]"
-              : "cursor-not-allowed bg-cream-2 text-ink-300")
-          }
-        >
-          {busy ? (
-            <svg
-              className="h-4 w-4 animate-spin"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden
-            >
-              <circle cx="12" cy="12" r="10" strokeOpacity=".25" />
-              <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
-            </svg>
-          ) : (
-            <svg
-              viewBox="0 0 24 24"
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
-          )}
-        </button>
-      </form>
-      <p className="mt-2 text-center text-[12px] text-ink-500">
-        Five-minute conversation · Cmd+Enter to send · 20 messages a day
-      </p>
+        <p className="mt-2 text-center text-[12px] text-mute">
+          no PHI · responses use the math under "show the work"
+        </p>
+      </div>
     </main>
   );
 }
 
 // ─── In-thread Decision card ────────────────────────────────────────────
 //
-// Audit fixes applied:
-//   #1 single border (was border + ring + shadow triple-stack)
-//   #2 reducers: outer border + dividers, no per-item border
-//   #3 strip the inner <pre> border
-//   #4 h2 → text-xl
-//   #5 disclosure: text + chevron only, no hover pill
-//   #8 confidence chip carries an icon prefix
-//  #10 print button on the card
+// NOTE: This component is replaced wholesale in C7 (3-tier pyramid).
+// C6a leaves it intact so the chat-to-decision flow keeps working
+// end-to-end; the legacy classes here will be removed by C7 + C11 cleanup.
 
 function DecisionCard({
   decision,
@@ -550,7 +518,6 @@ function DecisionCard({
           </p>
 
           {topReducer.artifact.promptText && (
-            // Audit #3 — strip inner border; bg-white rests on cat-skill-bg
             <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-xl bg-white p-3 text-[12px] leading-relaxed text-ink-900 shadow-sm">
               {topReducer.artifact.promptText}
             </pre>
@@ -587,7 +554,7 @@ function DecisionCard({
         </p>
       </section>
 
-      {/* OTHER REDUCERS — outer border + dividers (audit #2) */}
+      {/* OTHER REDUCERS — outer border + dividers */}
       {restReducers.length > 0 && (
         <section className="border-b border-rule p-6 sm:p-7">
           <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-ink-500">
@@ -614,7 +581,7 @@ function DecisionCard({
         </section>
       )}
 
-      {/* SHOW THE MATH — disclosure, no hover pill (audit #5) */}
+      {/* SHOW THE MATH — disclosure, no hover pill */}
       <details className="group p-6 sm:p-7">
         <summary
           className="ease-soft flex cursor-pointer items-center gap-2 text-[14px] font-medium text-ink-700 hover:text-ink-900 [&::-webkit-details-marker]:hidden"
@@ -637,7 +604,6 @@ function DecisionCard({
           </span>
         </summary>
         <div className="mt-4 space-y-4 border-t border-rule pt-4">
-          {/* Plain-language explainer first (audit principle: jargon under disclosure) */}
           <div className="rounded-xl bg-cream-2 p-4 text-[13px] leading-relaxed text-ink-700">
             We compared {decision.alternatives.length + 1} paths against your
             stated priorities. The top option came in at{" "}
@@ -680,7 +646,7 @@ function DecisionCard({
         </div>
       </details>
 
-      {/* FOOTER ACTIONS — saved-to + print (audit #10) */}
+      {/* FOOTER ACTIONS — saved-to + print */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-rule bg-cream-2/40 px-6 py-4 sm:px-7">
         <div className="flex items-center gap-1.5 text-[12.5px] text-ink-500">
           <span
@@ -721,8 +687,6 @@ function DecisionCard({
 }
 
 // Width-stable copy button with brief success choreography.
-// Mirrors the RecommendationView's CopyPromptButton — kept inline here so
-// the chat bundle doesn't pull the heavier RecommendationView graph.
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const onClick = () => {
