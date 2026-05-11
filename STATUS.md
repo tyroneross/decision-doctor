@@ -124,3 +124,32 @@ at runtime.
 
 ## Phase 4b — A/B/F theme picker (Settings) — _next chunk (C12)_
 
+## Phase 5 — V2 Pain-to-AI Recommendation
+
+2026-05-10 — V2 P0 shipped on branch `v2-pain-to-ai-recommendation` (not yet merged to main):
+
+- L1 (23a263a) library schema + RLS
+- E1 (c33e51e) Stage 8 + runRecommendation peer
+- L3-content (78b637f) 25 use cases + 15 prompts (clinician review flagged)
+- L2 (eb72b7f) library retrieval + 7 APIs + universal search
+- adf3151 PillSearchBar multiline + chat bubble paragraph rendering
+- E2 (aaf6090) pain-path classifier + 9-criteria scoring
+- U1 (451a37c) hybrid first screen
+- S1 (aa69365) PHI guard + rate-limit + audit + library leg + citation tokens
+- E3 (b137bba) recommendations table + /api/recommendations
+- U3 (06fc60f) /app/library with universal search
+- U4 (3c642ba) AdoptionPathwayPicker + builder bridges + quality gate + /app/skills catalog
+- Q1 (c5e29e6) AI-adoption Q&A surface with SSE streaming
+- U2 (e129de6) recommendation pages + 6-tier RecommendationView
+- L3-seeder (pending) — seed runner for library content
+- U5 (this commit) — /app/decisions → /app/history rename, NoPhiNotice on free-text surfaces, V2 route smoke test
+
+Open items before main merge:
+- B1 (backend worktree) — corpus extraction fix in workers/src/adapters/*
+  for the 1,516-corpus-doc audit findings (openai stubs, Perplexity stubs,
+  Anthropic "Loading...", FlippingBook shells, lastmod vs published_at).
+- Migration apply: pnpm db:push to apply 0007_library.sql + 0008_recommendations.sql
+- Library seed: pnpm run library:seed
+- Clinical-advisor review of L3-content
+- Final IBR scan
+

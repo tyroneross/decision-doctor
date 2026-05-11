@@ -16,10 +16,10 @@ import { twMerge } from "tailwind-merge";
 const TABS = [
   { href: "/app", label: "Search", icon: Search, match: (p: string) => p === "/app" },
   {
-    href: "/app/decisions",
-    label: "Decisions",
+    href: "/app/history",
+    label: "History",
     icon: FileText,
-    match: (p: string) => p.startsWith("/app/decisions"),
+    match: (p: string) => p.startsWith("/app/history"),
   },
   {
     href: "/app/skills",

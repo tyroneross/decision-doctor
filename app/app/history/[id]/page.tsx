@@ -7,7 +7,7 @@ import { RecommendationView } from "@/components/recommendation/RecommendationVi
 
 type Props = { params: Promise<{ id: string }> };
 
-export default async function DecisionDetailPage({ params }: Props) {
+export default async function HistoryDetailPage({ params }: Props) {
   const { id } = await params;
   const actor = await getSessionActor();
   if (!actor) return null;

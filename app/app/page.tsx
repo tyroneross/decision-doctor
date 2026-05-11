@@ -117,7 +117,7 @@ export default async function HomePage() {
       <p className="text-[12px] text-mute">
         Need capacity, pricing, or hiring math?{" "}
         <Link
-          href="/app/decisions/new"
+          href="/app/history/new"
           className="font-medium text-ink hover:underline underline-offset-2"
         >
           Use the structured decisions →
@@ -135,7 +135,7 @@ export default async function HomePage() {
               {recent.map((d) => (
                 <li key={d.id}>
                   <Link
-                    href={`/app/decisions/${d.id}`}
+                    href={`/app/history/${d.id}`}
                     className="block py-2.5 hover:bg-line/30 -mx-4 px-4 rounded transition-colors"
                   >
                     <p className="text-[14px] font-medium text-text leading-snug line-clamp-1">

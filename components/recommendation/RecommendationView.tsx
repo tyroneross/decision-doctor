@@ -132,7 +132,7 @@ export function RecommendationView({ row }: { row: Decision }) {
           aria-label="breadcrumb"
           className="flex items-center gap-1.5 text-[13px] text-mute"
         >
-          <Link href="/app/decisions" className="hover:text-text">
+          <Link href="/app/history" className="hover:text-text">
             History
           </Link>
           <span aria-hidden>·</span>

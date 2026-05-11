@@ -188,7 +188,7 @@ function DecisionRow({ row }: { row: DecisionRow }) {
   return (
     <li>
       <Link
-        href={`/app/decisions/${row.id}`}
+        href={`/app/history/${row.id}`}
         className="flex items-center gap-4 px-5 py-4 transition-colors duration-150 hover:bg-line/30 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ink/20"
       >
         <div className="min-w-0 flex-1">

@@ -2,16 +2,16 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 
-// Empty state — ink-only hero card, single primary CTA into chat.
+// Empty state — ink-only hero card.
 // Per UI Guidelines v0.1: terracotta-on-bone, no gradient, no coral shadow,
 // no color-as-decoration. Visual containment via Card primitive (single
 // border, single shadow). Color carries meaning only on the hours-saved
 // pill (`ok` tone) reserved for capacity drains.
 //
-// Note: primary CTA renders as a styled <Link>, not <Button>, because
-// Next/Link wants its child to be the anchor itself. The class string
-// mirrors Button "primary" variant (bg-ink text-paper border-ink) for
-// visual parity with the rest of the system.
+// V2 CTA hierarchy (U5):
+//   Primary   → /app/recommendations/new  (pain-path intake)
+//   Secondary → /app/library              (browse use cases instead)
+//   Tertiary  → /app/chat                 (free-text fallback)
 export function EmptyState() {
   return (
     <section className="space-y-6">
@@ -27,11 +27,10 @@ export function EmptyState() {
           an AI-feasibility score for each, and a paste-ready skill or
           playbook for the top one. Time comes back this week, not "someday."
         </p>
-        <div className="mt-5">
-          {/* Single dominant CTA — Hick's law / NN/g first-run pattern.
-              Target chat (the primary conversational entry). */}
+        <div className="mt-5 space-y-2.5">
+          {/* Primary CTA — V2 pain-path intake (Hick's law / NN/g first-run). */}
           <Link
-            href="/app/chat"
+            href="/app/recommendations/new"
             className={
               "inline-flex h-12 items-center gap-2 rounded-[10px] " +
               "bg-ink px-6 text-[15px] font-semibold text-paper " +
@@ -51,15 +50,25 @@ export function EmptyState() {
             >
               <path d="M12 5v14M5 12h14" />
             </svg>
-            Start a decision
+            Get an AI recommendation
           </Link>
-          <p className="mt-2.5 text-[12.5px] text-mute">
-            Already know the shape of it?{" "}
+          {/* Secondary — browse library */}
+          <p className="text-[12.5px] text-mute">
             <Link
-              href="/app/decisions/new"
+              href="/app/library"
               className="font-semibold text-ink underline-offset-2 hover:underline"
             >
-              Pick a template instead →
+              Browse use cases instead →
+            </Link>
+          </p>
+          {/* Tertiary — chat fallback */}
+          <p className="text-[12px] text-mute">
+            Prefer free-form?{" "}
+            <Link
+              href="/app/chat"
+              className="text-ink underline-offset-2 hover:underline"
+            >
+              Start a conversation
             </Link>
           </p>
         </div>

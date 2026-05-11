@@ -140,10 +140,10 @@ export function IntakeForm({ template }: { template: PublicTemplate }) {
         } catch {
           /* ignore */
         }
-        router.push("/app/decisions/guest-preview");
+        router.push("/app/history/guest-preview");
         return;
       }
-      router.push(`/app/decisions/${out.decisionId}`);
+      router.push(`/app/history/${out.decisionId}`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {

@@ -14,7 +14,7 @@ import { EmptyState } from "@/components/decisions/EmptyState";
 // SSR — RLS-enforced. Loads the user's prior decisions, projects to a
 // shape the list client can render, and computes the hero-ledger
 // aggregates server-side so the client gets serialized primitives.
-export default async function DecisionsHistoryPage() {
+export default async function HistoryPage() {
   const actor = await getSessionActor();
   if (!actor) {
     // Guests see the empty-state hero (CTA into /app to start a decision).

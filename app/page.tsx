@@ -5,6 +5,6 @@ import { headers } from "next/headers";
 // Root: send authenticated users to the app, others to sign-in.
 export default async function Root() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (session?.user) redirect("/app/decisions");
+  if (session?.user) redirect("/app");
   redirect("/sign-in");
 }

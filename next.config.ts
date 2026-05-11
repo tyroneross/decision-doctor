@@ -14,6 +14,17 @@ const config: NextConfig = {
   },
   // Empty turbopack config silences the warning when build-loop later wires hand-rolled SW.
   turbopack: {},
+  async redirects() {
+    // U5: /app/decisions/* → /app/history/* (permanent — 308).
+    // Both the list page and all sub-paths are covered by the wildcard.
+    return [
+      {
+        source: "/app/decisions/:path*",
+        destination: "/app/history/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     // Dev needs 'unsafe-eval' for React Refresh; production stays strict.
     const isDev = process.env.NODE_ENV !== "production";

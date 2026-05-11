@@ -3,6 +3,7 @@ import { listTemplates } from "@/lib/engine/templates";
 import { categoryFor } from "@/lib/decision-display";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
+import { NoPhiNotice } from "@/components/ui/NoPhiNotice";
 
 // F-01 — template selector. UI Guidelines v0.1 ink-only treatment.
 // Reachable from EmptyState secondary link and the chat-hero "skip the
@@ -26,13 +27,15 @@ export default function NewDecisionPage() {
         </p>
       </header>
 
+      <NoPhiNotice />
+
       <ul className="grid grid-cols-1 gap-3">
         {templates.map((t) => {
           const cat = categoryFor(t.id);
           return (
             <li key={t.id}>
               <Link
-                href={`/app/decisions/new/${t.id}`}
+                href={`/app/history/new/${t.id}`}
                 className="block rounded-xl border border-line bg-paper p-5 shadow-card transition-colors hover:border-ink focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
               >
                 <div className="flex items-start justify-between gap-4">

@@ -10,6 +10,7 @@ import {
 } from "@/lib/decision-display";
 import { Chip } from "@/components/ui/Chip";
 import { PillSearchBar } from "@/components/ui/PillSearchBar";
+import { NoPhiNotice } from "@/components/ui/NoPhiNotice";
 import type {
   ClarifierWidget,
   ClarifierSubmission,
@@ -319,7 +320,7 @@ export function Chat({ seed }: { seed?: string } = {}) {
           <p className="mt-3 text-[12.5px] text-mute">
             Already know the shape of it?{" "}
             <Link
-              href="/app/decisions/new"
+              href="/app/history/new"
               className="text-text underline decoration-line underline-offset-2 hover:text-ink"
             >
               Pick a template instead →
@@ -416,7 +417,7 @@ export function Chat({ seed }: { seed?: string } = {}) {
           !reframeChips &&
           !thread.decision && (
             <li className="flex flex-wrap gap-2" aria-label="Quick actions">
-              <Link href="/app/decisions/new" tabIndex={-1}>
+              <Link href="/app/history/new" tabIndex={-1}>
                 <Chip tone="default">Run the survey</Chip>
               </Link>
               <Chip
@@ -523,6 +524,7 @@ export function Chat({ seed }: { seed?: string } = {}) {
 
       {/* COMPOSER — PillSearchBar primitive (28px radius, 1.5px ink border) */}
       <div className="sticky bottom-0 mt-3">
+        <NoPhiNotice />
         <PillSearchBar
           value={input}
           onChange={setInput}
@@ -689,7 +691,7 @@ function DecisionCard({
             <div className="mt-3 grid grid-cols-2 gap-2">
               <CopyButton text={topReducer.artifact.promptText} />
               <Link
-                href={`/app/decisions/${decision.decisionId}`}
+                href={`/app/history/${decision.decisionId}`}
                 className="inline-flex h-10 items-center justify-center gap-1.5 rounded-[10px] border border-ink bg-paper text-[13px] font-semibold text-ink transition-colors hover:bg-line/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
               >
                 See full plan →
@@ -810,7 +812,7 @@ function DecisionCard({
           />
           Saved to{" "}
           <Link
-            href={`/app/decisions/${decision.decisionId}`}
+            href={`/app/history/${decision.decisionId}`}
             className="font-medium text-ink underline-offset-2 hover:underline"
           >
             your decisions

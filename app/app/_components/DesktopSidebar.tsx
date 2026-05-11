@@ -45,10 +45,10 @@ const WORKSPACE = [
     match: (p: string) => p.startsWith("/app/chat"),
   },
   {
-    href: "/app/decisions",
-    label: "Decisions",
+    href: "/app/history",
+    label: "History",
     icon: FileText,
-    match: (p: string) => p.startsWith("/app/decisions"),
+    match: (p: string) => p.startsWith("/app/history"),
   },
   {
     href: "/app/skills",
@@ -143,7 +143,7 @@ export function DesktopSidebar({
         {openCase ? (
           <div className="px-3 py-2 mb-1 rounded-md bg-line/30">
             <Link
-              href={`/app/decisions/${openCase.id}`}
+              href={`/app/history/${openCase.id}`}
               className="block text-[13px] font-medium text-ink leading-snug line-clamp-2"
             >
               {openCase.title}
@@ -157,7 +157,7 @@ export function DesktopSidebar({
             {recentDecisions.slice(0, 5).map((d) => (
               <li key={d.id}>
                 <Link
-                  href={`/app/decisions/${d.id}`}
+                  href={`/app/history/${d.id}`}
                   className="block px-3 py-1 rounded-md text-[13px] text-mute hover:bg-line/30 hover:text-text leading-snug line-clamp-1"
                   title={d.title}
                 >

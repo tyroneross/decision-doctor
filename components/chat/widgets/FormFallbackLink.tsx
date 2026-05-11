@@ -28,7 +28,7 @@ export function FormFallbackLink({
   return (
     <p className="mt-2 text-[12px] text-mute">
       <Link
-        href={`/app/decisions/new/${inferredTemplateId}`}
+        href={`/app/history/new/${inferredTemplateId}`}
         className="text-text underline decoration-line underline-offset-2 hover:text-ink"
       >
         Use the survey form instead →
