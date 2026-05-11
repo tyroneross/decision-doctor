@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
+import { Suspense } from "react";
 import { auth } from "@/lib/auth";
 import { decisions } from "@/lib/db/schema";
 import { runWithActor, withActor } from "@/lib/db/actor";
@@ -9,6 +10,7 @@ import { totalHoursSaved } from "@/lib/decision-display";
 import { ServiceWorkerRegister } from "./_components/sw-register";
 import { MobileBottomNav } from "./_components/MobileBottomNav";
 import { DesktopSidebar } from "./_components/DesktopSidebar";
+import { SkillPanel, type SkillSummary } from "./_components/SkillPanel";
 import { desc } from "drizzle-orm";
 
 // Auth gate for everything under /app/*. SSR redirect — no client flash.
@@ -39,11 +41,12 @@ export default async function AppLayout({
       .join("")
       .slice(0, 2) || "?";
 
-  // Best-effort sidebar data. Failure here must NOT block layout render
-  // (auth gate above is the load-bearing piece).
+  // Best-effort sidebar + skill-panel data. Failure here must NOT block
+  // layout render (auth gate above is the load-bearing piece).
   let totalHrs = 0;
   let skillCount = 0;
   let recent: { id: string; title: string }[] = [];
+  let skills: SkillSummary[] = [];
   try {
     const actor = await getSessionActor();
     if (actor) {
@@ -75,6 +78,39 @@ export default async function AppLayout({
         id: r.id,
         title: r.title ?? "(untitled decision)",
       }));
+      // Project bounded skill summaries for the desktop F3 right rail.
+      // We cap at ~25 across the recent 50 decisions to keep the prop
+      // payload small and to avoid bloating the layout's HTML size.
+      const projected: SkillSummary[] = [];
+      for (const r of rows) {
+        const reducers = Array.isArray(r.workloadReducers)
+          ? (r.workloadReducers as Array<Record<string, unknown>>)
+          : [];
+        for (let i = 0; i < reducers.length; i++) {
+          const red = reducers[i] ?? {};
+          const title =
+            typeof red.title === "string" && red.title.trim()
+              ? red.title.trim()
+              : `Skill ${i + 1}`;
+          const description =
+            typeof red.description === "string" ? red.description : "";
+          const hrs =
+            typeof red.estTimeSavingHrsPerWeek === "number"
+              ? red.estTimeSavingHrsPerWeek
+              : 0;
+          projected.push({
+            decisionId: r.id,
+            decisionTitle: r.title ?? "(untitled decision)",
+            index: i,
+            title,
+            description,
+            estTimeSavingHrsPerWeek: hrs,
+          });
+          if (projected.length >= 25) break;
+        }
+        if (projected.length >= 25) break;
+      }
+      skills = projected;
     }
   } catch {
     // Silent degrade. Sidebar still renders; numbers just hide.
@@ -106,6 +142,14 @@ export default async function AppLayout({
       {/* Main column. Padding-bottom on mobile reserves space for the
           fixed 52px bottom nav. Desktop expands to fill the grid cell. */}
       <main className="flex-1 min-w-0 pb-[60px] lg:pb-0">{children}</main>
+
+      {/* Desktop F3 right rail (360px). SSR-rendered with bounded skill
+          summaries; client reads ?skill=<decisionId>:<index> to pick the
+          active one. Hidden on mobile (< lg). Suspense boundary required
+          because SkillPanel uses useSearchParams (Next.js 16 contract). */}
+      <Suspense fallback={null}>
+        <SkillPanel skills={skills} />
+      </Suspense>
 
       <MobileBottomNav />
       <ServiceWorkerRegister />
