@@ -125,6 +125,8 @@ export interface FetchArxivResult {
   duplicates: number;
   fetched: number;
   query: string;
+  /** UUIDs of newly-inserted corpus_documents rows (empty array on full-dedupe runs). */
+  ingestedIds: string[];
 }
 
 export async function fetchArxivQuery(
@@ -145,7 +147,7 @@ export async function fetchArxivQuery(
   const entries = parseEntries(xml);
 
   if (entries.length === 0) {
-    return { ingested: 0, duplicates: 0, fetched: 0, query: opts.query };
+    return { ingested: 0, duplicates: 0, fetched: 0, query: opts.query, ingestedIds: [] };
   }
 
   // Bulk insert with ON CONFLICT DO NOTHING. The UNIQUE constraint is
@@ -153,6 +155,7 @@ export async function fetchArxivQuery(
   const pool = getPool();
   const client = await pool.connect();
   let ingested = 0;
+  const ingestedIds: string[] = [];
   try {
     await client.query("BEGIN");
     // Set the GUC so the scope_write policy passes when scope='global'.
@@ -190,7 +193,11 @@ export async function fetchArxivQuery(
           JSON.stringify(metadata),
         ],
       );
-      if (r.rowCount && r.rowCount > 0) ingested++;
+      if (r.rowCount && r.rowCount > 0) {
+        ingested++;
+        const id = r.rows[0]?.id as string | undefined;
+        if (id) ingestedIds.push(id);
+      }
     }
     await client.query("COMMIT");
   } catch (e) {
@@ -205,5 +212,6 @@ export async function fetchArxivQuery(
     duplicates: entries.length - ingested,
     fetched: entries.length,
     query: opts.query,
+    ingestedIds,
   };
 }
