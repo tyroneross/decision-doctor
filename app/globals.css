@@ -3,29 +3,67 @@
 @tailwind utilities;
 
 @layer base {
+  /* ============================================================
+   * UI Guidelines v0.1 — Terracotta on bone, ink-only.
+   * Theme F is default; A and B switch via [data-theme="A"|"B"]
+   * on <html>. Color tokens carry NO semantic meaning.
+   *   --ok   reserved for hours-saved + audit "keep"
+   *   --warn reserved for audit "retire"
+   * ============================================================ */
   :root {
-    /* V2 sunrise — cream paper background, deep ink text */
-    --bg: #fff7ef;
-    --fg: #1f1410;
+    /* Theme F — terracotta on bone (default) */
+    --bg:    #faf6f0;   /* bone */
+    --paper: #ffffff;   /* card / panel */
+    --ink:   #9a3412;   /* terracotta accent */
+    --text:  #1f1410;   /* body */
+    --mute:  #6b5d52;   /* secondary */
+    --line:  #e8dfd4;   /* border / divider */
+    --ok:    #15803d;   /* hours-saved + audit "keep" only */
+    --warn:  #b45309;
+    --bad:   #b91c1c;   /* audit "retire" only */
+
+    /* Legacy — used by V2 sunrise utilities (.grad-coral, .grad-skill,
+       focus rings) until C11 cleanup. */
+    --fg: var(--text);
     --rule: #f1d8be;
-    --ring-coral: 255 107 74; /* coral DEFAULT in RGB */
+    --ring-coral: 255 107 74;
   }
+
+  [data-theme="A"] {
+    /* Direction A — Case File (deep blue accent on warm white) */
+    --bg:    #fafaf8;
+    --paper: #ffffff;
+    --ink:   #1e3a8a;
+    --text:  #0f172a;
+    --mute:  #64748b;
+    --line:  #e2e8f0;
+  }
+
+  [data-theme="B"] {
+    /* Direction B — Conversation (muted red accent on cool gray) */
+    --bg:    #f7f7f6;
+    --paper: #ffffff;
+    --ink:   #b91c1c;
+    --text:  #1c1917;
+    --mute:  #78716c;
+    --line:  #e7e5e4;
+  }
+
   html, body {
     background: var(--bg);
-    color: var(--fg);
+    color: var(--text);
     -webkit-font-smoothing: antialiased;
   }
   body {
     @apply font-sans text-[15px] leading-relaxed;
   }
-  /* Calm-precision: text-color status only, never background badges
-     (when used as inline tone). Chips with -bg pairings use the cat/conf
-     palette in tailwind.config.ts. */
-  .status-ok    { @apply text-emerald-700; }
-  .status-warn  { @apply text-amber-700; }
-  .status-error { @apply text-rose-700; }
 
-  /* Reduced-motion respect. Movement is "invitation, not insistence". */
+  /* Calm-precision: text-color status only, never background badges. */
+  .status-ok    { color: var(--ok); }
+  .status-warn  { color: var(--warn); }
+  .status-error { color: var(--bad); }
+
+  /* Reduced-motion respect. */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
@@ -36,9 +74,7 @@
 }
 
 @layer utilities {
-  /* Entry animation for new messages + decision cards. Calm, not bouncy.
-     200ms ease-out + 4px translate — the eye registers the arrival without
-     being asked to track motion. */
+  /* Entry animation for new messages + decision cards. */
   @keyframes dd-fade-up {
     from { opacity: 0; transform: translateY(4px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -47,24 +83,24 @@
     animation: dd-fade-up 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 
-  /* Sunrise gradient — coral to peach to sun. Used for the primary
-     CTA, the time-back hero, the logo mark, the user message bubble. */
+  /* ============================================================
+   * LEGACY V2 SUNRISE UTILITIES — used by domain components that
+   * have not yet been re-skinned (RecommendationView, IntakeForm,
+   * AhpPairwise, DecisionsListClient). C11 grep-deletes both
+   * these utilities and every callsite project-wide.
+   * ============================================================ */
   .grad-coral {
     background: linear-gradient(135deg, #ff6b4a 0%, #ffb085 60%, #ffc857 100%);
   }
-  /* Text-clipped sunrise — for the time-back metric on cream backgrounds */
   .grad-coral-text {
     background: linear-gradient(135deg, #ff6b4a, #c43e2e);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
-  /* Skill teal gradient — for "Skill ready" cards and the copy-prompt CTA */
   .grad-skill {
     background: linear-gradient(135deg, #0fb8a6 0%, #0aa282 100%);
   }
-
-  /* Coral focus glow — 4px ring at low alpha. Composes with focus-visible. */
   .ring-coral-glow {
     box-shadow: 0 0 0 4px rgba(255, 107, 74, 0.15);
   }
@@ -72,18 +108,12 @@
     outline: none;
     box-shadow: 0 0 0 3px rgba(255, 107, 74, 0.45);
   }
-
-  /* Cubic ease-out — every transition uses this curve. */
   .ease-soft {
     transition: all 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-  /* Lift on hover — combined with shadow-soft for cards. */
   .lift:hover {
     transform: translateY(-2px);
   }
-
-  /* Skeleton shimmer — for the "thinking" state. Better than spinners
-     for AI inference (-40% perceived load per NN/g). */
   .skeleton {
     background: linear-gradient(
       90deg,

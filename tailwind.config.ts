@@ -12,25 +12,36 @@ const config: Config = {
     extend: {
       colors: {
         // ============================================================
-        // V2 SUNRISE PALETTE
-        // Cream-paper background, coral/peach/sun accents, plum + teal
-        // for category and skill semantics. Hand-picked for AA contrast
-        // on cream-2 (#ffeede). All pairs verified at:
-        //   coral on cream-2     5.4:1
-        //   ink-900 on cream     11.4:1
-        //   white on coral-deep  4.7:1 (text)
-        //   plum  on plum-bg     7.4:1
-        //   teal  on skill-bg    5.1:1
+        // UI Guidelines v0.1 — Terracotta on bone, ink-only.
+        // CSS-var-backed; theme F is default. Themes A and B override
+        // the same vars in app/globals.css under [data-theme="A"] /
+        // [data-theme="B"] blocks.
         //
-        // brand/* and accent/* are kept as ALIASES into the new palette
-        // so the sign-in screens and intake form (still on the v1 names)
-        // pick up the new colors without per-file rewrites.
+        // Color carries NO semantic meaning by default.
+        //   --ok   reserved for hours-saved + audit "keep"
+        //   --warn reserved for audit "retire"
+        // Everything else is ink + mute on bone.
+        // ============================================================
+        bg: "var(--bg)",
+        paper: "var(--paper)",
+        ink: "var(--ink)",
+        text: "var(--text)",
+        mute: "var(--mute)",
+        line: "var(--line)",
+        ok: "var(--ok)",
+        warn: "var(--warn)",
+
+        // ============================================================
+        // LEGACY V2 SUNRISE — kept until C11 grep cleanup so domain
+        // components (RecommendationView, DecisionsListClient,
+        // AhpPairwise, IntakeForm) compile during the migration.
+        // C11 deletes this block + every callsite project-wide.
         // ============================================================
         cream: {
           DEFAULT: "#fff7ef",
           2: "#ffeede",
         },
-        ink: {
+        "ink-legacy": {
           900: "#1f1410",
           800: "#3a2c24",
           700: "#4a3a30",
@@ -55,7 +66,6 @@ const config: Config = {
           DEFAULT: "#7a3aa8",
           bg: "#f1e4f8",
         },
-        // Category swatches — semantic. Each pairs with a -bg for chips.
         cat: {
           cap: "#ff6b4a",
           "cap-bg": "#ffe9e0",
@@ -71,7 +81,6 @@ const config: Config = {
           other: "#5b6cff",
           "other-bg": "#e6e9ff",
         },
-        // Confidence band colors — used as chips, never as headlines.
         conf: {
           strong: "#1f9b4f",
           "strong-bg": "#dcf3e3",
@@ -80,7 +89,6 @@ const config: Config = {
           flip: "#c4364a",
           "flip-bg": "#fbe0e2",
         },
-        // ALIASES into sunrise — keeps legacy class names rendering correctly.
         brand: {
           50: "#fff7ef",
           100: "#ffeede",
@@ -98,6 +106,9 @@ const config: Config = {
         },
       },
       boxShadow: {
+        // New canonical shadow — single subtle card shadow on paper.
+        card: "0 1px 2px rgba(31, 20, 16, 0.04), 0 1px 1px rgba(31, 20, 16, 0.02)",
+        // Legacy — removed in C11 once callsites are migrated.
         soft: "0 4px 24px rgba(255,107,74,.08)",
         lift: "0 12px 28px rgba(255,107,74,.18)",
         ledger: "0 8px 32px rgba(255,107,74,.08)",
@@ -106,6 +117,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
+          "var(--font-inter)",
           "Inter",
           "ui-sans-serif",
           "system-ui",
@@ -113,6 +125,14 @@ const config: Config = {
           "Segoe UI",
           "Roboto",
           "sans-serif",
+        ],
+        mono: [
+          "var(--font-plex-mono)",
+          "IBM Plex Mono",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "monospace",
         ],
       },
       keyframes: {
