@@ -1,19 +1,32 @@
 "use client";
 
+// C7 — Recommendation D6: 3-tier pyramid, ink-only.
+//
+// Tier 1 (HERO): eyebrow with confidence band, big recommendation, 1-line
+//   method label, optional green hours-saved pill.
+// Tier 2 (3 MECE cards, equal width on desktop, stacked on mobile):
+//   🛠️ The skill we built · 🎯 What this changes · 🛡️ If this stops working
+// Tier 3 (THIS WEEK · 3 actions): numbered list, each row tagged with
+//   implementation type (🛠️ Skill / 🧩 Plugin / 👤 Human).
+// Footer: <details> "▾ show the math" → existing method-trace, IBM Plex
+//   Mono on bg-paper.
+//
+// Confidence: text-only label. No background pill.
+// Color: ink/mute on bone. The ONLY accent color used is `text-ok` for the
+//   green hours-saved pill (var(--ok)).
+
 import { useState } from "react";
 import Link from "next/link";
 import type { Decision } from "@/lib/db/schema";
 import { ScaffoldViewer } from "@/components/scaffold/ScaffoldViewer";
-import type { Scaffold } from "@/shared/schema";
+import type { Scaffold, AiFeasibility } from "@/shared/schema";
 import {
-  categoryFor,
   confidenceBand,
-  feasibilityFor,
   formatHrs,
-  relativeDay,
   totalHoursSaved,
 } from "@/lib/decision-display";
-import type { AiFeasibility } from "@/shared/schema";
+import { describeRobustness } from "@/lib/engine/robustness";
+import { Button } from "@/components/ui/Button";
 
 // ─── JSON-column shapes (defensive — DB types are unknown at boundary) ──
 
@@ -29,17 +42,15 @@ type Alternative = {
   reason: string;
 };
 type Robust = { option: string; rationale?: string; why?: string };
-type MethodTraceEntry = { stage: number; label: string; detail: string };
+type MethodTraceEntry = { stage: number; label?: string; detail?: string; name?: string; output?: unknown };
 type WorkloadReducer = {
   type?: "prompt" | "playbook" | "skill" | "plugin" | "mcp_tool";
   title: string;
   description: string;
   estTimeSavingHrsPerWeek?: number;
-  // F-08 additive fields — render the chip when present.
   aiFeasibility?: AiFeasibility;
   feasibilityRationale?: string;
   combinedScore?: number;
-  // F-09: paste-ready scaffold for skill/plugin reducers.
   scaffold?: Scaffold;
   artifact?: {
     promptText?: string;
@@ -47,6 +58,38 @@ type WorkloadReducer = {
     skillName?: string;
   };
 };
+
+// Plain-language confidence labels per spec (text-only — no chip).
+function confidenceLabel(conf: number | null | undefined): string {
+  if (typeof conf !== "number") return "values-dominant";
+  if (conf >= 75) return "strong call";
+  if (conf >= 55) return "leans this way";
+  return "could flip";
+}
+
+// Method label for the tier-1 hero — short phrase, not jargon.
+function methodLabel(templateId: string | null | undefined): string {
+  switch (templateId) {
+    case "capacity":
+      return "MCDA over your capacity inputs";
+    case "pricing":
+      return "MCDA over your pricing constraints";
+    case "admin-hire":
+      return "MCDA over your hiring runway";
+    default:
+      return "Multi-criteria decision analysis";
+  }
+}
+
+// Tier-3 implementation-type tag.
+function implementationTag(r: WorkloadReducer): { icon: string; label: string } {
+  const tier = r.aiFeasibility ?? r.type;
+  if (tier === "skill") return { icon: "🛠️", label: "Skill" };
+  if (tier === "plugin") return { icon: "🧩", label: "Plugin" };
+  if (tier === "agent") return { icon: "🤖", label: "Agent" };
+  if (tier === "playbook") return { icon: "📋", label: "Playbook" };
+  return { icon: "👤", label: "Human" };
+}
 
 // ─── Component ──────────────────────────────────────────────────────────
 
@@ -56,471 +99,215 @@ export function RecommendationView({ row }: { row: Decision }) {
   const robust = (row.robustAlternative as Robust | null) ?? null;
   const trace = (row.methodTrace as MethodTraceEntry[] | null) ?? [];
   const reducers = (row.workloadReducers as WorkloadReducer[] | null) ?? [];
-  // F-09: scaffold viewer state. Holds the reducer index whose scaffold is
-  // currently being viewed, or null when the drawer is closed.
   const [scaffoldOpenIndex, setScaffoldOpenIndex] = useState<number | null>(null);
 
   if (!rec) {
     return (
       <section className="space-y-2">
-        <h1 className="text-xl font-semibold">Decision incomplete</h1>
-        <p className="text-sm text-ink-500">
+        <h1 className="text-xl font-semibold text-text">Decision incomplete</h1>
+        <p className="text-sm text-mute">
           The engine did not return a recommendation. Status: {row.status}.
         </p>
       </section>
     );
   }
 
-  const cat = categoryFor(row.templateId);
-  // F-11: VDD outputs omit confidence; band is suppressed in render below.
-  const band = confidenceBand(rec.confidence ?? null);
-  const hasConfidence = typeof rec.confidence === "number";
+  const conf = rec.confidence ?? null;
+  const band = confidenceBand(conf);
+  const hasConfidence = typeof conf === "number";
   const hoursBack = totalHoursSaved(reducers);
   const topReducer = reducers[0];
   const thisWeek = reducers.slice(0, 3);
-  const robustReason = robust?.why ?? robust?.rationale ?? "";
+  const robustness = describeRobustness({
+    robustOption: robust?.option,
+    robustWhy: robust?.why ?? robust?.rationale,
+    templateId: row.templateId,
+  });
 
   return (
-    <article className="space-y-6">
-      {/* BREADCRUMB + TOP ACTIONS */}
+    <article className="space-y-8">
+      {/* TOP NAV — minimal: history link + print, no chip pills */}
       <div className="no-print flex flex-wrap items-center justify-between gap-3">
         <nav
           aria-label="breadcrumb"
-          className="flex items-center gap-1.5 text-[13px] text-ink-500"
+          className="flex items-center gap-1.5 text-[13px] text-mute"
         >
-          <Link href="/app/decisions" className="hover:text-ink-700">
+          <Link href="/app/decisions" className="hover:text-text">
             History
           </Link>
-          <svg
-            viewBox="0 0 24 24"
-            className="h-3.5 w-3.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            aria-hidden
-          >
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-          <span
-            className={`inline-flex h-6 items-center gap-1 rounded-full px-2 text-[11px] font-semibold uppercase tracking-wider ${cat.bg} ${cat.fg}`}
-          >
-            <span
-              aria-hidden
-              className={`h-1.5 w-1.5 rounded-full ${cat.stripe}`}
-            />
-            {cat.label}
-          </span>
-          <span>·</span>
-          <span>{relativeDay(row.createdAt)}</span>
+          <span aria-hidden>·</span>
+          <span>{row.templateId ?? "decision"}</span>
         </nav>
-        <div className="flex items-center gap-1">
-          <PrintButton />
-        </div>
+        <PrintButton />
       </div>
 
-      {/* PYRAMID TIER 1 — TIME-SAVED HERO + RANKED-DRAINS SIDEBAR
-          E1 — Ranked drains right-column layout. The hero stays the
-          primary signal; the right column surfaces every drain ranked by
-          impact × feasibility, replacing the prior "what changes" bury.
-          Mobile (<lg): the sidebar drops below the hero as a full-width
-          section (NOT a drawer — Calm Precision §"surface, don't bury"). */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px] lg:items-start lg:gap-5">
-        <section
-          aria-label="Recommendation"
-          className="grad-coral relative overflow-hidden rounded-3xl p-7 text-white sm:p-9"
-        >
-        <div
-          aria-hidden
-          className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white opacity-15 blur-2xl"
-        />
-        <div
-          aria-hidden
-          className="absolute -bottom-20 -left-12 h-56 w-56 rounded-full bg-white opacity-10 blur-2xl"
-        />
-        <div className="relative grid grid-cols-1 gap-6 md:grid-cols-12 md:gap-8 md:items-center">
-          <div className="md:col-span-7">
-            <p className="text-[11px] font-semibold uppercase tracking-[.14em] opacity-80 sm:text-[12px]">
-              What we built · primary outcome
-            </p>
-            {hoursBack > 0 ? (
-              <>
-                <p className="mt-3 text-[44px] font-semibold leading-[.95] tracking-tight sm:text-[56px] md:text-[64px]">
-                  🕐 {formatHrs(hoursBack)}/wk back
-                </p>
-                <p className="mt-3 max-w-xl text-[16px] leading-snug opacity-95 sm:text-[18px]">
-                  {rec.option}
-                </p>
-              </>
-            ) : (
-              <p className="mt-3 text-[32px] font-semibold leading-tight tracking-tight sm:text-[40px]">
-                {rec.option}
-              </p>
-            )}
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              {hasConfidence && (
-                <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-white/20 px-2.5 text-[12px] font-semibold backdrop-blur">
-                  {band.icon} {band.label} · {rec.confidence}%
-                </span>
-              )}
-              {robust && (
-                <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-white/20 px-2.5 text-[12px] font-semibold backdrop-blur">
-                  🛡️ Reversal point built in
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="md:col-span-5">
-            <div className="rounded-2xl bg-white/15 p-5 backdrop-blur">
-              <p className="text-[11px] uppercase tracking-wider opacity-80">
-                In plain language
-              </p>
-              <p className="mt-2 text-[14.5px] leading-relaxed sm:text-[15.5px]">
-                {rec.rationale}
-              </p>
-            </div>
-          </div>
-        </div>
-        </section>
-
-        {/* E1 — Ranked drains sidebar (right column on lg+, full-width below on mobile) */}
-        {reducers.length > 0 && (
-          <aside
-            aria-label="Ranked drains"
-            className="rounded-2xl border border-rule bg-white p-4 sm:p-5"
-          >
-            <header className="flex items-baseline justify-between gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-ink-500">
-                Ranked drains
-              </p>
-              <span className="text-[11.5px] text-ink-500">
-                {reducers.length}
-              </span>
-            </header>
-            <p className="mt-1 text-[12px] leading-relaxed text-ink-500">
-              Sorted by impact × AI feasibility — the math the engine used
-              to pick a top skill.
-            </p>
-            <ol className="mt-3 divide-y divide-rule">
-              {reducers.map((r, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2.5 py-2.5 first:pt-0 last:pb-0"
-                >
-                  <span
-                    aria-hidden
-                    className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cream-2 text-[11px] font-semibold text-ink-700"
-                  >
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-1.5">
-                      <p className="truncate text-[13px] font-semibold text-ink-900">
-                        {r.title}
-                      </p>
-                      <FeasibilityChip
-                        tier={r.aiFeasibility}
-                        variant="ghost"
-                      />
-                    </div>
-                    <p className="mt-0.5 text-[11.5px] text-ink-500">
-                      {r.estTimeSavingHrsPerWeek
-                        ? `~${formatHrs(r.estTimeSavingHrsPerWeek)}/wk`
-                        : "Time savings TBD"}
-                      {typeof r.combinedScore === "number" && (
-                        <>
-                          {" · "}
-                          <span className="text-ink-700">
-                            score {Math.round(r.combinedScore * 100)}
-                          </span>
-                        </>
-                      )}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </aside>
+      {/* TIER 1 — HERO. Eyebrow + big rec + method label + optional green pill. */}
+      <section aria-label="Recommendation">
+        <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-text">
+          RECOMMENDED
+          {hasConfidence ? <> · {conf}%</> : null}{" "}
+          · {confidenceLabel(conf)}
+          <span className="text-mute"> ({band.icon} {band.label})</span>
+        </p>
+        <h1 className="mt-2 text-[28px] font-semibold leading-tight tracking-tight text-text sm:text-[32px]">
+          {rec.option}
+        </h1>
+        <p className="mt-2 text-[15px] text-mute">{methodLabel(row.templateId)}</p>
+        {hoursBack > 0 && (
+          <p className="mt-3 inline-flex items-baseline gap-1 text-[15px] font-semibold text-ok">
+            +{formatHrs(hoursBack)} hrs/wk back
+          </p>
         )}
-      </div>
+      </section>
 
-      {/* PYRAMID TIER 2 — 3 MECE SUPPORTING CARDS */}
+      {/* TIER 2 — 3 MECE supporting cards, equal width on desktop. */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
-        {/* MECE 1 — Skill ready (PRIMARY card, teal accent) */}
-        {topReducer ? (
-          <article className="relative overflow-hidden rounded-2xl border-2 border-cat-skill bg-white p-6">
-            <div
-              aria-hidden
-              className="grad-skill absolute -right-12 -top-12 h-40 w-40 rounded-full opacity-15 blur-2xl"
-            />
-            <div className="relative">
-              <div className="flex items-center justify-between gap-2">
-                <FeasibilityChip
-                  tier={topReducer.aiFeasibility}
-                  variant="filled"
-                />
-                <span className="text-[11px] font-semibold text-cat-skill-deep">
-                  {feasibilityFor(topReducer.aiFeasibility).ship}
-                </span>
-              </div>
-              <h3 className="mt-3 text-lg font-semibold leading-snug">
+        {/* MECE 1 — The skill we built */}
+        <article className="rounded-2xl border border-line bg-paper p-6">
+          <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-mute">
+            🛠️ The skill we built
+          </p>
+          {topReducer ? (
+            <>
+              <h3 className="mt-3 text-[17px] font-semibold leading-snug text-text">
                 {topReducer.title}
               </h3>
-              <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-700">
+              <p className="mt-1.5 text-[14px] leading-relaxed text-mute">
                 {topReducer.description}
               </p>
-              {topReducer.artifact?.promptText && (
-                <CopyPromptButton text={topReducer.artifact.promptText} />
-              )}
-              {/* F-09: open the scaffold drawer for skill/plugin reducers.
-                  E2: CTA hidden when scaffold is null OR has zero files —
-                  no broken "open empty drawer" affordance. */}
-              {topReducer.scaffold && topReducer.scaffold.files.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setScaffoldOpenIndex(0)}
-                  className="ease-soft mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-cat-skill-deep hover:gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-                  aria-label={`Open scaffold for ${topReducer.title}`}
-                >
-                  Open scaffold →
-                </button>
-              )}
-              {topReducer.estTimeSavingHrsPerWeek && (
-                <p className="mt-3 text-[11.5px] text-ink-500">
-                  Saves ~{formatHrs(topReducer.estTimeSavingHrsPerWeek)}/week
-                </p>
-              )}
-            </div>
-          </article>
-        ) : (
-          <article className="rounded-2xl border border-dashed border-rule bg-cream-2/40 p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-ink-500">
-              🛠️ Skill ready
-            </p>
-            <p className="mt-3 text-[14px] text-ink-500">
+              <div className="mt-4 flex flex-wrap gap-2">
+                {topReducer.artifact?.promptText && (
+                  <CopyPromptButton text={topReducer.artifact.promptText} />
+                )}
+                {topReducer.scaffold &&
+                  topReducer.scaffold.files.length > 0 && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setScaffoldOpenIndex(0)}
+                      aria-label={`Open scaffold for ${topReducer.title}`}
+                    >
+                      Open scaffold →
+                    </Button>
+                  )}
+              </div>
+            </>
+          ) : (
+            <p className="mt-3 text-[14px] text-mute">
               No starter skill was generated for this decision.
             </p>
-          </article>
-        )}
+          )}
+        </article>
 
-        {/* MECE 2 — What changes */}
-        <article className="rounded-2xl border border-rule bg-white p-6">
-          <span
-            className={`inline-flex h-7 items-center rounded-full px-2.5 text-[11px] font-semibold uppercase tracking-[.14em] ${cat.bg} ${cat.fg}`}
-          >
-            🎯 What changes
-          </span>
-          <h3 className="mt-3 text-lg font-semibold leading-snug">
-            ~{formatHrs(hoursBack)}/wk recovered
-          </h3>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-700">
+        {/* MECE 2 — What this changes */}
+        <article className="rounded-2xl border border-line bg-paper p-6">
+          <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-mute">
+            🎯 What this changes
+          </p>
+          <p className="mt-3 text-[14px] leading-relaxed text-text">
             {rec.rationale}
           </p>
-          <ul className="mt-4 space-y-1.5 text-[13.5px]">
-            <li className="flex items-start gap-2">
-              <span
-                aria-hidden
-                className={`mt-1.5 h-1 w-1 shrink-0 rounded-full ${cat.stripe}`}
-              />
-              <span>
-                {reducers.length} {reducers.length === 1 ? "skill" : "skills"} to ship this week
-              </span>
+          <ul className="mt-4 space-y-1.5 text-[13.5px] text-mute">
+            <li>
+              {reducers.length} {reducers.length === 1 ? "skill" : "skills"} to
+              ship this week
             </li>
-            <li className="flex items-start gap-2">
-              <span
-                aria-hidden
-                className={`mt-1.5 h-1 w-1 shrink-0 rounded-full ${cat.stripe}`}
-              />
-              <span>
-                {alternatives.filter((a) => a.eliminatedAtStage === 2).length > 0
-                  ? `${alternatives.filter((a) => a.eliminatedAtStage === 2).length} path${alternatives.filter((a) => a.eliminatedAtStage === 2).length === 1 ? "" : "s"} ruled out by your hard constraints`
-                  : `Compared against ${alternatives.length} alternative${alternatives.length === 1 ? "" : "s"}`}
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span
-                aria-hidden
-                className={`mt-1.5 h-1 w-1 shrink-0 rounded-full ${cat.stripe}`}
-              />
-              <span>Robust fallback queued — see card 3</span>
+            {hoursBack > 0 && (
+              <li>
+                ~{formatHrs(hoursBack)}/wk recovered if you ship them all
+              </li>
+            )}
+            <li>
+              {alternatives.length} alternative
+              {alternatives.length === 1 ? "" : "s"} compared
             </li>
           </ul>
         </article>
 
         {/* MECE 3 — If this stops working */}
-        <article className="rounded-2xl border border-rule bg-white p-6">
-          <span className="inline-flex h-7 items-center rounded-full bg-plum-bg px-2.5 text-[11px] font-semibold uppercase tracking-[.14em] text-plum">
+        <article className="rounded-2xl border border-line bg-paper p-6">
+          <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-mute">
             🛡️ If this stops working
-          </span>
-          {robust ? (
-            <>
-              <h3 className="mt-3 text-lg font-semibold leading-snug">
-                {robust.option}
-              </h3>
-              <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-700">
-                {robustReason || "Switch to this path if conditions shift."}
-              </p>
-              <ul className="mt-4 space-y-1.5 text-[13.5px]">
-                <li className="flex items-start gap-2">
-                  <span
-                    aria-hidden
-                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-plum"
-                  />
-                  <span>Lower regret if the goal weakens</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span
-                    aria-hidden
-                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-plum"
-                  />
-                  <span>Calendared revisit recommended</span>
-                </li>
-              </ul>
-            </>
-          ) : (
-            <p className="mt-3 text-[14px] text-ink-500">
-              No robust alternative — the engine couldn't surface a strong
-              fallback. Re-run with revised priorities if conditions change.
+          </p>
+          <h3 className="mt-3 text-[17px] font-semibold leading-snug text-text">
+            {robustness.option}
+          </h3>
+          <p className="mt-1.5 text-[14px] leading-relaxed text-mute">
+            {robustness.threshold}
+          </p>
+          {!robustness.hasReal && (
+            <p className="mt-3 text-[12px] text-mute">
+              (the engine couldn't surface a strong fallback — re-run with
+              revised priorities if conditions change)
             </p>
           )}
         </article>
       </div>
 
-      {/* THIS WEEK — bento mini-cards (Miller-friendly: ≤3) */}
+      {/* TIER 3 — THIS WEEK · 3 ACTIONS. Numbered, implementation-type tagged. */}
       {thisWeek.length > 0 && (
-        <section className="rounded-2xl border border-rule bg-cream-2 p-5 sm:p-6">
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-ink-500">
-                This week
-              </p>
-              <h3 className="mt-0.5 text-lg font-semibold">
-                {thisWeek.length} thing{thisWeek.length === 1 ? "" : "s"} to actually do
-              </h3>
-            </div>
-            <span className="text-[12px] text-ink-500">
-              ~{thisWeek.length * 15} min total
-            </span>
-          </div>
-          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {thisWeek.map((r, i) => (
-              <li
-                key={i}
-                className="ease-soft lift rounded-2xl border border-rule bg-white p-4"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <FeasibilityChip tier={r.aiFeasibility} variant="ghost" />
-                  <span className="grad-skill rounded-full px-2 py-0.5 text-[10.5px] font-semibold text-white">
-                    ~{formatHrs(r.estTimeSavingHrsPerWeek ?? 0)}/wk
-                  </span>
-                </div>
-                <p className="mt-3 text-[14.5px] font-semibold leading-snug">
-                  {r.title}
-                </p>
-                <p className="mt-1 text-[12.5px] leading-relaxed text-ink-500">
-                  {r.description}
-                </p>
-                {r.artifact?.promptText ? (
-                  <CopyPromptButton
-                    text={r.artifact.promptText}
-                    variant="compact"
-                  />
-                ) : r.artifact?.playbookSteps ? (
-                  <details className="mt-3">
-                    <summary className="ease-soft inline-flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-rule bg-white text-[13px] font-semibold hover:border-cat-cap [&::-webkit-details-marker]:hidden">
-                      Open playbook
-                    </summary>
-                    <ol className="mt-2 list-decimal space-y-0.5 pl-5 text-[12px] text-ink-700">
-                      {r.artifact.playbookSteps.map((s, j) => (
-                        <li key={j}>{s}</li>
-                      ))}
-                    </ol>
-                  </details>
-                ) : r.scaffold && r.scaffold.files.length > 0 ? (
-                  /* E2: bento-card scaffold CTA — only when scaffold present
-                     AND has at least one file. Same hide-when-empty contract
-                     as the hero card above. */
-                  <button
-                    type="button"
-                    onClick={() => setScaffoldOpenIndex(i)}
-                    className="ease-soft mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-rule bg-white text-[13px] font-semibold hover:border-cat-skill focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-                    aria-label={`Open scaffold for ${r.title}`}
+        <section className="rounded-2xl border border-line bg-paper p-6 sm:p-7">
+          <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-mute">
+            THIS WEEK · {thisWeek.length} ACTION
+            {thisWeek.length === 1 ? "" : "S"}
+          </p>
+          <ol className="mt-4 divide-y divide-line">
+            {thisWeek.map((r, i) => {
+              const tag = implementationTag(r);
+              return (
+                <li
+                  key={i}
+                  className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
+                >
+                  <span
+                    aria-hidden
+                    className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line text-[12px] font-semibold text-text"
                   >
-                    Open scaffold →
-                  </button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <p className="text-[15px] font-semibold leading-snug text-text">
+                        {r.title}
+                      </p>
+                      <span className="text-[12px] text-mute">
+                        {tag.icon} {tag.label}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[13.5px] leading-relaxed text-mute">
+                      {r.description}
+                    </p>
+                    {r.estTimeSavingHrsPerWeek ? (
+                      <p className="mt-1 text-[12px] font-semibold text-ok">
+                        +{formatHrs(r.estTimeSavingHrsPerWeek)}/wk
+                      </p>
+                    ) : null}
+                  </div>
+                  {r.scaffold && r.scaffold.files.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setScaffoldOpenIndex(i)}
+                      className="shrink-0 self-center text-[13px] font-medium text-text underline decoration-line underline-offset-2 hover:text-ink focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
+                      aria-label={`Open scaffold for ${r.title}`}
+                    >
+                      Open →
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
         </section>
       )}
 
-      {/* PAIRED PATHS — anti-nudge framing */}
-      {robust && (
-        <section className="rounded-2xl border border-rule bg-white p-6 sm:p-7">
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-ink-500">
-                Two paths the math supports
-              </p>
-              <h3 className="mt-0.5 text-lg font-semibold">
-                You choose. Both clear your constraints.
-              </h3>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-            <article
-              className={`relative rounded-xl border-2 ${cat.bg} p-5`}
-              style={{ borderColor: cat.hex }}
-            >
-              <span
-                className="absolute -top-2.5 left-4 rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-white"
-                style={{ backgroundColor: cat.hex }}
-              >
-                Higher upside · selected
-              </span>
-              <p className={`mt-1 text-[11.5px] font-semibold uppercase tracking-wider ${cat.fg}`}>
-                Path A
-              </p>
-              <h4 className="mt-1.5 text-[16px] font-semibold leading-snug">
-                {rec.option}
-              </h4>
-              <p className="mt-1 text-[13px] leading-relaxed text-ink-700">
-                +~{formatHrs(hoursBack)}/wk back
-                {hasConfidence
-                  ? ` · ${band.label.toLowerCase()} (${rec.confidence}%)`
-                  : ""}
-              </p>
-            </article>
-            <article className="rounded-xl border border-rule bg-white p-5">
-              <span className="rounded-full bg-plum-bg px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-plum">
-                Lower regret
-              </span>
-              <p className="mt-3 text-[11.5px] font-semibold uppercase tracking-wider text-ink-500">
-                Path B
-              </p>
-              <h4 className="mt-1.5 text-[16px] font-semibold leading-snug">
-                {robust.option}
-              </h4>
-              <p className="mt-1 text-[13px] leading-relaxed text-ink-700">
-                {robustReason || "Lower-regret alternative if conditions shift."}
-              </p>
-            </article>
-          </div>
-        </section>
-      )}
-
-      {/* SHOW THE MATH — disclosure */}
+      {/* SHOW THE MATH — disclosure. IBM Plex Mono on bg-paper, no
+          background tint pillows. */}
       <ShowTheMath
-        confidence={rec.confidence ?? null}
+        confidence={conf}
         alternatives={alternatives}
         trace={trace}
       />
 
-      {/* F-09: scaffold drawer for the currently-selected reducer.
-          E2: pass `empty` + `category` so the drawer can render an
-          explicit empty-state when files.length === 0 instead of a
-          blank two-column body. */}
+      {/* SCAFFOLD DRAWER */}
       {scaffoldOpenIndex !== null && reducers[scaffoldOpenIndex]?.scaffold && (
         <ScaffoldViewer
           scaffold={reducers[scaffoldOpenIndex]!.scaffold!}
@@ -528,107 +315,21 @@ export function RecommendationView({ row }: { row: Decision }) {
           open
           onClose={() => setScaffoldOpenIndex(null)}
           empty={reducers[scaffoldOpenIndex]!.scaffold!.files.length === 0}
-          category={cat.label}
+          category={row.templateId ?? undefined}
         />
       )}
-
-      {/* PRIMARY-VS-SECONDARY framing */}
-      <div className="rounded-2xl border border-rule bg-cream-2 p-5 sm:p-6">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-cat-cap-deep">
-              Primary path
-            </p>
-            <p className="mt-1.5 text-[14.5px] font-semibold">
-              Find where AI saves you time
-            </p>
-            <p className="mt-1 text-[13px] text-ink-700">
-              This decision shipped {reducers.length} starter skill{reducers.length === 1 ? "" : "s"}.
-              More drains? Run another decision and stack the time-back.
-            </p>
-            <Link
-              href="/app/chat"
-              className="ease-soft mt-2 inline-flex items-center gap-1 text-[13.5px] font-semibold text-coral hover:gap-2"
-            >
-              Find another drain →
-            </Link>
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-plum">
-              Secondary path
-            </p>
-            <p className="mt-1.5 text-[14.5px] font-semibold">
-              Help me decide given my constraints
-            </p>
-            <p className="mt-1 text-[13px] text-ink-700">
-              Same engine for "should I, when, given X" decisions when AI alone
-              won't solve it.
-            </p>
-            <Link
-              href="/app/chat"
-              className="ease-soft mt-2 inline-flex items-center gap-1 text-[13.5px] font-semibold text-plum hover:gap-2"
-            >
-              Start a decide-flow →
-            </Link>
-          </div>
-        </div>
-      </div>
     </article>
   );
 }
 
 // ─── Sub-components ─────────────────────────────────────────────────────
 
-/**
- * F-08 AI-feasibility chip. Sunrise tokens (`cat-skill` / `plum` / `cat-cap` /
- * `ink-500`). Variant:
- *   - "filled": white text on a tier-colored gradient (used in heroes).
- *   - "ghost":  tier-colored text on a tier-colored tint (used on cards).
- *
- * Defensive: when `tier` is absent, falls back to "Human review" (per
- * feasibilityFor() in decision-display) so legacy reducers without F-08
- * scoring don't render an empty slot.
- */
-function FeasibilityChip({
-  tier,
-  variant = "ghost",
-}: {
-  tier: AiFeasibility | undefined;
-  variant?: "filled" | "ghost";
-}) {
-  const style = feasibilityFor(tier);
-  if (variant === "filled") {
-    // Match the existing "🛠️ Skill ready" gradient pill on the hero card.
-    const bg = style.key === "skill" ? "grad-skill text-white"
-      : style.key === "plugin" ? "bg-plum text-white"
-      : style.key === "agent" ? "grad-coral text-white"
-      : "bg-ink-700 text-white";
-    return (
-      <span
-        className={`${bg} inline-flex h-7 items-center rounded-full px-2.5 text-[11px] font-semibold uppercase tracking-[.14em]`}
-        aria-label={`AI feasibility: ${style.label}`}
-      >
-        {style.icon} {style.label}
-      </span>
-    );
-  }
-  return (
-    <span
-      className={`${style.bg} ${style.fg} inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[11px] font-semibold uppercase tracking-wider`}
-      aria-label={`AI feasibility: ${style.label}`}
-    >
-      <span aria-hidden>{style.icon}</span>
-      {style.label}
-    </span>
-  );
-}
-
 function PrintButton() {
   return (
     <button
       type="button"
       onClick={() => window.print()}
-      className="ease-soft inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-ink-700 hover:bg-cream-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line px-3 text-[13px] font-medium text-text transition-colors duration-150 hover:bg-line/40 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
       aria-label="Print or save as PDF"
     >
       <svg
@@ -649,13 +350,8 @@ function PrintButton() {
   );
 }
 
-function CopyPromptButton({
-  text,
-  variant = "full",
-}: {
-  text: string;
-  variant?: "full" | "compact";
-}) {
+// Width-stable copy button. No coral; uses primary Button from primitives.
+function CopyPromptButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const onClick = () => {
     if (typeof navigator === "undefined") return;
@@ -666,75 +362,26 @@ function CopyPromptButton({
         setTimeout(() => setCopied(false), 1800);
       })
       .catch(() => {
-        /* ignore */
+        /* user can long-press the prompt and copy manually */
       });
   };
-  // Width-stable label slot so the button doesn't twitch between states.
-  const compactLabel = (
-    <span className="inline-flex w-[88px] items-center justify-center">
-      {copied ? (
-        <span className="dd-fade-up inline-flex items-center gap-1">
-          <CheckIcon /> Copied
-        </span>
-      ) : (
-        <span>Copy prompt</span>
-      )}
-    </span>
-  );
-  if (variant === "compact") {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={copied ? "Prompt copied to clipboard" : "Copy prompt"}
-        className={
-          "ease-soft mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-white hover:-translate-y-0.5 " +
-          (copied ? "bg-conf-strong" : "grad-coral")
-        }
-      >
-        {compactLabel}
-      </button>
-    );
-  }
   return (
-    <div className="mt-4 grid grid-cols-2 gap-2">
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={copied ? "Prompt copied to clipboard" : "Copy prompt"}
-        className={
-          "ease-soft inline-flex h-10 items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-white hover:-translate-y-0.5 " +
-          (copied ? "bg-conf-strong" : "grad-skill")
-        }
-      >
-        <span className="inline-flex w-[120px] items-center justify-center">
-          {copied ? (
-            <span className="dd-fade-up inline-flex items-center gap-1.5">
-              <CheckIcon /> Copied to clipboard
-            </span>
-          ) : (
-            <span>📋 Copy prompt</span>
-          )}
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          const w = window.open("", "_blank", "noopener");
-          if (w) {
-            w.document.write(
-              `<pre style="white-space:pre-wrap;padding:24px;font:14px ui-monospace,Menlo,monospace">${escapeHtml(
-                text,
-              )}</pre>`,
-            );
-            w.document.close();
-          }
-        }}
-        className="ease-soft inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-rule bg-white text-[13px] font-semibold hover:border-cat-skill"
-      >
-        ▶️ Try it
-      </button>
-    </div>
+    <Button
+      variant="primary"
+      type="button"
+      onClick={onClick}
+      aria-label={copied ? "Prompt copied to clipboard" : "Copy prompt"}
+    >
+      <span className="inline-flex w-[110px] items-center justify-center">
+        {copied ? (
+          <span className="dd-fade-up inline-flex items-center gap-1.5">
+            <CheckIcon /> Copied
+          </span>
+        ) : (
+          <span>📋 Copy prompt</span>
+        )}
+      </span>
+    </Button>
   );
 }
 
@@ -755,15 +402,6 @@ function CheckIcon() {
   );
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 function ShowTheMath({
   confidence,
   alternatives,
@@ -774,12 +412,12 @@ function ShowTheMath({
   trace: MethodTraceEntry[];
 }) {
   return (
-    <details className="group rounded-2xl border border-rule bg-white">
-      <summary className="ease-soft flex cursor-pointer items-center justify-between gap-3 rounded-2xl px-6 py-4 text-[14.5px] font-medium text-ink-700 hover:bg-cream-2 [&::-webkit-details-marker]:hidden">
+    <details className="group rounded-2xl border border-line bg-paper">
+      <summary className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl px-6 py-4 text-[14.5px] font-medium text-text transition-colors duration-150 hover:bg-line/40 [&::-webkit-details-marker]:hidden">
         <div className="flex items-center gap-2">
           <svg
             viewBox="0 0 24 24"
-            className="ease-soft h-4 w-4 group-open:rotate-90"
+            className="h-4 w-4 transition-transform duration-150 group-open:rotate-90"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
@@ -788,21 +426,18 @@ function ShowTheMath({
           >
             <polyline points="9 18 15 12 9 6" />
           </svg>
-          <span className="text-[15px] font-semibold">Show the math</span>
-          <span className="hidden text-[12.5px] text-ink-500 sm:inline">
-            — what we ruled out, MCDA stages, why this won
-          </span>
+          <span className="text-[15px] font-semibold">▾ show the math</span>
         </div>
-        <span className="text-[12px] text-ink-500">For the curious</span>
+        <span className="text-[12px] text-mute">For the curious</span>
       </summary>
-      <div className="space-y-5 border-t border-rule px-6 pb-6 pt-4 sm:px-7">
+      <div className="space-y-5 border-t border-line px-6 pb-6 pt-4 sm:px-7">
         {/* Plain-language explainer FIRST */}
-        <div className="rounded-xl bg-cream-2 p-4 text-[13px] leading-relaxed text-ink-700">
+        <p className="text-[13px] leading-relaxed text-mute">
           {typeof confidence === "number" ? (
             <>
               We compared {alternatives.length + 1} paths against your stated
               priorities. The top option scored{" "}
-              <strong className="text-ink-900">{confidence}/100</strong>.
+              <strong className="text-text">{confidence}/100</strong>.
             </>
           ) : (
             <>
@@ -822,24 +457,21 @@ function ShowTheMath({
               ranking).
             </>
           )}
-        </div>
+        </p>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           {alternatives.length > 0 && (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-ink-500">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-mute">
                 What we ruled out
               </p>
               <ul className="mt-2 space-y-2 text-[13.5px]">
                 {alternatives.map((a, i) => (
-                  <li key={i} className="text-ink-700">
-                    <span className="font-medium text-ink-900">{a.option}</span>{" "}
-                    — {a.reason}
+                  <li key={i} className="text-mute">
+                    <span className="font-medium text-text">{a.option}</span> —{" "}
+                    {a.reason}
                     {a.eliminatedAtStage && (
-                      <span className="text-ink-500">
-                        {" "}
-                        (stage {a.eliminatedAtStage})
-                      </span>
+                      <span> (stage {a.eliminatedAtStage})</span>
                     )}
                   </li>
                 ))}
@@ -849,17 +481,20 @@ function ShowTheMath({
 
           {trace.length > 0 && (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-ink-500">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-mute">
                 How we ranked
               </p>
-              <dl className="mt-2 space-y-1 text-[13px]">
-                {trace.map((s, i) => (
-                  <div key={i} className="flex justify-between gap-4">
-                    <dt className="text-ink-500">Stage {s.stage}</dt>
-                    <dd className="text-right text-ink-700">{s.label}</dd>
-                  </div>
-                ))}
-              </dl>
+              <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-xl border border-line bg-paper p-3 font-mono text-[12px] leading-relaxed text-text">
+                {JSON.stringify(
+                  trace.map((s) => ({
+                    stage: s.stage,
+                    name: s.name ?? s.label ?? null,
+                    output: s.output ?? s.detail ?? null,
+                  })),
+                  null,
+                  2,
+                )}
+              </pre>
             </div>
           )}
         </div>
