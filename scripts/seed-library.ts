@@ -351,16 +351,30 @@ async function ensureUniqueConstraints(db: ReturnType<typeof drizzle>): Promise<
     for (const spec of missing) {
       if (spec.includes("use_cases")) {
         await db.execute(sql`
-          ALTER TABLE library_use_cases
-          ADD CONSTRAINT IF NOT EXISTS library_use_cases_pain_path_title_unique
-          UNIQUE (pain_path, title)
+          DO $$ BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_constraint
+              WHERE conname = 'library_use_cases_pain_path_title_unique'
+            ) THEN
+              ALTER TABLE library_use_cases
+              ADD CONSTRAINT library_use_cases_pain_path_title_unique
+              UNIQUE (pain_path, title);
+            END IF;
+          END $$
         `);
         console.log("  + library_use_cases(pain_path, title) UNIQUE constraint added");
       } else {
         await db.execute(sql`
-          ALTER TABLE library_prompts
-          ADD CONSTRAINT IF NOT EXISTS library_prompts_pain_path_title_unique
-          UNIQUE (pain_path, title)
+          DO $$ BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_constraint
+              WHERE conname = 'library_prompts_pain_path_title_unique'
+            ) THEN
+              ALTER TABLE library_prompts
+              ADD CONSTRAINT library_prompts_pain_path_title_unique
+              UNIQUE (pain_path, title);
+            END IF;
+          END $$
         `);
         console.log("  + library_prompts(pain_path, title) UNIQUE constraint added");
       }
