@@ -11,6 +11,7 @@ import { z } from "zod";
 import { groq, GROQ_MODEL } from "@/lib/groq";
 import { CHAT_SYSTEM_PROMPT } from "@/lib/chat/system-prompt";
 import { runDecision } from "@/lib/engine/orchestrator";
+import { ClarifierWidgetSchema } from "@/lib/engine/clarifier";
 import {
   runStage0Classifier,
   shouldDeclineAndReframe,
@@ -55,67 +56,11 @@ const FieldValueSchema = z.union([
   z.array(z.number().finite()),
 ]);
 
-// C6b — clarifier widget schema. Mirrors components/chat/widgets/types.ts.
-// The discriminated union below is what the LLM may emit when status="clarifier";
-// values flow back as plain user messages so the existing `messages` log stays
-// the only chat state.
-//
-// Hard ceilings on every numeric/string field. The LLM is the only producer of
-// this payload, so zod is the prompt-injection backstop: any out-of-bounds value
-// the LLM would invent gets rejected and the user sees the "lost the thread"
-// fallback instead of a malformed widget.
-const ClarifierWidgetSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("slider"),
-    fieldId: z.string().min(1).max(64),
-    label: z.string().min(1).max(120),
-    hint: z.string().max(200).optional(),
-    min: z.number().finite(),
-    max: z.number().finite(),
-    step: z.number().positive().finite().optional(),
-    defaultValue: z.number().finite(),
-    unit: z.string().max(24).optional(),
-  }),
-  z.object({
-    kind: z.literal("stepper"),
-    fieldId: z.string().min(1).max(64),
-    label: z.string().min(1).max(120),
-    hint: z.string().max(200).optional(),
-    min: z.number().finite(),
-    max: z.number().finite(),
-    step: z.number().positive().finite().optional(),
-    defaultValue: z.number().finite(),
-    unit: z.string().max(24).optional(),
-  }),
-  z.object({
-    kind: z.literal("range"),
-    fieldId: z.string().min(1).max(64),
-    label: z.string().min(1).max(120),
-    hint: z.string().max(200).optional(),
-    min: z.number().finite(),
-    max: z.number().finite(),
-    step: z.number().positive().finite().optional(),
-    defaultLo: z.number().finite(),
-    defaultHi: z.number().finite(),
-    unit: z.string().max(24).optional(),
-  }),
-  z.object({
-    kind: z.literal("chips"),
-    fieldId: z.string().min(1).max(64),
-    label: z.string().min(1).max(120),
-    hint: z.string().max(200).optional(),
-    options: z
-      .array(
-        z.object({
-          value: z.string().min(1).max(64),
-          label: z.string().min(1).max(80),
-        }),
-      )
-      .min(2)
-      .max(8),
-    defaultValue: z.string().max(64).optional(),
-  }),
-]);
+// C6b — clarifier widget schema imported from lib/engine/clarifier.
+// Engine owns the source of truth for clarifier shape; this route is just
+// the wire-format validator. Future non-chat surfaces (voice / native /
+// async weekly-audit) reuse the same schema without going through this
+// streaming HTTP path. See lib/engine/clarifier.ts for the rationale.
 
 const AssistantPayloadSchema = z.discriminatedUnion("status", [
   z.object({

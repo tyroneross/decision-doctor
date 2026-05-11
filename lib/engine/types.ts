@@ -7,8 +7,31 @@
 //   - constraints — hard veto rules (Stage 2)
 //
 // Each stage transforms a typed input into a typed output. Orchestrator wires them.
+//
+// Re-exports the clarifier protocol so any consumer that imports from
+// lib/engine/types.ts (the canonical engine-types entry point) sees the
+// full type surface — including the typed clarifier protocol that voice /
+// native / async surfaces will route through.
 
 import type { z } from "zod";
+
+export type {
+  ClarifierKind,
+  ClarifierBase,
+  ClarifierSlider,
+  ClarifierStepper,
+  ClarifierRange,
+  ClarifierChips,
+  ClarifierWidget,
+  ClarifierMeta,
+  ClarifierSubmission,
+  ClarifierEvent,
+} from "./clarifier";
+export {
+  ClarifierWidgetSchema,
+  emitClarifier,
+  parseClarifierWidget,
+} from "./clarifier";
 
 export type CriterionDirection = "max" | "min";
 
