@@ -20,6 +20,7 @@ import { auth } from "@/lib/auth";
 import { isGuestRequest } from "@/lib/auth-guest";
 import { getSessionActor } from "@/lib/auth-session";
 import type { PainPathId } from "@/lib/engine/types";
+import { PainCardGrid } from "@/components/pain-cards/PainCardGrid";
 import { NewRecommendationClient } from "./NewRecommendationClient";
 
 const VALID_PAIN_PATHS: Set<string> = new Set([
@@ -67,30 +68,34 @@ export default async function NewRecommendationPage({ searchParams }: Props) {
       ? decodeURIComponent(params.challenge.trim()).slice(0, 800)
       : null;
 
-  // Edge case: no params at all — render a gentle nudge back to home.
+  // Edge case: no params at all — render the pain card grid inline so the
+  // user can pick a path without bouncing back to /app. PainCardGrid clicks
+  // navigate to /app/recommendations/new?path=<pathId>, returning here with
+  // the path arg populated and routing into the intake flow below.
   if (!path && !challenge) {
     return (
-      <main className="mx-auto max-w-xl px-5 py-12">
-        <h1
-          className="text-[24px] font-bold"
-          style={{ color: "var(--ink)" }}
-        >
-          Start a recommendation
-        </h1>
-        <p className="mt-2 text-[14px]" style={{ color: "var(--mute)" }}>
-          Pick a pain path or describe your challenge to get a personalised AI
-          task recommendation.
-        </p>
-        <div className="mt-6 flex gap-3">
+      <main className="mx-auto max-w-3xl px-5 py-10">
+        <header className="mb-6 space-y-1">
+          <h1
+            className="text-[24px] font-bold leading-tight"
+            style={{ color: "var(--ink)" }}
+          >
+            Start a recommendation
+          </h1>
+          <p className="text-[14px]" style={{ color: "var(--mute)" }}>
+            Pick the area that fits best, or describe your own challenge.
+          </p>
+        </header>
+
+        <PainCardGrid />
+
+        <div className="mt-8">
           <Link
             href="/app"
-            className="inline-flex items-center rounded-[10px] px-4 py-[9px] text-[14px] font-semibold"
-            style={{
-              backgroundColor: "var(--ink)",
-              color: "var(--paper)",
-            }}
+            className="inline-flex items-center text-[13px] font-medium"
+            style={{ color: "var(--mute)" }}
           >
-            Back to home
+            ← Back to home
           </Link>
         </div>
       </main>
