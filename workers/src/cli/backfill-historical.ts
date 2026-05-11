@@ -31,7 +31,7 @@
 import { config as loadEnv } from "dotenv";
 loadEnv();
 
-import { startQueue, stopQueue, loadCrawlConfig, getBoss } from "../queue.js";
+import { loadCrawlConfig, getBoss } from "../queue.js";
 import { runSitemapAdapter, type SitemapAdapterConfig } from "../adapters/sitemap-adapter.js";
 import { closePool, pingPostgres } from "../db.js";
 import { createInterface } from "node:readline/promises";
@@ -135,12 +135,15 @@ async function main(): Promise<void> {
     console.error("[backfill] postgres unreachable; aborting.");
     process.exit(2);
   }
-  // We start the queue so that runSitemapAdapter's inserted ids can be
-  // enqueued to content-extract through getBoss().send. The cron registration
-  // is intentionally skipped — we don't want this CLI run to also start the
-  // schedule loop.
-  await startQueue();
+  // We need pg-boss in *send-only* mode — start it for queue creation, but
+  // do NOT call startQueue() because that registers in-process workers
+  // (which would drain content-extract / ai-summarize / kg-extract / arxiv-embed
+  // locally and burn Groq/OpenAI calls). The Railway worker has those handlers
+  // registered already; CLI only enqueues.
   const boss = getBoss();
+  await boss.start();
+  // pg-boss v10 requires the queue exist before send(); idempotent.
+  await boss.createQueue("content-extract");
 
   // ---- Execute ----
   const summaries: RunSummary[] = [];
@@ -236,7 +239,8 @@ main()
   })
   .finally(async () => {
     try {
-      await stopQueue();
+      const boss = getBoss();
+      await boss.stop({ graceful: true, timeout: 3000 });
     } catch {}
     await closePool();
   });
