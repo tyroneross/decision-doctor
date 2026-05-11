@@ -103,6 +103,16 @@ export async function startQueue(): Promise<PgBoss> {
   await boss.createQueue("kg-extract");
   await boss.createQueue("test-job");
 
+  // ---- Per-queue concurrency (env-overridable) ----------------------------
+  // Default = 1 (existing serial behavior; safe rollout).
+  // CDP-path queues (content-extract, *-fetch) stay at 1 per CLAUDE.md
+  // non-negotiable on render concurrency. The 3 LLM-bound queues below
+  // benefit most from parallelism: Groq has high RPM headroom and OpenAI
+  // embeddings allow 3000 RPM.
+  const EMBED_BATCH = Math.max(1, Number(process.env.EMBED_BATCH ?? "1"));
+  const AI_SUMMARIZE_BATCH = Math.max(1, Number(process.env.AI_SUMMARIZE_BATCH ?? "1"));
+  const KG_EXTRACT_BATCH = Math.max(1, Number(process.env.KG_EXTRACT_BATCH ?? "1"));
+
   // ---- Register handlers --------------------------------------------------
   // arxiv-fetch: ingest arXiv papers matching a query.
   // Payload: { query: string; scope?: string; maxResults?: number }
@@ -133,17 +143,19 @@ export async function startQueue(): Promise<PgBoss> {
 
   // arxiv-embed: chunk + embed a single corpus_documents row.
   // Payload: { documentId: string }
-  // batchSize=1 to bound OpenAI throughput; pg-boss serializes per queue.
+  // Default batchSize=1; opt-in parallelism via EMBED_BATCH env (typically 3-5).
+  // OpenAI text-embedding-3-small allows 3000 RPM; even at EMBED_BATCH=10
+  // we're at ~600 RPM with 4 chunks/doc avg — comfortable margin.
   await boss.work<{ documentId: string }>(
     "arxiv-embed",
-    { batchSize: 1 },
+    { batchSize: EMBED_BATCH },
     async (jobs) => {
-      const out = [];
-      for (const job of jobs) {
-        const r = await handleArxivEmbed({ documentId: job.data.documentId });
-        out.push({ id: job.id, ...r });
-      }
-      return out;
+      return await Promise.all(
+        jobs.map(async (job) => {
+          const r = await handleArxivEmbed({ documentId: job.data.documentId });
+          return { id: job.id, ...r };
+        }),
+      );
     },
   );
 
@@ -171,16 +183,17 @@ export async function startQueue(): Promise<PgBoss> {
   // ai-summarize: Groq Llama 3.3 70B JSON-mode summary written into
   // metadata.ai_summary. SMB-persona constrained; graceful-degrade on
   // Groq error. Payload: { documentId: string }
+  // Default batchSize=1; opt-in parallelism via AI_SUMMARIZE_BATCH (typically 5).
   await boss.work<{ documentId: string }>(
     "ai-summarize",
-    { batchSize: 1 },
+    { batchSize: AI_SUMMARIZE_BATCH },
     async (jobs) => {
-      const out = [];
-      for (const job of jobs) {
-        const r = await handleAiSummarize({ documentId: job.data.documentId });
-        out.push({ id: job.id, ...r });
-      }
-      return out;
+      return await Promise.all(
+        jobs.map(async (job) => {
+          const r = await handleAiSummarize({ documentId: job.data.documentId });
+          return { id: job.id, ...r };
+        }),
+      );
     },
   );
 
@@ -188,16 +201,18 @@ export async function startQueue(): Promise<PgBoss> {
   // extraction. Canonicalizes against ai_entities via (exact → pg_trgm ≥ 0.7
   // → alias overlap → insert). Writes mentions + relationships in one txn.
   // Doc-level idempotent: skip if any mention row already exists.
+  // Default batchSize=1; opt-in parallelism via KG_EXTRACT_BATCH (typically 3
+  // — slower per-job than ai-summarize, so smaller fan-out keeps Groq happy).
   await boss.work<{ documentId: string }>(
     "kg-extract",
-    { batchSize: 1 },
+    { batchSize: KG_EXTRACT_BATCH },
     async (jobs) => {
-      const out = [];
-      for (const job of jobs) {
-        const r = await handleKgExtract({ documentId: job.data.documentId });
-        out.push({ id: job.id, ...r });
-      }
-      return out;
+      return await Promise.all(
+        jobs.map(async (job) => {
+          const r = await handleKgExtract({ documentId: job.data.documentId });
+          return { id: job.id, ...r };
+        }),
+      );
     },
   );
 
