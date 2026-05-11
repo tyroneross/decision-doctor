@@ -13,9 +13,54 @@ import { fetchAnthropicNews } from "./adapters/anthropic-sitemap.js";
 import { handleContentExtract } from "./adapters/content-extract.js";
 import { handleAiSummarize } from "./adapters/ai-summarize.js";
 import { handleKgExtract } from "./adapters/kg-extract.js";
+import {
+  runSitemapAdapter,
+  type SitemapAdapterConfig,
+} from "./adapters/sitemap-adapter.js";
+import { getPool } from "./db.js";
 
 let _boss: PgBoss | null = null;
 let _started = false;
+
+/**
+ * Look up a single ai_sources row's crawl_config and coerce to a
+ * SitemapAdapterConfig. Returns null if the row doesn't exist or is missing
+ * a sitemap_url. RLS-scoped read.
+ */
+async function loadCrawlConfig(
+  scope: string,
+  sourceKey: string,
+): Promise<SitemapAdapterConfig | null> {
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT set_config('app.current_user_id', $1, true)", [scope]);
+    const r = await client.query<{ crawl_config: SitemapAdapterConfig }>(
+      `SELECT crawl_config FROM ai_sources
+        WHERE scope = $1 AND source_key = $2 AND enabled = true
+        LIMIT 1`,
+      [scope, sourceKey],
+    );
+    await client.query("COMMIT");
+    if (r.rows.length === 0) return null;
+    const cfg = r.rows[0]!.crawl_config;
+    if (!cfg || typeof cfg !== "object" || !("sitemap_url" in cfg)) {
+      console.warn(
+        `[sitemap-fetch] ai_sources ${sourceKey} has no sitemap_url in crawl_config; skipping`,
+      );
+      return null;
+    }
+    return cfg;
+  } catch (e) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+export { loadCrawlConfig };
 
 export function getBoss(): PgBoss {
   if (_boss) return _boss;
@@ -52,6 +97,7 @@ export async function startQueue(): Promise<PgBoss> {
   await boss.createQueue("arxiv-embed");
   await boss.createQueue("rss-fetch");
   await boss.createQueue("anthropic-news-fetch");
+  await boss.createQueue("sitemap-fetch");
   await boss.createQueue("content-extract");
   await boss.createQueue("ai-summarize");
   await boss.createQueue("kg-extract");
@@ -215,6 +261,59 @@ export async function startQueue(): Promise<PgBoss> {
     },
   );
 
+  // sitemap-fetch: generic config-driven sitemap ingest (X-1 adapter).
+  // Reads ai_sources.crawl_config for the source_key, runs runSitemapAdapter,
+  // and chains content-extract per newly-inserted document.
+  // Payload: { sourceKey: string; scope?: string; maxOverride?: number;
+  //            ignoreLookback?: boolean }
+  // - maxOverride / ignoreLookback are used by the historical backfill CLI
+  //   to ignore lookback_days and bump max_per_run for one-shot pulls.
+  await boss.work<{
+    sourceKey: string;
+    scope?: string;
+    maxOverride?: number;
+    ignoreLookback?: boolean;
+  }>(
+    "sitemap-fetch",
+    { batchSize: 1 },
+    async (jobs) => {
+      const results = [];
+      for (const job of jobs) {
+        const scope = job.data.scope ?? "global";
+        const cfg = await loadCrawlConfig(scope, job.data.sourceKey);
+        if (!cfg) {
+          console.warn(
+            `[sitemap-fetch] no ai_sources row for source_key=${job.data.sourceKey}; skipping`,
+          );
+          results.push({
+            id: job.id,
+            sourceKey: job.data.sourceKey,
+            ingested: 0,
+            skipped_count: 0,
+            considered: 0,
+            fetched: 0,
+            errors: ["source not found in ai_sources"],
+            ingestedIds: [],
+          });
+          continue;
+        }
+        const r = await runSitemapAdapter({
+          scope,
+          sourceKey: job.data.sourceKey,
+          config: cfg,
+          maxOverride: job.data.maxOverride,
+          ignoreLookback: job.data.ignoreLookback,
+        });
+        for (const docId of r.ingestedIds) {
+          await boss.send("content-extract", { documentId: docId });
+        }
+        results.push({ id: job.id, ...r });
+      }
+      console.log("[sitemap-fetch] processed:", JSON.stringify(results));
+      return results;
+    },
+  );
+
   // test-job: round-trips its payload. Used by tests and `pnpm enqueue:test`.
   await boss.work<{ echo: string }>("test-job", async (jobs) => {
     const out = jobs.map((j) => ({ ok: true, echo: j.data.echo, id: j.id }));
@@ -242,6 +341,7 @@ export async function queueCount(): Promise<number> {
     "arxiv-embed",
     "rss-fetch",
     "anthropic-news-fetch",
+    "sitemap-fetch",
     "content-extract",
     "ai-summarize",
     "kg-extract",

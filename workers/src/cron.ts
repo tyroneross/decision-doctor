@@ -98,7 +98,44 @@ const REGISTRY: ScheduleDef[] = [
       // Perplexity Hub may need scraping (need to verify feed availability).
     },
   },
+
+  // ----- X-3: tier-1 corpus-expansion sitemap schedules -----
+  // Staggered to avoid hour-boundary pile-up; cadence per
+  // decision_tier_1_source_roster.md. All route through the generic
+  // sitemap-fetch queue; per-source behavior lives in ai_sources.crawl_config.
+  // Each schedule enqueues one job per fire, singleton-coalesced so an
+  // overlapping fire doesn't double-queue.
+  ...buildSitemapSchedules([
+    { name: "daily-perplexity",          cron: "15 1 * * *",  sourceKey: "perplexity-research" },
+    { name: "daily-blog-google",         cron: "30 1 * * *",  sourceKey: "google-blog-ai" },
+    { name: "daily-deepmind",            cron: "45 1 * * *",  sourceKey: "deepmind-blog" },
+    { name: "daily-huggingface-blog",    cron: "0 2 * * *",   sourceKey: "huggingface-blog" },
+    { name: "3-day-mistral",             cron: "0 3 */3 * *", sourceKey: "mistral-blog" },
+    { name: "3-day-ibm-research",        cron: "0 4 */3 * *", sourceKey: "ibm-research" },
+    { name: "weekly-anthropic-docs",     cron: "0 5 * * 0",   sourceKey: "anthropic-docs" },
+    { name: "weekly-mcp-spec",           cron: "30 5 * * 0",  sourceKey: "mcp-spec" },
+    { name: "weekly-stanford-hai",       cron: "0 6 * * 1",   sourceKey: "stanford-hai" },
+    { name: "weekly-mit-csail",          cron: "30 6 * * 1",  sourceKey: "mit-csail" },
+    { name: "weekly-booth",              cron: "0 6 * * 2",   sourceKey: "chicago-booth-research" },
+  ]),
 ];
+
+function buildSitemapSchedules(
+  defs: Array<{ name: string; cron: string; sourceKey: string }>,
+): ScheduleDef[] {
+  return defs.map((d) => ({
+    name: d.name,
+    cron: d.cron,
+    fire: async () => {
+      const boss = getBoss();
+      await boss.send(
+        "sitemap-fetch",
+        { sourceKey: d.sourceKey, scope: "global" },
+        { singletonKey: d.name },
+      );
+    },
+  }));
+}
 
 export function registerSchedules(): void {
   if (_registered) return;
