@@ -25,6 +25,7 @@ import { rrfFuse, type LegHit } from "@/lib/ai-knowledge/search/rrf-fusion";
 import { rerank } from "@/lib/ai-knowledge/rerank/bge-client";
 import { gpt4oRerank } from "@/lib/ai-knowledge/rerank/gpt4o-fallback";
 import { getSessionActor } from "@/lib/auth-session";
+import { isGuestRequest } from "@/lib/auth-guest";
 import { runWithActor, withActor, db } from "@/lib/db/actor";
 import type { RerankResult } from "@/lib/ai-knowledge/rerank/types";
 
@@ -63,10 +64,22 @@ export async function GET(req: Request) {
   }
   const { q, limit } = parsed.data;
 
+  // Search is intentionally accessible to guests. The corpus is curated AI-
+  // adoption content; users (signed-in or not) need to browse it to find
+  // recommendations and prompts. RLS on corpus_documents enforces
+  // `scope='global' OR scope=current_user_id` — guests have no user_id, so
+  // RLS naturally narrows their results to global content. The "my" scope
+  // option is a no-op for guests (returns the same as global).
   const actor = await getSessionActor();
-  if (!actor) {
+  const guest = !actor && (await isGuestRequest());
+  if (!actor && !guest) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
+  // Synthetic UUIDs for guest's actor context — only used to call
+  // runWithActor below; RLS GUC for app.current_user_id stays unset for
+  // the global-only path.
+  const userId = actor?.userId ?? "00000000-0000-0000-0000-000000000000";
+  const tenantId = actor?.tenantId ?? "00000000-0000-0000-0000-000000000000";
 
   // Phase 1 — embed the query (network).
   let embedding: number[];
@@ -88,7 +101,7 @@ export async function GET(req: Request) {
     fn: (tx: Parameters<Parameters<typeof withActor>[0]>[0]) => Promise<T>,
   ): Promise<T> => {
     const start = Date.now();
-    return runWithActor({ userId: actor.userId, tenantId: actor.tenantId }, async () =>
+    return runWithActor({ userId, tenantId }, async () =>
       withActor(async (tx) => {
         const out = await fn(tx);
         legTiming[name] = Date.now() - start;
@@ -114,7 +127,7 @@ export async function GET(req: Request) {
     const total = Date.now() - t0;
     // Best-effort observability write; never block the response on it.
     void logSearch({
-      userId: actor.userId,
+      userId,
       query: q,
       result_count: 0,
       lex_ms: legTiming.bm25,
@@ -137,7 +150,7 @@ export async function GET(req: Request) {
   // gpt-4o-mini fallback's MAX_DOCS).
   const candidateIds = fused.slice(0, 30).map((f) => f.doc_id);
   const candidateRows = await runWithActor(
-    { userId: actor.userId, tenantId: actor.tenantId },
+    { userId, tenantId },
     async () =>
       withActor(async (tx) =>
         tx.execute(sql`
@@ -214,7 +227,7 @@ export async function GET(req: Request) {
   // Phase 6 — observability write BEFORE the response. Best-effort; the
   // outer response is the load-bearing piece. 100ms budget.
   await logSearch({
-    userId: actor.userId,
+    userId,
     query: q,
     result_count: results.length,
     lex_ms: legTiming.bm25,
