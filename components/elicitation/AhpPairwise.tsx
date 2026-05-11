@@ -1,16 +1,15 @@
 "use client";
 
 // F-10 AHP elicitation UI — pairwise comparison of criterion importance using
-// Saaty's 1–9 scale (default) or a coarsened 5-chip fallback. Mobile-first.
-// Sunrise tokens only — no new design tokens introduced.
+// Saaty's 1–9 scale. Mobile-first. UI Guidelines v0.1 (ink-only).
 //
 // Contract with the engine:
 //   • Caller owns the comparisons dict keyed `${i}:${j}` (i < j).
 //   • Selection emits { i, j, value } via onChange.
 //   • Computed weights + CR come from runStage1bAhp() outside this component.
 //
-// Inconsistency UX: when CR > 0.10, surface the worstPair as a "your answers
-// conflict on X vs Y" hint with a one-tap revise affordance.
+// Inconsistency UX: when CR > 0.10, surface the worstPair as inline ink text
+// ("Conflicts with your other answers — revise?") not a colored background pill.
 //
 // E4 — Interaction-state matrix (`resolveAhpPairwiseState()` in
 // lib/component-state.ts is the test-covered resolver):
@@ -26,6 +25,12 @@
 // E3 — Raw-matrix JSON disclosure: a collapsed <details> below the grid
 // reveals an editable JSON view of the comparison matrix. Paste-back
 // re-validates and propagates via onChange.
+//
+// Round-2 change (UI Guidelines v0.1):
+//   • Removed coarse 5-chip mode + scale-granularity toggle (per plan §AHP D3).
+//   • Replaced all V2 Sunrise palette classes (cat-*, plum, grad-coral,
+//     focus-coral, ring-coral-glow, bg-cream-2, text-ink-700, border-rule)
+//     with ink-only tokens (text-ink, text-mute, border-line, bg-paper).
 
 import { useState } from "react";
 import { resolveAhpPairwiseState } from "@/lib/component-state";
@@ -42,8 +47,6 @@ interface Props {
   comparisons: Record<string, number>;
   /** Inconsistency hint: when set, shows a "revise this pair" callout. */
   worstPair?: { i: number; j: number } | null;
-  /** Saaty 1–9 (default) vs coarsened 5-chip mode. */
-  mode?: "saaty" | "coarse";
   onChange: (
     next: Record<string, number>,
     changed: { i: number; j: number; value: number },
@@ -61,7 +64,7 @@ interface Props {
   onRetry?: () => void;
 }
 
-// Saaty's 1–9 scale anchors.
+// Saaty's 1–9 scale anchors. Single canonical scale; coarse mode removed.
 const SAATY_OPTIONS: Array<{ value: number; label: string; hint: string }> = [
   { value: 1, label: "Equal", hint: "Same importance" },
   { value: 3, label: "Moderate", hint: "Slightly more important" },
@@ -70,20 +73,10 @@ const SAATY_OPTIONS: Array<{ value: number; label: string; hint: string }> = [
   { value: 9, label: "Extreme", hint: "Absolutely more important" },
 ];
 
-// Coarsened 5-chip (when Saaty's 1–9 feels too granular).
-const COARSE_OPTIONS: Array<{ value: number; label: string }> = [
-  { value: 5, label: "A matters much more" },
-  { value: 3, label: "A matters more" },
-  { value: 1, label: "Equal" },
-  { value: 1 / 3, label: "B matters more" },
-  { value: 1 / 5, label: "B matters much more" },
-];
-
 export function AhpPairwise({
   criteria,
   comparisons,
   worstPair,
-  mode = "saaty",
   onChange,
   loading = false,
   error = null,
@@ -91,7 +84,6 @@ export function AhpPairwise({
   onRetry,
 }: Props) {
   const n = criteria.length;
-  const [activeMode, setActiveMode] = useState<"saaty" | "coarse">(mode);
   // E3: raw-matrix JSON disclosure state. The textarea holds a draft of the
   // matrix as JSON; on submit we parse + validate + propagate via onChange.
   const [rawDraft, setRawDraft] = useState<string>("");
@@ -182,13 +174,13 @@ export function AhpPairwise({
     return (
       <section
         aria-label="Pairwise criterion comparison (AHP)"
-        className="rounded-2xl border border-dashed border-rule bg-cream-2/40 p-6"
+        className="rounded-xl border border-dashed border-line bg-paper p-6"
         role="status"
       >
-        <p className="text-[14px] font-semibold text-ink-900">
+        <p className="text-[14px] font-semibold text-ink">
           Not enough criteria to compare.
         </p>
-        <p className="mt-1 text-[12.5px] text-ink-500">
+        <p className="mt-1 text-[12.5px] text-mute">
           Pairwise comparison needs at least 2 criteria. Add more in the
           previous step.
         </p>
@@ -205,9 +197,9 @@ export function AhpPairwise({
       >
         <span className="skeleton block h-4 w-1/2 rounded-full" />
         <span className="skeleton block h-3 w-full rounded-full" />
-        <span className="skeleton block h-20 w-full rounded-2xl" />
-        <span className="skeleton block h-20 w-full rounded-2xl" />
-        <p className="text-[12.5px] text-ink-500">Preparing comparisons…</p>
+        <span className="skeleton block h-20 w-full rounded-xl" />
+        <span className="skeleton block h-20 w-full rounded-xl" />
+        <p className="text-[12.5px] text-mute">Preparing comparisons…</p>
       </section>
     );
   }
@@ -215,18 +207,18 @@ export function AhpPairwise({
     return (
       <section
         aria-label="Pairwise criterion comparison (AHP)"
-        className="rounded-2xl border border-cat-cap bg-white p-6"
+        className="rounded-xl border border-ink bg-paper p-6"
         role="alert"
       >
-        <p className="text-[14px] font-semibold text-ink-900">
+        <p className="text-[14px] font-semibold text-ink">
           Couldn't load the comparison.
         </p>
-        <p className="mt-1 text-[12.5px] text-ink-500">{error}</p>
+        <p className="mt-1 text-[12.5px] text-mute">{error}</p>
         {onRetry && (
           <button
             type="button"
             onClick={onRetry}
-            className="ease-soft mt-3 inline-flex h-10 items-center gap-1.5 rounded-full border border-rule bg-white px-4 text-[13.5px] font-semibold text-ink-700 hover:border-coral focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+            className="mt-3 inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-ink bg-paper px-4 text-[13.5px] font-semibold text-ink transition-colors hover:bg-line/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
           >
             Try again
           </button>
@@ -240,82 +232,55 @@ export function AhpPairwise({
       aria-label="Pairwise criterion comparison (AHP)"
       className="space-y-4"
     >
-      {/* E4 success banner — all answered + consistent */}
+      {/* E4 success banner — all answered + consistent.
+          Ink-only: text-ink on bg-paper with a single ink border. The
+          previous V2 Sunrise version used bg-conf-strong-bg / text-conf-strong
+          which violated the strict ink-only rule (color carries meaning
+          ONLY on Pill `ok` for hours-saved + Pill `bad` for audit retire). */}
       {viewState === "success" && (
         <div
-          className="rounded-xl bg-conf-strong-bg px-4 py-3 text-[13px] font-medium text-conf-strong"
+          className="rounded-xl border border-ink bg-paper px-4 py-3 text-[13px] font-medium text-ink"
           role="status"
         >
           ✓ Weights look consistent — you're done. Move on to compute results.
         </div>
       )}
 
-      {/* HEADER + MODE TOGGLE */}
+      {/* HEADER — coarse/numeric toggle removed per plan §AHP D3. */}
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-[17px] font-semibold leading-snug">
+          <h2 className="text-[17px] font-semibold leading-snug text-ink">
             Set your weights yourself
           </h2>
-          <p className="mt-1 max-w-prose text-[13px] text-ink-700">
+          <p className="mt-1 max-w-prose text-[13px] text-mute">
             For each pair below, choose which criterion matters more to you and
             by how much. The math turns these into weights — and flags any
             answers that conflict.
           </p>
         </div>
-        <div
-          role="tablist"
-          aria-label="Scale granularity"
-          className="inline-flex h-9 items-center rounded-full border border-rule bg-white p-0.5 text-[12.5px] font-medium"
-        >
-          <button
-            role="tab"
-            type="button"
-            aria-selected={activeMode === "saaty"}
-            onClick={() => setActiveMode("saaty")}
-            className={`ease-soft inline-flex h-8 items-center rounded-full px-3 ${
-              activeMode === "saaty"
-                ? "bg-cream-2 text-ink-900"
-                : "text-ink-500 hover:text-ink-700"
-            }`}
-          >
-            Saaty 1–9
-          </button>
-          <button
-            role="tab"
-            type="button"
-            aria-selected={activeMode === "coarse"}
-            onClick={() => setActiveMode("coarse")}
-            className={`ease-soft inline-flex h-8 items-center rounded-full px-3 ${
-              activeMode === "coarse"
-                ? "bg-cream-2 text-ink-900"
-                : "text-ink-500 hover:text-ink-700"
-            }`}
-          >
-            5 chips
-          </button>
-        </div>
       </header>
 
-      {/* PROGRESS */}
+      {/* PROGRESS — ink fill on line track. No gradient. */}
       <div
         aria-label="Pairs answered"
-        className="flex items-center gap-3 text-[12px] text-ink-500"
+        className="flex items-center gap-3 text-[12px] text-mute"
       >
         <span>
           {answered} / {total} pair{total === 1 ? "" : "s"}
         </span>
         <div
-          className="h-1 flex-1 rounded-full bg-cream-2"
+          className="h-1 flex-1 rounded-full bg-line"
           aria-hidden
         >
           <div
-            className="grad-coral h-1 rounded-full transition-[width]"
+            className="h-1 rounded-full bg-ink transition-[width]"
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
 
-      {/* PAIRS — populated/default states (default = 0 answered, just renders empty grid) */}
+      {/* PAIRS — populated/default states (default = 0 answered, just renders empty grid).
+          Worst-pair callout: ink text only, not a colored background pill. */}
       <ol className="space-y-3">
         {pairs.map((p) => {
           const key = `${p.i}:${p.j}`;
@@ -325,43 +290,34 @@ export function AhpPairwise({
           return (
             <li
               key={key}
-              className={`rounded-2xl border bg-white p-4 ${
-                isWorst ? "border-cat-cap" : "border-rule"
+              className={`rounded-xl border bg-paper p-4 ${
+                isWorst ? "border-ink" : "border-line"
               }`}
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="text-[14.5px] font-semibold leading-snug">
+                <p className="text-[14.5px] font-semibold leading-snug text-ink">
                   <span>{criteria[p.i]!.label}</span>
-                  <span className="mx-1.5 text-ink-500">vs</span>
+                  <span className="mx-1.5 text-mute">vs</span>
                   <span>{criteria[p.j]!.label}</span>
                 </p>
                 {isWorst && (
-                  <span className="inline-flex h-6 items-center rounded-full bg-cat-cap-bg px-2 text-[11px] font-semibold text-cat-cap-deep">
+                  <span className="text-[11px] font-semibold text-ink">
                     Conflicts with your other answers — revise?
                   </span>
                 )}
               </div>
               {(criteria[p.i]!.description || criteria[p.j]!.description) && (
-                <p className="mt-1 text-[12px] text-ink-500">
+                <p className="mt-1 text-[12px] text-mute">
                   Compare on the dimension that matters more to you right now.
                 </p>
               )}
 
-              {activeMode === "saaty" ? (
-                <SaatyScale
-                  iLabel={criteria[p.i]!.label}
-                  jLabel={criteria[p.j]!.label}
-                  value={value}
-                  onSelect={(v) => setPair(p.i, p.j, v)}
-                />
-              ) : (
-                <CoarseScale
-                  iLabel={criteria[p.i]!.label}
-                  jLabel={criteria[p.j]!.label}
-                  value={value}
-                  onSelect={(v) => setPair(p.i, p.j, v)}
-                />
-              )}
+              <SaatyScale
+                iLabel={criteria[p.i]!.label}
+                jLabel={criteria[p.j]!.label}
+                value={value}
+                onSelect={(v) => setPair(p.i, p.j, v)}
+              />
             </li>
           );
         })}
@@ -372,7 +328,7 @@ export function AhpPairwise({
           payloads must keep the raw JSON one tab away. Paste-back parses +
           re-validates, friendly errors stay inside the disclosure. */}
       <details
-        className="group rounded-2xl border border-rule bg-white"
+        className="group rounded-xl border border-line bg-paper"
         onToggle={(e) => {
           // When opening, seed the textarea from current state so the user
           // can edit. When closing, leave their draft intact.
@@ -383,13 +339,13 @@ export function AhpPairwise({
         }}
       >
         <summary
-          className="ease-soft flex cursor-pointer items-center justify-between gap-2 rounded-2xl px-4 py-3 text-[13px] font-medium text-ink-700 hover:bg-cream-2 [&::-webkit-details-marker]:hidden"
+          className="flex cursor-pointer items-center justify-between gap-2 rounded-xl px-4 py-3 text-[13px] font-medium text-ink transition-colors hover:bg-line/40 [&::-webkit-details-marker]:hidden"
           aria-label="Show raw comparison matrix as JSON"
         >
           <span className="flex items-center gap-2">
             <svg
               viewBox="0 0 24 24"
-              className="ease-soft h-4 w-4 group-open:rotate-90"
+              className="h-4 w-4 transition-transform group-open:rotate-90"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -398,18 +354,18 @@ export function AhpPairwise({
             >
               <polyline points="9 18 15 12 9 6" />
             </svg>
-            <span className="text-[14px] font-semibold">
+            <span className="text-[14px] font-semibold text-ink">
               Show raw matrix (advanced)
             </span>
           </span>
-          <span className="text-[12px] text-ink-500">
+          <span className="text-[12px] text-mute">
             Edit JSON directly · advanced users
           </span>
         </summary>
-        <div className="space-y-3 border-t border-rule px-4 pb-4 pt-3 sm:px-5">
-          <p className="text-[12px] leading-relaxed text-ink-500">
+        <div className="space-y-3 border-t border-line px-4 pb-4 pt-3 sm:px-5">
+          <p className="text-[12px] leading-relaxed text-mute">
             Comparison matrix as JSON. Keys are{" "}
-            <code className="rounded bg-cream-2 px-1 py-0.5 text-[11px] text-ink-700">
+            <code className="rounded bg-line/40 px-1 py-0.5 text-[11px] text-ink">
               i:j
             </code>{" "}
             with i &lt; j. Values are positive numbers on Saaty's 1–9 scale
@@ -428,10 +384,10 @@ export function AhpPairwise({
             }}
             rows={Math.min(12, Math.max(4, rawMatrix.split("\n").length))}
             spellCheck={false}
-            className="block w-full rounded-xl border border-rule bg-cream-2 p-3 font-mono text-[12.5px] leading-relaxed text-ink-900 focus:border-coral focus:outline-none focus:ring-coral-glow"
+            className="block w-full rounded-[10px] border border-line bg-paper p-3 font-mono text-[12.5px] leading-relaxed text-ink focus:border-ink focus:outline-none focus:ring-[3px] focus:ring-ink/20"
           />
           {rawError && (
-            <p className="status-error text-[12.5px]" role="alert">
+            <p className="text-[12.5px] text-ink" role="alert">
               {rawError}
             </p>
           )}
@@ -439,10 +395,10 @@ export function AhpPairwise({
             <button
               type="button"
               onClick={applyRawDraft}
-              className={`ease-soft inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[12.5px] font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 ${
+              className={`inline-flex h-9 items-center gap-1.5 rounded-[10px] border px-4 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20 ${
                 rawApplied
-                  ? "border border-cat-skill bg-white text-cat-skill-deep"
-                  : "grad-coral text-white"
+                  ? "border-ink bg-paper text-ink"
+                  : "border-ink bg-ink text-paper shadow-card hover:bg-ink/90"
               }`}
               aria-label="Apply pasted matrix"
             >
@@ -454,12 +410,12 @@ export function AhpPairwise({
                 setRawDraft(rawMatrix);
                 setRawError(null);
               }}
-              className="ease-soft inline-flex h-9 items-center gap-1.5 rounded-full border border-rule bg-white px-3 text-[12.5px] font-semibold text-ink-700 hover:border-coral focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+              className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-ink bg-paper px-3 text-[12.5px] font-semibold text-ink transition-colors hover:bg-line/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
               aria-label="Reset draft to current matrix"
             >
               Reset
             </button>
-            <span className="text-[11.5px] text-ink-500">
+            <span className="text-[11.5px] text-mute">
               Edits sync to the chip grid above.
             </span>
           </div>
@@ -484,7 +440,7 @@ function SaatyScale({
 }) {
   return (
     <div className="mt-3">
-      <div className="grid grid-cols-2 gap-3 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+      <div className="grid grid-cols-2 gap-3 text-[11px] font-semibold uppercase tracking-wider text-mute">
         <span>{iLabel} matters more</span>
         <span className="text-right">{jLabel} matters more</span>
       </div>
@@ -498,7 +454,6 @@ function SaatyScale({
               value={opt.value}
               selected={value === opt.value}
               onClick={() => onSelect(opt.value)}
-              tone="i"
               label={opt.label}
               hint={opt.hint}
             />
@@ -507,7 +462,6 @@ function SaatyScale({
           value={1}
           selected={value === 1}
           onClick={() => onSelect(1)}
-          tone="eq"
           label="Equal"
           hint="Same importance"
         />
@@ -519,7 +473,6 @@ function SaatyScale({
               value={inverted}
               selected={typeof value === "number" && Math.abs(value - inverted) < 1e-9}
               onClick={() => onSelect(inverted)}
-              tone="j"
               label={opt.label}
               hint={opt.hint}
             />
@@ -530,61 +483,16 @@ function SaatyScale({
   );
 }
 
-// ── Coarse 5-chip ─────────────────────────────────────────────────────────
-
-function CoarseScale({
-  iLabel,
-  jLabel,
-  value,
-  onSelect,
-}: {
-  iLabel: string;
-  jLabel: string;
-  value: number | undefined;
-  onSelect: (v: number) => void;
-}) {
-  return (
-    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-5">
-      {COARSE_OPTIONS.map((opt, i) => {
-        const selected =
-          typeof value === "number" && Math.abs(value - opt.value) < 1e-9;
-        const tone =
-          opt.value > 1 ? "i" : opt.value < 1 ? "j" : "eq";
-        const label = opt.label
-          .replace("A", iLabel)
-          .replace("B", jLabel);
-        return (
-          <button
-            key={i}
-            type="button"
-            onClick={() => onSelect(opt.value)}
-            aria-pressed={selected}
-            className={`ease-soft inline-flex min-h-[44px] items-center justify-center rounded-xl border px-3 text-[12.5px] ${
-              selected
-                ? toneSelectedClass(tone)
-                : "border-rule bg-white text-ink-700 hover:border-ink-200"
-            }`}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 function ScaleChip({
   value,
   selected,
   onClick,
-  tone,
   label,
   hint,
 }: {
   value: number;
   selected: boolean;
   onClick: () => void;
-  tone: "i" | "j" | "eq";
   label: string;
   hint: string;
 }) {
@@ -595,17 +503,13 @@ function ScaleChip({
       aria-pressed={selected}
       aria-label={`${label} (${hint}, value ${value.toFixed(2)})`}
       title={`${label} — ${hint}`}
-      className={`ease-soft inline-flex h-10 min-w-[44px] items-center justify-center rounded-full border px-3 text-[11.5px] font-semibold ${
-        selected ? toneSelectedClass(tone) : "border-rule bg-white text-ink-700 hover:border-ink-200"
+      className={`inline-flex h-10 min-w-[44px] items-center justify-center rounded-full border px-3 text-[11.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20 ${
+        selected
+          ? "border-ink bg-ink text-paper"
+          : "border-line bg-paper text-mute hover:border-ink hover:text-ink"
       }`}
     >
       {label}
     </button>
   );
-}
-
-function toneSelectedClass(tone: "i" | "j" | "eq"): string {
-  if (tone === "i") return "border-cat-skill bg-cat-skill-bg text-cat-skill-deep";
-  if (tone === "j") return "border-plum bg-plum-bg text-plum";
-  return "border-ink-200 bg-cream-2 text-ink-900";
 }
