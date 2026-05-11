@@ -351,6 +351,59 @@ export const libraryPlugins = pgTable(
   }),
 );
 
+// --- Recommendations (V2 E3: pain-to-AI-recommendation) ---
+// User-scoped (no 'global' rows); RLS lives in drizzle/0008_recommendations.sql.
+// pain_path CHECK constraint mirrors library_use_cases (hardening item 12).
+// status enum mirrors the practitioner lifecycle: planned → tried → active → improve → retired.
+
+export type RecommendationStatus =
+  | "planned"
+  | "tried"
+  | "active"
+  | "improve"
+  | "retired";
+
+export const recommendations = pgTable(
+  "recommendations",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    painPath: text("pain_path").$type<PainPath>().notNull(),
+    challengeSummary: text("challenge_summary").notNull(),
+    goal: text("goal"),
+    intake: jsonb("intake").notNull().default(sql`'{}'::jsonb`),
+    candidateTasks: jsonb("candidate_tasks").notNull().default(sql`'[]'::jsonb`),
+    recommendedTask: jsonb("recommended_task"),
+    starterSolution: jsonb("starter_solution"),
+    guardrails: jsonb("guardrails").notNull().default(sql`'[]'::jsonb`),
+    successMetric: text("success_metric"),
+    adoptionPathway: jsonb("adoption_pathway").notNull().default(sql`'[]'::jsonb`),
+    methodTrace: jsonb("method_trace"),
+    baseline: jsonb("baseline"),
+    status: text("status")
+      .$type<RecommendationStatus>()
+      .notNull()
+      .default("planned"),
+    confidence: text("confidence"), // stored as numeric(3,2); read as string from PG, cast at runtime
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    userIdx: index("recommendations_user_idx").on(t.userId, t.createdAt),
+    painPathIdx: index("recommendations_pain_path_idx").on(t.painPath),
+    statusIdx: index("recommendations_status_idx").on(t.status),
+  }),
+);
+
 // Type exports — plural matches DB; type names stay singular for ergonomics.
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -370,3 +423,5 @@ export type LibrarySkill = typeof librarySkills.$inferSelect;
 export type NewLibrarySkill = typeof librarySkills.$inferInsert;
 export type LibraryPlugin = typeof libraryPlugins.$inferSelect;
 export type NewLibraryPlugin = typeof libraryPlugins.$inferInsert;
+export type Recommendation = typeof recommendations.$inferSelect;
+export type NewRecommendation = typeof recommendations.$inferInsert;
