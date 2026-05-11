@@ -8,7 +8,11 @@ export function SignOutButton() {
   return (
     <button
       type="button"
-      className="ease-soft min-h-11 rounded-full px-3 text-[13px] text-ink-500 hover:bg-cream-2 hover:text-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+      className={
+        "block w-full text-left px-3 py-1.5 rounded-md text-[12px] " +
+        "text-mute hover:text-ink hover:bg-line/40 transition-colors " +
+        "focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
+      }
       onClick={async () => {
         await signOut();
         router.push("/sign-in");
