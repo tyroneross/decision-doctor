@@ -2,6 +2,7 @@ import { desc } from "drizzle-orm";
 import { decisions } from "@/lib/db/schema";
 import { runWithActor, withActor } from "@/lib/db/actor";
 import { getSessionActor } from "@/lib/auth-session";
+import { isGuestRequest } from "@/lib/auth-guest";
 import { totalHoursSaved, streakWeeks } from "@/lib/decision-display";
 import {
   DecisionsListClient,
@@ -15,7 +16,13 @@ import { EmptyState } from "@/components/decisions/EmptyState";
 // aggregates server-side so the client gets serialized primitives.
 export default async function DecisionsHistoryPage() {
   const actor = await getSessionActor();
-  if (!actor) return null; // layout redirects; defensive
+  if (!actor) {
+    // Guests see the empty-state hero (CTA into /app to start a decision).
+    // Authed-but-actor-missing is the defensive case — layout would have
+    // redirected, but render the empty state as a safe fallback.
+    if (await isGuestRequest()) return <EmptyState />;
+    return null;
+  }
 
   const rows = await runWithActor(
     { userId: actor.userId, tenantId: actor.tenantId },

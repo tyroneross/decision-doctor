@@ -146,7 +146,7 @@ export default function SignInPage() {
             }
           }}
           disabled={busy}
-          className="text-[13px] font-medium text-ink underline-offset-2 hover:underline disabled:opacity-50"
+          className="inline-flex min-h-[32px] items-center px-1 -mx-1 text-[13px] font-medium text-ink underline-offset-2 hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20 rounded-[6px]"
         >
           Browse as guest &rarr;
         </button>

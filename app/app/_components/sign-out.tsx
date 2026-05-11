@@ -14,7 +14,13 @@ export function SignOutButton() {
         "focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
       }
       onClick={async () => {
-        await signOut();
+        // Best-effort clear both auth surfaces. signOut() is a no-op for
+        // guests (no session); DELETE /api/auth/guest is a no-op for
+        // authed users (no guest cookie). Run them in parallel.
+        await Promise.allSettled([
+          signOut(),
+          fetch("/api/auth/guest", { method: "DELETE" }),
+        ]);
         router.push("/sign-in");
       }}
     >
