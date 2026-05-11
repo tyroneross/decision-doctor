@@ -34,9 +34,12 @@ export interface BM25Hit {
  * RLS GUCs + leg-level latency timing) and returns top-K doc ids by
  * cover-density rank.
  *
- * websearch_to_tsquery sanitizes user input and supports "phrase queries"
- * + AND/OR/NOT operators. ts_rank_cd flag 32 normalizes by 1 + log(unique
- * words in document) — closest builtin to BM25's length normalization.
+ * Two-pass: AND-quorum first via websearch_to_tsquery (which honors phrase
+ * queries + AND/OR/NOT operators). If that returns zero rows — common for
+ * 5+ token natural-language queries because not every term is present in
+ * every relevant doc — falls back to an OR-quorum query so recall stays
+ * useful. Cover-density rank (flag 32) still produces a meaningful ordering
+ * because docs matching more terms accumulate higher rank.
  */
 export async function bm25Search(
   tx: NeonDatabase,
@@ -45,7 +48,8 @@ export async function bm25Search(
 ): Promise<BM25Hit[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
-  const rows = await tx.execute(sql`
+
+  const andRows = await tx.execute(sql`
     WITH tsq AS (SELECT websearch_to_tsquery('english', ${trimmed}) AS q)
     SELECT id AS doc_id,
            ts_rank_cd(search_tsv, tsq.q, 32) AS rank
@@ -54,7 +58,38 @@ export async function bm25Search(
      ORDER BY rank DESC
      LIMIT ${limit}
   `);
-  return (rows.rows as Array<{ doc_id: string; rank: number | string }>).map(
+  if (andRows.rows.length > 0) {
+    return (andRows.rows as Array<{ doc_id: string; rank: number | string }>).map(
+      (r) => ({ doc_id: r.doc_id, rank: Number(r.rank) }),
+    );
+  }
+
+  const orQuery = buildOrQuorum(trimmed);
+  if (!orQuery) return [];
+
+  const orRows = await tx.execute(sql`
+    WITH tsq AS (SELECT to_tsquery('english', ${orQuery}) AS q)
+    SELECT id AS doc_id,
+           ts_rank_cd(search_tsv, tsq.q, 32) AS rank
+      FROM corpus_documents, tsq
+     WHERE search_tsv @@ tsq.q
+     ORDER BY rank DESC
+     LIMIT ${limit}
+  `);
+  return (orRows.rows as Array<{ doc_id: string; rank: number | string }>).map(
     (r) => ({ doc_id: r.doc_id, rank: Number(r.rank) }),
   );
+}
+
+// Sanitize and OR-join tokens for to_tsquery. to_tsquery is operator-aware
+// and rejects raw punctuation, so we strip everything but [a-z0-9], drop
+// tokens shorter than 2 chars, and join with ` | `. Empty result is valid
+// (caller treats as zero hits).
+export function buildOrQuorum(input: string): string {
+  return input
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => w.replace(/[^a-z0-9]/g, ""))
+    .filter((w) => w.length >= 2)
+    .join(" | ");
 }
