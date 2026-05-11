@@ -181,14 +181,28 @@ export class BrowserManager {
 
     await mkdir(userDataDir, { recursive: true })
 
+    const isLinux = process.platform === 'linux'
+
     const args = [
       `--remote-debugging-port=${this._port}`,
+      `--remote-debugging-address=127.0.0.1`,
       `--user-data-dir=${userDataDir}`,
       '--no-first-run',
       '--no-default-browser-check',
       '--disable-background-networking',
       '--disable-sync',
     ]
+    if (isLinux) {
+      // Container/CI-safe flags. Chromium will not launch in a Docker/Railway
+      // container without --no-sandbox; --disable-dev-shm-usage avoids the
+      // 64 MB /dev/shm cap that produces "tab crash" on small instances.
+      args.push(
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+      )
+    }
     if (headless) {
       args.push('--headless=new')
     }
@@ -200,18 +214,52 @@ export class BrowserManager {
 
     this.process = spawn(chromePath, args, { stdio: 'pipe' })
 
+    // Capture stderr so a crashing Chrome shows its real reason. Without this
+    // the only signal at the call site is "Chrome debugger did not respond" —
+    // the actual cause (missing libs, --no-sandbox required, etc.) hides in
+    // the discarded stderr stream.
+    const stderrChunks: Buffer[] = []
+    this.process.stderr?.on('data', (chunk: Buffer) => {
+      stderrChunks.push(chunk)
+      // Bounded to ~64 KB so a chatty Chrome doesn't OOM the worker.
+      while (stderrChunks.reduce((n, b) => n + b.length, 0) > 65_536) {
+        stderrChunks.shift()
+      }
+    })
+    this.process.stdout?.on('data', () => { /* drain to avoid backpressure */ })
+
     this.process.on('error', (err) => {
-      console.error(`Chrome process error: ${err.message}`)
+      console.error(`[cdp] Chrome process error: ${err.message}`)
+    })
+    this.process.on('exit', (code, signal) => {
+      if (code !== 0 && code !== null) {
+        const tail = Buffer.concat(stderrChunks).toString('utf8').slice(-4096)
+        console.error(`[cdp] Chrome exited code=${code} signal=${signal}\n${tail}`)
+      }
     })
 
-    const wsUrl = await this.waitForDebugger()
-    this._cdpUrl = `http://127.0.0.1:${this._port}`
-    this._wsEndpoint = wsUrl
-    return wsUrl
+    try {
+      const wsUrl = await this.waitForDebugger()
+      this._cdpUrl = `http://127.0.0.1:${this._port}`
+      this._wsEndpoint = wsUrl
+      return wsUrl
+    } catch (e) {
+      // Surface captured stderr so the upstream graceful-degrade path can
+      // record a real reason in metadata.content_extract.degraded_reason.
+      const tail = Buffer.concat(stderrChunks).toString('utf8').slice(-2048)
+      if (tail.trim().length > 0) {
+        console.error(`[cdp] Chrome stderr tail:\n${tail}`)
+      }
+      throw e
+    }
   }
 
   private async waitForDebugger(): Promise<string> {
-    const maxAttempts = 50 // 5 seconds at 100ms intervals
+    // 15 s gives slow first-launch on Railway-class instances time to write
+    // the singleton lock, register the debugger socket, and respond to the
+    // first poll. Earlier 5 s window was the proximate cause of the first
+    // production degrade — see content-extract degraded:true outcome.
+    const maxAttempts = 150 // 15 seconds at 100 ms intervals
     for (let i = 0; i < maxAttempts; i++) {
       try {
         const res = await fetch(`http://127.0.0.1:${this._port}/json/version`)
@@ -222,7 +270,7 @@ export class BrowserManager {
       }
     }
     throw new Error(
-      `Chrome debugger did not respond within 5s on port ${this._port}. `
+      `Chrome debugger did not respond within 15s on port ${this._port}. `
       + 'Is another Chrome instance using this port?\n'
       + 'If you are running inside a sandbox, retry with connect mode:\n'
       + '  --browser-mode connect --cdp-url http://127.0.0.1:9222'

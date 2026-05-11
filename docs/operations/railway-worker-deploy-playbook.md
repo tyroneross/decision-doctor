@@ -1,26 +1,37 @@
 # Railway Worker Deploy Playbook
 
 **Status:** ✅ Live — `decision-doctor-workers-production.up.railway.app` `/health` returns 200
-**First successful deploy:** 2026-05-10, after 4 failed attempts
+**First successful deploy:** 2026-05-10 (under Nixpacks). Re-converged 2026-05-11 after Railway's Nixpacks→Railpack migration broke the original config — see "Railpack migration" section below.
 **Project:** `decision-doc-railway` (`11d80262-9690-428d-ac73-ec689f9d5574`)
 **Service:** `decision-doctor-workers` (`07399a5d-1b4b-4aa9-84d5-cfbcc506cee0`)
-**Reference precedent:** [`atomize-ai/docs/04-operations/RAILWAY_WORKERS.md`](/Users/tyroneross/dev/git-folder/atomize-ai/docs/04-operations/RAILWAY_WORKERS.md) — production for ~30 days as of this writing
+**Reference precedent:** [`atomize-ai/docs/04-operations/RAILWAY_WORKERS.md`](/Users/tyroneross/dev/git-folder/atomize-ai/docs/04-operations/RAILWAY_WORKERS.md) — production for ~30 days under Nixpacks.
 
 ---
 
-## TL;DR — the working recipe
+## TL;DR — the current working recipe (Railpack)
 
-If you're deploying a TypeScript worker to Railway from this monorepo (or a sibling):
+> **2026-05-11:** Railway migrated this service from Nixpacks to Railpack. The earlier `workers/railway.json` + `workers/nixpacks.toml` are now stale and were deleted. Single source of truth is **root `railpack.json`**.
 
-1. **Auth via project token, not user login.** Set `RAILWAY_TOKEN` env var with a project-scoped token from the Railway dashboard. No `railway login` needed.
-2. **`railway.json`** points at the worker subdirectory; `buildCommand` runs `pnpm install --frozen-lockfile`, no `pnpm build` step.
-3. **`package.json` `start`:** `node --import tsx src/index.ts` (not bare `tsx`). Atomize's verified pattern.
-4. **`tsx` in `dependencies`** (not devDependencies); `typescript` + `@types/*` stay in devDependencies.
-5. **`pnpm-lock.yaml` committed** and in sync with `package.json` or `--frozen-lockfile` rejects the build.
-6. Service creation: `railway add --service <name>` once; env vars via `railway variables --service <name> --set "KEY=$value"`; deploy via `railway up --service <name> --detach`.
-7. **Public domain:** `railway domain --service <name>` generates `<service>-<env>.up.railway.app`.
+1. **Auth via project token, not user login.** Set `RAILWAY_TOKEN` env var with a project-scoped token. No `railway login` needed.
+2. **Root `railpack.json`** overrides the build step to install workers deps (`cd workers && pnpm install --frozen-lockfile`) and sets `deploy.startCommand` to `cd workers && node --import tsx src/index.ts`. `deploy.aptPackages: ["chromium"]` installs system Chromium for the content-extract CDP path.
+3. **Root `tsconfig.json`** must exclude `workers/**` — otherwise `next build` typechecks worker files using root's `node_modules` (no `pg`/`pg-boss`/`cheerio` types) and fails on inferred `any`.
+4. **`package.json` `start`:** `node --import tsx src/index.ts` in `workers/package.json` (not bare `tsx`). Atomize's verified pattern.
+5. **`tsx` in `dependencies`** (not devDependencies); `typescript` + `@types/*` stay in devDependencies.
+6. **`pnpm-lock.yaml` committed** and in sync with `package.json` or `--frozen-lockfile` rejects the build.
+7. Deploy: `RAILWAY_TOKEN=… railway up --service decision-doctor-workers --detach`. Build logs: `railway logs --build <deployment-id> --service decision-doctor-workers --environment production`.
+8. **Public domain:** already provisioned at `decision-doctor-workers-production.up.railway.app`.
 
 Copy-paste recipe at the end of this doc.
+
+---
+
+## Railpack migration (2026-05-11)
+
+Railway silently migrated this service from Nixpacks to Railpack. The original `workers/railway.json` (`buildCommand: pnpm install --frozen-lockfile`, service root = `workers/`) was no longer honored. Railpack autodetected Next.js at the repo root and tried to run `next build` on the workers service, which fails because:
+- workers env doesn't have the web app's `BETTER_AUTH_SECRET`/`RESEND_API_KEY` (those live on Vercel)
+- root `tsconfig.json` includes `**/*.ts`, so worker files get typechecked against root's node_modules
+
+**Fix:** root `railpack.json` overrides install/build/start to be workers-only. Took 7 deploys to converge; full debugging timeline in `.build-loop/memory/` (Railpack lessons).
 
 ---
 

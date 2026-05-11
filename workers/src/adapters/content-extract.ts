@@ -178,14 +178,17 @@ export async function handleContentExtract(
     const doc = docQ.rows[0]!;
     const priorLen = doc.body.length;
     const ce = (doc.metadata?.content_extract ?? null) as
-      | { fetched_at?: string }
+      | { fetched_at?: string; degraded?: boolean; method?: string }
       | null;
-    if (ce?.fetched_at) {
-      // Idempotent: extraction already ran for this doc.
+    if (ce?.fetched_at && !ce.degraded) {
+      // Idempotent: a successful extraction already ran for this doc.
+      // Degraded prior runs are intentionally retried — e.g. when Chrome
+      // misconfiguration caused a CDP failure and has since been fixed,
+      // we want the next enqueue to re-extract and clear the degraded flag.
       return {
         documentId: doc.id,
         status: "skipped-already-extracted",
-        method: String((doc.metadata?.content_extract as { method?: string })?.method ?? "unknown"),
+        method: String(ce.method ?? "unknown"),
         body_length: priorLen,
         prior_body_length: priorLen,
         latency_ms: Date.now() - t0,
