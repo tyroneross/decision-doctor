@@ -6,8 +6,8 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "echo 'no build step — tsx compiles at runtime'",
-    "start": "tsx src/index.ts",
+    "build": "echo 'no build step — node --import tsx loads TS at runtime (Atomize-verified pattern)'",
+    "start": "node --import tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
     "enqueue:arxiv": "tsx src/cli/enqueue-arxiv.ts",
