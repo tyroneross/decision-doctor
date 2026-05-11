@@ -9,9 +9,22 @@ import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { queueCount } from "./queue.js";
 import { pingPostgres, lastJobAt } from "./db.js";
+import { getCronStatus } from "./cron.js";
 
 export function startHealthServer(port: number): void {
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    if (req.url === "/cron-status") {
+      res.statusCode = 200;
+      res.setHeader("content-type", "application/json");
+      res.end(
+        JSON.stringify({
+          ok: true,
+          schedules: getCronStatus(),
+          checked_at: new Date().toISOString(),
+        }),
+      );
+      return;
+    }
     if (req.url !== "/health") {
       res.statusCode = 404;
       res.setHeader("content-type", "application/json");

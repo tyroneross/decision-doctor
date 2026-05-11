@@ -1,36 +1,124 @@
 // node-cron schedules.
 //
-// F-30 wires real ingest schedules. This file ships the WIRING so we can
-// confirm the worker boots cleanly; the actual schedules are commented placeholders.
+// Wires the F-30 ingest schedules. Each tick enqueues a pg-boss job; the job
+// handler is the unit of concurrency control, not cron itself. We use
+// pg-boss's singletonKey to coalesce overlapping fires (matches the
+// "concurrency=1 on RLS-scoped writes" pattern from ADR-011 and the
+// SET LOCAL discipline used by the Perplexity adapter; addresses the
+// cron-overlap class of bug DEBT-11 in the Atomize debt audit).
 //
-// Pattern:
-//   import cron from "node-cron";
-//   cron.schedule("0 * * * *", async () => {
-//     const boss = getBoss();
-//     await boss.send("arxiv-fetch", { query: "cat:cs.AI", scope: "global" });
-//   });
-//
-// All schedules MUST be idempotent at the work-handler level (the handler
-// uses ON CONFLICT DO NOTHING via the UNIQUE constraint on corpus_documents).
+// Every schedule logs a structured {event:'cron-tick'} line per fire and
+// updates a module-local last-fire map exposed via /cron-status.
 import cron from "node-cron";
+import { getBoss } from "./queue.js";
 
 let _registered = false;
+
+/**
+ * Last-fire timestamp per schedule. Read by /cron-status. We keep this map
+ * module-local rather than persisting to Postgres — restart is rare and
+ * losing this state across deploys is acceptable (the schedules themselves
+ * are durable; ops just need a "is the worker firing?" signal).
+ */
+const lastFire: Map<string, string> = new Map();
+
+export interface CronStatusEntry {
+  schedule: string;
+  cron: string;
+  last_fire: string | null;
+}
+
+export function getCronStatus(): CronStatusEntry[] {
+  return REGISTRY.map((r) => ({
+    schedule: r.name,
+    cron: r.cron,
+    last_fire: lastFire.get(r.name) ?? null,
+  }));
+}
+
+interface ScheduleDef {
+  name: string;
+  cron: string;
+  fire: () => Promise<void>;
+}
+
+/**
+ * The registry holds every defined schedule. Inactive entries (commented in
+ * the dispatch as "adapter not yet built") are recorded with a no-op `fire`
+ * so /cron-status still lists them as known-but-pending.
+ */
+const REGISTRY: ScheduleDef[] = [
+  {
+    name: "arxiv-cs-ai-hourly",
+    cron: "0 * * * *", // every hour at :00
+    fire: async () => {
+      const boss = getBoss();
+      // singletonKey coalesces overlapping fires — only one queued at a time.
+      await boss.send(
+        "arxiv-fetch",
+        { query: "cat:cs.AI", scope: "global", maxResults: 25 },
+        { singletonKey: "arxiv-cs-ai-hourly" },
+      );
+    },
+  },
+  // Placeholder schedules — adapters not yet built. They appear in
+  // /cron-status with last_fire:null so ops can see what's wired vs pending.
+  {
+    name: "anthropic-news-6h",
+    cron: "0 */6 * * *",
+    fire: async () => {
+      // TODO(F-31): wire when the Anthropic adapter lands.
+      // Until then this is a no-op so the schedule itself is harmless.
+    },
+  },
+  {
+    name: "openai-changelog-6h",
+    cron: "10 */6 * * *",
+    fire: async () => {
+      // TODO(F-31): wire when the OpenAI changelog adapter lands.
+    },
+  },
+  {
+    name: "perplexity-hub-24h",
+    cron: "20 3 * * *",
+    fire: async () => {
+      // TODO(F-31): wire when the Perplexity hub adapter lands.
+    },
+  },
+];
 
 export function registerSchedules(): void {
   if (_registered) return;
   _registered = true;
 
-  // No active schedules yet — F-30 follow-up wires:
-  //   cat:cs.AI         every 1h
-  //   anthropic blog    every 6h
-  //   openai blog       every 6h
-  //   perplexity blog   every 6h
-  //
-  // Until then, ingest is manual via `pnpm enqueue:arxiv -- "cat:cs.AI"`.
+  for (const def of REGISTRY) {
+    cron.schedule(def.cron, async () => {
+      const firedAt = new Date().toISOString();
+      lastFire.set(def.name, firedAt);
+      console.log(
+        JSON.stringify({
+          event: "cron-tick",
+          schedule: def.name,
+          fired_at: firedAt,
+        }),
+      );
+      try {
+        await def.fire();
+      } catch (e) {
+        console.error(
+          `[cron] schedule=${def.name} fire failed:`,
+          (e as Error).message ?? e,
+        );
+      }
+    });
+  }
 
-  console.log("[cron] schedules registered (currently 0 active; F-30 wires them)");
+  console.log(
+    `[cron] schedules registered: ${REGISTRY.map((r) => r.name).join(", ")}`,
+  );
 
-  // Ensure cron is imported so build doesn't tree-shake it out. Trivial no-op.
+  // Diagnostic probe — set CRON_PROBE=1 to verify cron wiring without
+  // waiting an hour for the first hourly fire.
   if (process.env.CRON_PROBE === "1") {
     cron.schedule("* * * * *", () => {
       console.log("[cron] probe tick");
