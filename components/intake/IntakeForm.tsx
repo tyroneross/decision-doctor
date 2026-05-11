@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AhpPairwise, type AhpCriterion } from "@/components/elicitation/AhpPairwise";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 type FieldKind = "number" | "text" | "select" | "boolean";
 type Field = {
@@ -139,82 +141,78 @@ export function IntakeForm({ template }: { template: PublicTemplate }) {
           ships criteria. AHP is opt-in — the default LLM path covers the
           large majority of users; AHP is for high-trust SED/VDD decisions. */}
       {template.criteria && template.criteria.length >= 3 && (
-        <section
-          aria-label="Weight elicitation method"
-          className="rounded-2xl border border-rule bg-cream-2 p-4 sm:p-5"
-        >
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-ink-500">
-                Who sets the weights?
-              </p>
-              <p className="mt-0.5 text-[14px] font-semibold leading-snug">
-                {weightSource === "llm"
-                  ? "Let the AI propose weights (default)"
-                  : "Set the weights yourself (AHP)"}
-              </p>
-            </div>
-            <div
-              role="tablist"
-              aria-label="Weight source"
-              className="inline-flex h-9 items-center rounded-full border border-rule bg-white p-0.5 text-[12.5px] font-medium"
-            >
-              <button
-                role="tab"
-                type="button"
-                aria-selected={weightSource === "llm"}
-                onClick={() => setWeightSource("llm")}
-                className={`ease-soft inline-flex h-8 items-center rounded-full px-3 ${
-                  weightSource === "llm"
-                    ? "bg-cream-2 text-ink-900"
-                    : "text-ink-500 hover:text-ink-700"
-                }`}
+        <Card flat>
+          <section aria-label="Weight elicitation method" className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-mute">
+                  Who sets the weights?
+                </p>
+                <p className="mt-0.5 text-[14px] font-semibold leading-snug text-ink">
+                  {weightSource === "llm"
+                    ? "Let the AI propose weights (default)"
+                    : "Set the weights yourself (AHP)"}
+                </p>
+              </div>
+              <div
+                role="tablist"
+                aria-label="Weight source"
+                className="inline-flex h-9 items-center rounded-full border border-line bg-bg p-0.5 text-[12.5px] font-medium"
               >
-                AI proposes
-              </button>
-              <button
-                role="tab"
-                type="button"
-                aria-selected={weightSource === "ahp"}
-                onClick={() => setWeightSource("ahp")}
-                className={`ease-soft inline-flex h-8 items-center rounded-full px-3 ${
-                  weightSource === "ahp"
-                    ? "bg-cream-2 text-ink-900"
-                    : "text-ink-500 hover:text-ink-700"
-                }`}
-              >
-                I'll set them
-              </button>
+                <button
+                  role="tab"
+                  type="button"
+                  aria-selected={weightSource === "llm"}
+                  onClick={() => setWeightSource("llm")}
+                  className={`inline-flex h-8 items-center rounded-full px-3 transition-colors ${
+                    weightSource === "llm"
+                      ? "bg-ink text-paper"
+                      : "text-mute hover:text-ink"
+                  }`}
+                >
+                  AI proposes
+                </button>
+                <button
+                  role="tab"
+                  type="button"
+                  aria-selected={weightSource === "ahp"}
+                  onClick={() => setWeightSource("ahp")}
+                  className={`inline-flex h-8 items-center rounded-full px-3 transition-colors ${
+                    weightSource === "ahp"
+                      ? "bg-ink text-paper"
+                      : "text-mute hover:text-ink"
+                  }`}
+                >
+                  I'll set them
+                </button>
+              </div>
             </div>
-          </div>
-          {weightSource === "ahp" && (
-            <div className="mt-4">
-              <AhpPairwise
-                criteria={template.criteria}
-                comparisons={ahpComparisons}
-                onChange={(next) => setAhpComparisons(next)}
-              />
-            </div>
-          )}
-        </section>
+            {weightSource === "ahp" && (
+              <div>
+                <AhpPairwise
+                  criteria={template.criteria}
+                  comparisons={ahpComparisons}
+                  onChange={(next) => setAhpComparisons(next)}
+                />
+              </div>
+            )}
+          </section>
+        </Card>
       )}
 
-      <button
+      <Button
         type="submit"
+        variant="primary"
+        full
         disabled={!filled || busy}
-        className={
-          "w-full min-h-11 rounded-md py-3 text-sm font-medium shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 " +
-          (filled && !busy
-            ? "bg-brand-600 text-white hover:bg-brand-700 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]"
-            : "bg-ink-100 text-ink-700 cursor-not-allowed shadow-none")
-        }
-        aria-disabled={!filled || busy}
+        aria-busy={busy}
+        className="min-h-11 text-[14px]"
       >
         {busy ? "Running engine..." : "Get recommendation"}
-      </button>
+      </Button>
 
-      {err && <p className="text-sm status-error">{err}</p>}
-      <p className="text-xs text-ink-500">
+      {err && <p className="text-[13px] status-error">{err}</p>}
+      <p className="text-[12px] text-mute">
         Engine takes ~5 seconds. Two short Groq calls power the value tags and
         the recommendation copy. The math is deterministic.
       </p>
@@ -234,11 +232,11 @@ function FieldRow({
   const id = `f-${field.name}`;
   if (field.kind === "select") {
     return (
-      <label htmlFor={id} className="block text-sm">
-        <span className="text-ink-700">
+      <label htmlFor={id} className="block text-[13.5px]">
+        <span className="text-ink font-medium">
           {field.label}
           {field.required !== false && (
-            <span aria-hidden className="ml-0.5 text-ink-500">
+            <span aria-hidden className="ml-0.5 text-mute">
               *
             </span>
           )}
@@ -247,7 +245,7 @@ function FieldRow({
           id={id}
           value={(value as string) ?? ""}
           onChange={(e) => onChange(e.target.value)}
-          className="mt-1 block min-h-11 w-full rounded border-ink-300 px-3 focus:border-accent-600 focus:ring-accent-600"
+          className="mt-1 block min-h-11 w-full rounded-md border-line bg-paper px-3 text-text focus:border-ink focus:ring-ink"
         >
           <option value="" disabled>
             Select…
@@ -259,25 +257,25 @@ function FieldRow({
           ))}
         </select>
         {field.helper && (
-          <span className="mt-1 block text-xs text-ink-500">{field.helper}</span>
+          <span className="mt-1 block text-[12px] text-mute">{field.helper}</span>
         )}
       </label>
     );
   }
   if (field.kind === "boolean") {
     return (
-      <label htmlFor={id} className="flex items-start gap-3 text-sm">
+      <label htmlFor={id} className="flex items-start gap-3 text-[13.5px]">
         <input
           id={id}
           type="checkbox"
           checked={Boolean(value)}
           onChange={(e) => onChange(e.target.checked)}
-          className="mt-1 rounded border-ink-300 text-accent-600 focus:ring-accent-600"
+          className="mt-1 rounded border-line text-ink focus:ring-ink"
         />
         <span>
-          <span className="text-ink-700">{field.label}</span>
+          <span className="text-ink font-medium">{field.label}</span>
           {field.helper && (
-            <span className="mt-0.5 block text-xs text-ink-500">
+            <span className="mt-0.5 block text-[12px] text-mute">
               {field.helper}
             </span>
           )}
@@ -298,11 +296,11 @@ function FieldRow({
 
   // Fallback: text input or unbounded number.
   return (
-    <label htmlFor={id} className="block text-sm">
-      <span className="text-ink-700">
+    <label htmlFor={id} className="block text-[13.5px]">
+      <span className="text-ink font-medium">
         {field.label}
         {field.required !== false && (
-          <span aria-hidden className="ml-0.5 text-ink-500">
+          <span aria-hidden className="ml-0.5 text-mute">
             *
           </span>
         )}
@@ -323,10 +321,10 @@ function FieldRow({
             onChange(e.target.value);
           }
         }}
-        className="mt-1 block min-h-11 w-full rounded border-ink-300 px-3 focus:border-accent-600 focus:ring-accent-600"
+        className="mt-1 block min-h-11 w-full rounded-md border-line bg-paper px-3 text-text focus:border-ink focus:ring-ink"
       />
       {field.helper && (
-        <span className="mt-1 block text-xs text-ink-500">{field.helper}</span>
+        <span className="mt-1 block text-[12px] text-mute">{field.helper}</span>
       )}
     </label>
   );
@@ -352,27 +350,25 @@ function SliderRow({
     typeof value === "number" && Number.isFinite(value) ? value : Math.round((min + max) / 2);
   const hasUserValue = typeof value === "number" && Number.isFinite(value);
 
-  // Initialize cache only on first interaction so we don't pre-fill the form
-  // and let the user think they "answered" without actually moving anything.
   const handleChange = (n: number) => {
     onChange(n);
   };
 
   return (
-    <div className="block text-sm">
+    <div className="block text-[13.5px]">
       <div className="flex items-baseline justify-between gap-3">
-        <label htmlFor={id} className="text-ink-700">
+        <label htmlFor={id} className="text-ink font-medium">
           {field.label}
           {field.required !== false && (
-            <span aria-hidden className="ml-0.5 text-ink-500">
+            <span aria-hidden className="ml-0.5 text-mute">
               *
             </span>
           )}
         </label>
         <span
           className={
-            "inline-flex min-w-[3.5rem] justify-center rounded px-2 py-0.5 text-sm tabular-nums font-medium transition-colors duration-200 " +
-            (hasUserValue ? "bg-brand-600 text-white" : "bg-ink-100 text-ink-500")
+            "inline-flex min-w-[3.5rem] justify-center rounded px-2 py-0.5 text-[13px] tabular-nums font-medium transition-colors duration-200 " +
+            (hasUserValue ? "bg-ink text-paper" : "bg-line/40 text-mute")
           }
           aria-live="polite"
           aria-label={`Current value ${numericValue}`}
@@ -388,22 +384,20 @@ function SliderRow({
         step={field.step ?? 1}
         value={numericValue}
         onChange={(e) => handleChange(Number(e.target.value))}
-        // Touch on first move so we capture the value (slider's existing
-        // position becomes the user's intended value).
         onPointerDown={() => {
           if (!hasUserValue) handleChange(numericValue);
         }}
-        className="mt-2 block h-11 w-full cursor-pointer accent-brand-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2"
+        className="mt-2 block h-11 w-full cursor-pointer accent-ink transition-colors focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
         aria-valuemin={min}
         aria-valuemax={max}
         aria-valuenow={numericValue}
       />
-      <div className="mt-1 flex justify-between text-xs text-ink-500 tabular-nums">
+      <div className="mt-1 flex justify-between text-[12px] text-mute tabular-nums">
         <span>{min}</span>
         <span>{max}</span>
       </div>
       {field.helper && (
-        <p className="mt-1 text-xs text-ink-500">{field.helper}</p>
+        <p className="mt-1 text-[12px] text-mute">{field.helper}</p>
       )}
     </div>
   );

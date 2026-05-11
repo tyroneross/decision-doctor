@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { loadTemplate } from "@/lib/engine/templates";
 import { IntakeForm } from "@/components/intake/IntakeForm";
+import { Card } from "@/components/ui/Card";
 
 type Props = { params: Promise<{ templateId: string }> };
 
@@ -28,16 +29,23 @@ export default async function IntakePage({ params }: Props) {
   };
 
   return (
-    <section className="space-y-6">
-      <header>
-        <h1 className="text-xl font-semibold">{template.label}</h1>
-        <p className="text-sm text-ink-500">{template.description}</p>
+    <section className="space-y-6 px-5 py-8 lg:px-8 lg:py-10 max-w-2xl mx-auto">
+      <header className="space-y-1">
+        <h1 className="text-[22px] font-semibold leading-tight text-ink">
+          {template.label}
+        </h1>
+        <p className="text-[14px] text-mute leading-relaxed">
+          {template.description}
+        </p>
       </header>
 
-      <div className="rounded-md border border-ink-100 bg-ink-100/40 p-3 text-xs text-ink-700">
-        First-run hint: enter only what you'd write on a sticky note. The form
-        accepts short values; long free-text is rejected.
-      </div>
+      <Card flat>
+        <p className="text-[12.5px] leading-relaxed text-text">
+          <span className="font-semibold text-ink">First-run hint:</span> enter
+          only what you'd write on a sticky note. The form accepts short
+          values; long free-text is rejected.
+        </p>
+      </Card>
 
       <IntakeForm template={publicTemplate} />
     </section>

@@ -90,3 +90,37 @@ Both will need `.env.local` from `git ignore/dd-secrets.rtf` populated the same 
 - GitHub: https://github.com/tyroneross/decision-doctor/commits/main
 - Vercel: preview URL added here once Phase 3 completes
 - Build-loop state: `.build-loop/state.json`
+
+## Phase 4 — UI Guidelines v0.1 implementation (✅ complete)
+
+Re-skin the entire app from V2 Sunrise (coral / peach / sun / plum / teal +
+category stripes + 3 confidence bands + gradient cards) to **terracotta on
+bone, ink-only**. CSS-var-backed tokens; themes F (default), A, B switchable
+at runtime.
+
+| # | Commit | SHA |
+|---|--------|------|
+| C1 | theme tokens + globals.css + layout themeColor | `ace61d5` |
+| C2 | UI primitives (Button, Chip, Input, Pill, Card, Stepper, Slider, Callout, RangePicker, PillSearchBar) | `954a524` |
+| C3 | sign-in D0 single-screen | `99f3d1b` |
+| C4 | F3 dual-mode shell (mobile bottom-nav + desktop sidebar) | `5074600` |
+| C5 | F1 home (search-first) | `84553fc` |
+| C6a | chat hero rewrite (Fm) | `e80f9be` |
+| C6b | in-chat clarifier widgets | `7b011c7` |
+| C7 | recommendation D6 3-tier pyramid | `2ee1785` |
+| C8 | decisions list D2 (ledger hero + 5-bucket chip filter) | `8a2eeb2` |
+| C8b | C8 follow-up: EmptyState re-skin | `fcd2181` |
+| U-1 | EmptyState CTA target → /app/chat | `b7d6798` |
+| C9 | AHP — 1-9 Saaty only (coarse mode removed), ink-only | `ea44bcc` |
+| C10 | F3 desktop right SkillPanel + lg grid | `30df078` |
+| C11 | intake re-skin + sign-in redirect to /app + legacy palette deletion | _(this commit)_ |
+
+**Acceptance (post-C11):**
+- `pnpm typecheck` — clean.
+- `pnpm vitest run` — 90/90 (12 files; 1 concurrent.test.ts flake on cold runs, re-runs green).
+- `pnpm build` — 15 routes (sign-in, /app, /app/chat, /app/decisions, /app/decisions/[id], /app/decisions/new, /app/decisions/new/[templateId], /app/skills, /app/audit, plus APIs).
+- Legacy palette: deleted from `tailwind.config.ts` and `app/globals.css`. No `grad-coral`, `shadow-coral-*`, `cat-*`, `conf-*`, `bg-cream*`, `text-ink-{50,100,300,500,700,800,900}`, `border-rule`, `bg-brand-*`, `accent-{50,500,600}`, `ease-soft`, `.skeleton` survive in `app/`, `components/`, `lib/` (only comment references remain).
+- `lib/decision-display.ts`: `categoryFor()`, `feasibilityFor()`, `confidenceBand()` now return neutral ink-on-paper classes — color does not carry semantic meaning per UI Guidelines v0.1. Emoji + label carry the distinction.
+
+## Phase 4b — A/B/F theme picker (Settings) — _next chunk (C12)_
+

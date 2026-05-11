@@ -2,10 +2,11 @@
 
 // F-09 CodeBlock — syntax-highlighted preview with per-file copy.
 //
-// Sunrise tokens only. "Copied ✓" is teal TEXT (no green pill — Calm
-// Precision §"Signal-to-noise"). Lazy-loads react-syntax-highlighter so the
-// initial bundle stays light; the highlighter ships only when a scaffold is
-// actually opened.
+// UI Guidelines v0.1 (ink-only). "Copied ✓" is an ink-on-paper chip with
+// a small icon (no green pill — Calm Precision §"Signal-to-noise" still
+// applies, just rendered without color). Lazy-loads react-syntax-highlighter
+// so the initial bundle stays light; the highlighter ships only when a
+// scaffold is actually opened.
 //
 // E4 — Interaction-state matrix (`resolveCodeBlockState()` in
 // lib/component-state.ts is the test-covered resolver):
@@ -81,9 +82,9 @@ export function CodeBlock({
   });
 
   return (
-    <div className="rounded-2xl border border-rule bg-white">
-      <header className="flex items-center justify-between gap-2 border-b border-rule px-4 py-2">
-        <span className="font-mono text-[12.5px] text-ink-700">
+    <div className="rounded-xl border border-line bg-paper">
+      <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-2">
+        <span className="font-mono text-[12.5px] text-ink">
           {filename ?? language}
         </span>
         {(viewState === "populated" || viewState === "success") && (
@@ -91,10 +92,10 @@ export function CodeBlock({
             type="button"
             onClick={onCopy}
             aria-label={copied ? "Copied to clipboard" : "Copy file contents"}
-            className={`ease-soft inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 ${
+            className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20 ${
               copied
-                ? "border-cat-skill text-cat-skill-deep"
-                : "border-rule bg-white text-ink-700 hover:border-cat-skill hover:text-cat-skill-deep"
+                ? "border-ink bg-paper text-ink"
+                : "border-line bg-paper text-mute hover:border-ink hover:text-ink"
             }`}
           >
             {copied ? (
@@ -107,7 +108,7 @@ export function CodeBlock({
           </button>
         )}
       </header>
-      <div className="overflow-auto bg-cream-2 px-4 py-3">
+      <div className="overflow-auto bg-paper px-4 py-3">
         {viewState === "loading" && (
           <div
             className="space-y-2 py-2"
@@ -115,22 +116,22 @@ export function CodeBlock({
             aria-live="polite"
             aria-label="Loading code preview"
           >
-            <span className="skeleton block h-3 w-3/4 rounded-full" />
-            <span className="skeleton block h-3 w-full rounded-full" />
-            <span className="skeleton block h-3 w-2/3 rounded-full" />
+            <span className="block h-3 w-3/4 rounded-full bg-line animate-pulse" />
+            <span className="block h-3 w-full rounded-full bg-line animate-pulse" />
+            <span className="block h-3 w-2/3 rounded-full bg-line animate-pulse" />
           </div>
         )}
         {viewState === "error" && (
           <div className="py-2" role="alert">
-            <p className="text-[13px] font-semibold text-ink-900">
+            <p className="text-[13px] font-semibold text-ink">
               Couldn't load this file.
             </p>
-            <p className="mt-0.5 text-[12.5px] text-ink-500">{error}</p>
+            <p className="mt-0.5 text-[12.5px] text-mute">{error}</p>
             {onRetry && (
               <button
                 type="button"
                 onClick={onRetry}
-                className="ease-soft mt-2 inline-flex h-8 items-center gap-1.5 rounded-full border border-rule bg-white px-3 text-[12px] font-semibold text-ink-700 hover:border-coral focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                className="mt-2 inline-flex h-8 items-center gap-1.5 rounded-[10px] border border-ink bg-paper px-3 text-[12px] font-semibold text-ink transition-colors hover:bg-line/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
               >
                 Try again
               </button>
@@ -138,14 +139,14 @@ export function CodeBlock({
           </div>
         )}
         {viewState === "empty" && (
-          <p className="py-2 text-[12.5px] italic text-ink-500">
+          <p className="py-2 text-[12.5px] italic text-mute">
             No content for this file.
           </p>
         )}
         {(viewState === "populated" || viewState === "success") && (
           <Suspense
             fallback={
-              <pre className="font-mono text-[12px] leading-relaxed text-ink-900">
+              <pre className="font-mono text-[12px] leading-relaxed text-ink">
                 {code}
               </pre>
             }

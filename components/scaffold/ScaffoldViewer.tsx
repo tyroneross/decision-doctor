@@ -6,10 +6,10 @@
 // fullscreen sheet (mobile). No Radix Dialog dependency — focus management
 // handled inline. Closing returns focus to the trigger element.
 //
-// Sunrise tokens only. The Calm Precision rules for this surface:
+// UI Guidelines v0.1 (ink-only). Calm Precision rules for this surface:
 //   • Single border around the drawer (Common Region).
 //   • Files presented as tabs in a left rail — no individual borders.
-//   • "Copied ✓" is teal TEXT only (not a green pill).
+//   • "Copied ✓" is ink text on paper (no green pill).
 //   • >70% of content area is the code preview.
 //   • Max 6 files (F-09 hard cap from lib/scaffold-generator.ts).
 //
@@ -134,7 +134,7 @@ export function ScaffoldViewer({
         type="button"
         aria-label="Close scaffold viewer"
         onClick={onClose}
-        className="fixed inset-0 z-40 bg-ink-900/30 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 z-40 bg-ink/20 backdrop-blur-sm transition-opacity"
       />
       {/* DRAWER */}
       <div
@@ -142,14 +142,14 @@ export function ScaffoldViewer({
         role="dialog"
         aria-modal="true"
         aria-labelledby={headingId}
-        className="fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-white shadow-lift sm:max-w-[640px] sm:rounded-l-3xl"
+        className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-line bg-paper shadow-card sm:max-w-[640px] sm:rounded-l-xl"
       >
-        <header className="flex items-start justify-between gap-3 border-b border-rule px-5 py-4 sm:px-6">
+        <header className="flex items-start justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
           <div>
-            <h2 id={headingId} className="text-[16px] font-semibold leading-snug">
+            <h2 id={headingId} className="text-[16px] font-semibold leading-snug text-ink">
               Scaffold · {title}
             </h2>
-            <p className="mt-0.5 text-[12px] text-ink-500">
+            <p className="mt-0.5 text-[12px] text-mute">
               {viewState === "populated" || viewState === "success" ? (
                 <>
                   {scaffold.files.length} file
@@ -169,7 +169,7 @@ export function ScaffoldViewer({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="ease-soft inline-flex h-9 w-9 items-center justify-center rounded-full border border-rule bg-white text-ink-700 hover:bg-cream-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-paper text-mute transition-colors hover:bg-line/40 hover:text-ink focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
           >
             ✕
           </button>
@@ -183,10 +183,10 @@ export function ScaffoldViewer({
             aria-live="polite"
             aria-label="Loading scaffold"
           >
-            <span className="skeleton block h-3 w-48 rounded-full" />
-            <span className="skeleton block h-3 w-64 rounded-full" />
-            <span className="skeleton block h-3 w-32 rounded-full" />
-            <p className="mt-2 text-[12.5px] text-ink-500">Generating files…</p>
+            <span className="block h-3 w-48 rounded-full bg-line animate-pulse" />
+            <span className="block h-3 w-64 rounded-full bg-line animate-pulse" />
+            <span className="block h-3 w-32 rounded-full bg-line animate-pulse" />
+            <p className="mt-2 text-[12.5px] text-mute">Generating files…</p>
           </div>
         )}
 
@@ -195,15 +195,15 @@ export function ScaffoldViewer({
             className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center"
             role="alert"
           >
-            <p className="text-[15px] font-semibold text-ink-900">
+            <p className="text-[15px] font-semibold text-ink">
               Couldn't load this scaffold.
             </p>
-            <p className="max-w-sm text-[13px] text-ink-500">{error}</p>
+            <p className="max-w-sm text-[13px] text-mute">{error}</p>
             {onRetry && (
               <button
                 type="button"
                 onClick={onRetry}
-                className="ease-soft mt-2 inline-flex h-10 items-center gap-1.5 rounded-full border border-rule bg-white px-4 text-[13.5px] font-semibold text-ink-700 hover:border-coral focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                className="mt-2 inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-ink bg-paper px-4 text-[13.5px] font-semibold text-ink transition-colors hover:bg-line/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
               >
                 Try again
               </button>
@@ -216,11 +216,11 @@ export function ScaffoldViewer({
             className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center"
             role="status"
           >
-            <p className="text-[15px] font-semibold text-ink-900">
+            <p className="text-[15px] font-semibold text-ink">
               Template not yet available
               {category ? ` for ${category}` : ""}.
             </p>
-            <p className="max-w-sm text-[13px] text-ink-500">
+            <p className="max-w-sm text-[13px] text-mute">
               We don't have a paste-ready scaffold for this drain category
               yet. The skill description and steps are still in the
               recommendation above — copy that to get started.
@@ -234,9 +234,9 @@ export function ScaffoldViewer({
             <div className="grid min-h-0 flex-1 grid-cols-[160px_1fr] sm:grid-cols-[180px_1fr]">
               <nav
                 aria-label="Files in scaffold"
-                className="border-r border-rule bg-cream"
+                className="border-r border-line bg-paper"
               >
-                <p className="px-3 pb-2 pt-4 text-[10.5px] font-semibold uppercase tracking-[.14em] text-ink-500">
+                <p className="px-3 pb-2 pt-4 text-[10.5px] font-semibold uppercase tracking-[.14em] text-mute">
                   📁 Files
                 </p>
                 <ul>
@@ -246,10 +246,10 @@ export function ScaffoldViewer({
                         type="button"
                         onClick={() => setActiveFile(i)}
                         aria-pressed={i === activeFile}
-                        className={`ease-soft block w-full px-3 py-2 text-left text-[13px] ${
+                        className={`block w-full px-3 py-2 text-left text-[13px] transition-colors ${
                           i === activeFile
-                            ? "bg-white font-semibold text-ink-900 shadow-[0_1px_0_var(--rule)]"
-                            : "text-ink-700 hover:bg-cream-2"
+                            ? "bg-line/40 font-semibold text-ink"
+                            : "text-mute hover:bg-line/40 hover:text-ink"
                         }`}
                       >
                         <span className="mr-1.5 opacity-60" aria-hidden>
@@ -271,14 +271,14 @@ export function ScaffoldViewer({
             </div>
 
             {/* FOOTER — primary actions */}
-            <footer className="flex flex-wrap items-center gap-2 border-t border-rule bg-cream px-5 py-3 sm:px-6">
+            <footer className="flex flex-wrap items-center gap-2 border-t border-line bg-paper px-5 py-3 sm:px-6">
               <button
                 type="button"
                 onClick={copyAll}
-                className={`ease-soft inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 ${
+                className={`inline-flex h-10 items-center gap-1.5 rounded-[10px] border px-4 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20 ${
                   copiedAll
-                    ? "border border-cat-skill bg-white text-cat-skill-deep"
-                    : "grad-coral text-white"
+                    ? "border-ink bg-paper text-ink"
+                    : "border-ink bg-ink text-paper shadow-card hover:bg-ink/90"
                 }`}
               >
                 {copiedAll ? "✓ Copied all" : "📥 Copy all"}
@@ -286,7 +286,7 @@ export function ScaffoldViewer({
               <button
                 type="button"
                 onClick={onClose}
-                className="ease-soft inline-flex h-10 items-center gap-1.5 rounded-full border border-rule bg-white px-4 text-[13.5px] font-semibold text-ink-700 hover:border-coral focus:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-ink bg-paper px-4 text-[13.5px] font-semibold text-ink transition-colors hover:bg-line/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
               >
                 Close
               </button>

@@ -19,9 +19,8 @@ import { Button } from "@/components/ui/Button";
  * flow auto-creates if not found, when configured server-side; magic-link
  * path provisions on first verification regardless).
  *
- * Redirects on success to /app/decisions for now (decisions list is the
- * established post-auth landing). Once C5 ships /app (search-first F1
- * home), update this to /app.
+ * Redirects on success to /app — the F1 search-first home (shipped in
+ * C5). The decisions list is one bottom-nav tap away.
  */
 export default function SignInPage() {
   const router = useRouter();
@@ -59,11 +58,11 @@ export default function SignInPage() {
             throw new Error(msg);
           }
         }
-        router.push("/app/decisions");
+        router.push("/app");
       } else {
         const res = await signIn.magicLink({
           email,
-          callbackURL: "/app/decisions",
+          callbackURL: "/app",
         });
         if (res.error) throw new Error(res.error.message);
         setMsg("Check your email — your sign-in link expires in 60 min.");

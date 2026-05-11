@@ -195,10 +195,10 @@ export function AhpPairwise({
         role="status"
         aria-live="polite"
       >
-        <span className="skeleton block h-4 w-1/2 rounded-full" />
-        <span className="skeleton block h-3 w-full rounded-full" />
-        <span className="skeleton block h-20 w-full rounded-xl" />
-        <span className="skeleton block h-20 w-full rounded-xl" />
+        <span className="block h-4 w-1/2 rounded-full bg-line animate-pulse" />
+        <span className="block h-3 w-full rounded-full bg-line animate-pulse" />
+        <span className="block h-20 w-full rounded-xl bg-line animate-pulse" />
+        <span className="block h-20 w-full rounded-xl bg-line animate-pulse" />
         <p className="text-[12.5px] text-mute">Preparing comparisons…</p>
       </section>
     );

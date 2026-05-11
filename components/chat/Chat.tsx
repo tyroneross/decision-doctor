@@ -494,9 +494,9 @@ export function Chat({ seed }: { seed?: string } = {}) {
               className="max-w-[85%] space-y-2 rounded-2xl rounded-tl-sm border border-line bg-paper px-4 py-3"
               aria-label="Thinking"
             >
-              <span className="skeleton block h-3 w-48 rounded-full" />
-              <span className="skeleton block h-3 w-64 rounded-full" />
-              <span className="skeleton block h-3 w-32 rounded-full" />
+              <span className="block h-3 w-48 rounded-full bg-line animate-pulse" />
+              <span className="block h-3 w-64 rounded-full bg-line animate-pulse" />
+              <span className="block h-3 w-32 rounded-full bg-line animate-pulse" />
             </div>
           </li>
         )}
@@ -617,67 +617,65 @@ function DecisionCard({
   const restReducers = decision.workloadReducers.slice(1);
 
   return (
-    <article className="dd-fade-up overflow-hidden rounded-3xl border border-rule bg-white shadow-soft">
-      {/* HERO — time-back is the headline, confidence is a chip */}
-      <div className="grad-coral relative overflow-hidden p-6 text-white sm:p-7">
-        <div
-          aria-hidden
-          className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white opacity-15 blur-2xl"
-        />
-        <p className="text-[11px] font-semibold uppercase tracking-[.14em] opacity-80">
+    <article className="dd-fade-up overflow-hidden rounded-xl border border-line bg-paper shadow-card">
+      {/* HERO — time-back is the headline, confidence is a chip.
+          UI Guidelines v0.1: ink-on-paper, no gradient hero, no white-on-coral. */}
+      <div className="relative overflow-hidden border-b border-line bg-paper p-6 sm:p-7">
+        <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-mute">
           What we built · primary outcome
         </p>
         {hoursBack > 0 ? (
-          <p className="mt-2 text-[40px] font-semibold leading-[.95] tracking-tight sm:text-[48px]">
+          <p className="mt-2 text-[40px] font-semibold leading-[.95] tracking-tight text-ink sm:text-[48px]">
             🕐 {formatHrs(hoursBack)}/wk back
           </p>
         ) : (
-          <p className="mt-2 text-[28px] font-semibold leading-tight tracking-tight sm:text-[34px]">
+          <p className="mt-2 text-[28px] font-semibold leading-tight tracking-tight text-ink sm:text-[34px]">
             {decision.recommendation.option}
           </p>
         )}
         {hoursBack > 0 && (
-          <p className="mt-2 max-w-xl text-[15px] leading-snug opacity-95 sm:text-[16px]">
+          <p className="mt-2 max-w-xl text-[15px] leading-snug text-mute sm:text-[16px]">
             {decision.recommendation.option}
           </p>
         )}
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-white/20 px-2.5 text-[12px] font-semibold backdrop-blur">
+          <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-ink bg-paper px-2.5 text-[12px] font-semibold text-ink">
             {band.icon} {band.label} · {conf}%
           </span>
           {painPoints.length > 0 && (
-            <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-white/20 px-2.5 text-[12px] backdrop-blur">
+            <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-line bg-paper px-2.5 text-[12px] text-mute">
               Heard you on: {painPoints.join(" · ")}
             </span>
           )}
         </div>
       </div>
 
-      {/* SKILL CARD — top reducer leads (skills-first hierarchy) */}
+      {/* SKILL CARD — top reducer leads (skills-first hierarchy).
+          Ink-only: bg-paper with subtle line border, no gradient skill pill. */}
       {topReducer && (
-        <section className="border-b border-rule bg-cat-skill-bg/50 p-6 sm:p-7">
+        <section className="border-b border-line bg-paper p-6 sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <span className="grad-skill inline-flex h-7 items-center rounded-full px-2.5 text-[11px] font-semibold uppercase tracking-[.12em] text-white">
+            <span className="inline-flex h-7 items-center rounded-full border border-ink bg-ink px-2.5 text-[11px] font-semibold uppercase tracking-[.12em] text-paper">
               🛠️ Skill ready
             </span>
-            <span className="text-[11px] font-semibold text-cat-skill-deep">
+            <span className="text-[11px] font-semibold text-mute">
               ~1 min to ship
             </span>
           </div>
-          <h2 className="mt-3 text-xl font-semibold leading-snug text-ink-900">
+          <h2 className="mt-3 text-xl font-semibold leading-snug text-ink">
             {topReducer.title}
           </h2>
-          <p className="mt-1.5 text-[14px] leading-relaxed text-ink-700">
+          <p className="mt-1.5 text-[14px] leading-relaxed text-ink">
             {topReducer.description}
           </p>
 
           {topReducer.artifact.promptText && (
-            <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-xl bg-white p-3 text-[12px] leading-relaxed text-ink-900 shadow-sm">
+            <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-[10px] border border-line bg-paper p-3 text-[12px] leading-relaxed text-ink">
               {topReducer.artifact.promptText}
             </pre>
           )}
           {topReducer.artifact.playbookSteps && (
-            <ol className="mt-3 list-decimal space-y-1 rounded-xl bg-white p-3 pl-7 text-[13px] leading-relaxed text-ink-700 shadow-sm">
+            <ol className="mt-3 list-decimal space-y-1 rounded-[10px] border border-line bg-paper p-3 pl-7 text-[13px] leading-relaxed text-ink">
               {topReducer.artifact.playbookSteps.map((s, j) => (
                 <li key={j}>{s}</li>
               ))}
@@ -689,7 +687,7 @@ function DecisionCard({
               <CopyButton text={topReducer.artifact.promptText} />
               <Link
                 href={`/app/decisions/${decision.decisionId}`}
-                className="ease-soft inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-rule bg-white text-[13px] font-semibold text-ink-900 hover:border-cat-skill"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-[10px] border border-ink bg-paper text-[13px] font-semibold text-ink transition-colors hover:bg-line/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20"
               >
                 See full plan →
               </Link>
@@ -699,32 +697,32 @@ function DecisionCard({
       )}
 
       {/* RATIONALE — plain-language framing, no jargon */}
-      <section className="border-b border-rule p-6 sm:p-7">
-        <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-ink-500">
+      <section className="border-b border-line p-6 sm:p-7">
+        <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-mute">
           What changes
         </p>
-        <p className="mt-2 text-[14px] leading-relaxed text-ink-700 sm:text-[15px]">
+        <p className="mt-2 text-[14px] leading-relaxed text-ink sm:text-[15px]">
           {decision.recommendation.rationale}
         </p>
       </section>
 
       {/* OTHER REDUCERS — outer border + dividers */}
       {restReducers.length > 0 && (
-        <section className="border-b border-rule p-6 sm:p-7">
-          <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-ink-500">
+        <section className="border-b border-line p-6 sm:p-7">
+          <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-mute">
             This week — {restReducers.length} more thing{restReducers.length === 1 ? "" : "s"} to ship
           </p>
-          <ul className="mt-3 divide-y divide-rule overflow-hidden rounded-xl border border-rule bg-cream-2/40">
+          <ul className="mt-3 divide-y divide-line overflow-hidden rounded-[10px] border border-line bg-paper">
             {restReducers.map((r, i) => (
               <li key={i} className="p-3.5">
-                <p className="text-[14px] font-medium text-ink-900">{r.title}</p>
-                <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-500">
+                <p className="text-[14px] font-medium text-ink">{r.title}</p>
+                <p className="mt-0.5 text-[12.5px] leading-relaxed text-mute">
                   {r.description}
                 </p>
                 {r.artifact.skillName && (
-                  <p className="mt-1.5 text-[11.5px] text-ink-500">
+                  <p className="mt-1.5 text-[11.5px] text-mute">
                     Skill ref:{" "}
-                    <code className="rounded bg-white px-1.5 py-0.5 text-[11px] text-ink-700">
+                    <code className="rounded bg-line/40 px-1.5 py-0.5 text-[11px] text-ink">
                       {r.artifact.skillName}
                     </code>
                   </p>
@@ -738,12 +736,12 @@ function DecisionCard({
       {/* SHOW THE MATH — disclosure, no hover pill */}
       <details className="group p-6 sm:p-7">
         <summary
-          className="ease-soft flex cursor-pointer items-center gap-2 text-[14px] font-medium text-ink-700 hover:text-ink-900 [&::-webkit-details-marker]:hidden"
+          className="flex cursor-pointer items-center gap-2 text-[14px] font-medium text-mute transition-colors hover:text-ink [&::-webkit-details-marker]:hidden"
           aria-label="Show the math behind this recommendation"
         >
           <svg
             viewBox="0 0 24 24"
-            className="ease-soft h-4 w-4 group-open:rotate-90"
+            className="h-4 w-4 transition-transform group-open:rotate-90"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
@@ -752,16 +750,16 @@ function DecisionCard({
           >
             <polyline points="9 18 15 12 9 6" />
           </svg>
-          <span className="text-[15px] font-semibold">Show the math</span>
-          <span className="text-[12.5px] text-ink-500">
+          <span className="text-[15px] font-semibold text-ink">Show the math</span>
+          <span className="text-[12.5px] text-mute">
             — what we ruled out, why this won
           </span>
         </summary>
-        <div className="mt-4 space-y-4 border-t border-rule pt-4">
-          <div className="rounded-xl bg-cream-2 p-4 text-[13px] leading-relaxed text-ink-700">
+        <div className="mt-4 space-y-4 border-t border-line pt-4">
+          <div className="rounded-[10px] border border-line bg-paper p-4 text-[13px] leading-relaxed text-ink">
             We compared {decision.alternatives.length + 1} paths against your
             stated priorities. The top option came in at{" "}
-            <strong className="text-ink-900">{conf}/100</strong>. Below is the
+            <strong className="text-ink">{conf}/100</strong>. Below is the
             short list of what we ruled out and why, plus a robust alternative
             in case conditions change.
           </div>
@@ -769,13 +767,13 @@ function DecisionCard({
           {/* If this stops working — robust */}
           {decision.robustAlternative && (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-cat-admin">
+              <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-mute">
                 🛡️ If this stops working
               </p>
-              <p className="mt-1 text-[14px] font-medium text-ink-900">
+              <p className="mt-1 text-[14px] font-medium text-ink">
                 {decision.robustAlternative.option}
               </p>
-              <p className="mt-0.5 text-[12.5px] text-ink-500">
+              <p className="mt-0.5 text-[12.5px] text-mute">
                 {decision.robustAlternative.why}
               </p>
             </div>
@@ -784,13 +782,13 @@ function DecisionCard({
           {/* What we ruled out */}
           {decision.alternatives.length > 0 && (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-ink-500">
+              <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-mute">
                 What we ruled out
               </p>
               <ul className="mt-1.5 space-y-1.5 text-[13.5px]">
                 {decision.alternatives.map((a, i) => (
-                  <li key={i} className="text-ink-700">
-                    <span className="font-medium text-ink-900">{a.option}</span>
+                  <li key={i} className="text-ink">
+                    <span className="font-medium text-ink">{a.option}</span>
                     <span> — {a.reason}</span>
                   </li>
                 ))}
@@ -801,16 +799,16 @@ function DecisionCard({
       </details>
 
       {/* FOOTER ACTIONS — saved-to + print */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-rule bg-cream-2/40 px-6 py-4 sm:px-7">
-        <div className="flex items-center gap-1.5 text-[12.5px] text-ink-500">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-paper px-6 py-4 sm:px-7">
+        <div className="flex items-center gap-1.5 text-[12.5px] text-mute">
           <span
             aria-hidden
-            className={`inline-block h-2 w-2 rounded-full ${cat.stripe}`}
+            className="inline-block h-2 w-2 rounded-full bg-ink"
           />
           Saved to{" "}
           <Link
             href={`/app/decisions/${decision.decisionId}`}
-            className="font-medium text-ink-900 underline-offset-2 hover:underline"
+            className="font-medium text-ink underline-offset-2 hover:underline"
           >
             your decisions
           </Link>
@@ -818,7 +816,7 @@ function DecisionCard({
         <button
           type="button"
           onClick={() => window.print()}
-          className="ease-soft no-print inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium text-ink-700 hover:bg-white"
+          className="no-print inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium text-mute transition-colors hover:bg-line/40 hover:text-ink"
         >
           <svg
             viewBox="0 0 24 24"
@@ -861,8 +859,10 @@ function CopyButton({ text }: { text: string }) {
       onClick={onClick}
       aria-label={copied ? "Prompt copied to clipboard" : "Copy prompt"}
       className={
-        "ease-soft inline-flex h-10 items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-white hover:-translate-y-0.5 " +
-        (copied ? "bg-conf-strong" : "grad-skill")
+        "inline-flex h-10 items-center justify-center gap-1.5 rounded-[10px] border text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20 " +
+        (copied
+          ? "border-ink bg-paper text-ink"
+          : "border-ink bg-ink text-paper shadow-card hover:bg-ink/90")
       }
     >
       <span className="inline-flex w-[110px] items-center justify-center">

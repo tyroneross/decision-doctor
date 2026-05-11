@@ -33,46 +33,44 @@ const CATEGORY_BY_TEMPLATE: Record<TemplateId | string, DecisionCategory> = {
   "admin-hire": "admin",
 };
 
+// UI Guidelines v0.1: ink-only — categories no longer carry color.
+// All categories return the same neutral ink-on-paper chip classes.
+// `stripe` is retained for shape parity with the legacy interface (callers
+// may still render a left-edge accent), but it now reads as a line color.
+// `hex` is retained for places that need a fallback inline color; it maps
+// to the ink token's hex value for all categories.
+const NEUTRAL_CATEGORY_CLASSES = {
+  fg: "text-ink",
+  bg: "bg-paper",
+  stripe: "bg-line",
+  hex: "#9a3412", // matches --ink in theme F (terracotta)
+} as const;
+
 const CATEGORY_STYLES: Record<DecisionCategory, CategoryStyle> = {
   capacity: {
     id: "capacity",
     label: "Capacity",
-    fg: "text-cat-cap-deep",
-    bg: "bg-cat-cap-bg",
-    stripe: "bg-cat-cap",
-    hex: "#ff6b4a",
+    ...NEUTRAL_CATEGORY_CLASSES,
   },
   pricing: {
     id: "pricing",
     label: "Pricing",
-    fg: "text-cat-price-deep",
-    bg: "bg-cat-price-bg",
-    stripe: "bg-cat-price",
-    hex: "#e8a93a",
+    ...NEUTRAL_CATEGORY_CLASSES,
   },
   admin: {
     id: "admin",
     label: "Admin hire",
-    fg: "text-cat-admin",
-    bg: "bg-cat-admin-bg",
-    stripe: "bg-cat-admin",
-    hex: "#7a3aa8",
+    ...NEUTRAL_CATEGORY_CLASSES,
   },
   skill: {
     id: "skill",
     label: "Skill",
-    fg: "text-cat-skill-deep",
-    bg: "bg-cat-skill-bg",
-    stripe: "bg-cat-skill",
-    hex: "#0fb8a6",
+    ...NEUTRAL_CATEGORY_CLASSES,
   },
   other: {
     id: "other",
     label: "Other",
-    fg: "text-cat-other",
-    bg: "bg-cat-other-bg",
-    stripe: "bg-cat-other",
-    hex: "#5b6cff",
+    ...NEUTRAL_CATEGORY_CLASSES,
   },
 };
 
@@ -85,8 +83,8 @@ export function categoryFor(templateId: string | null | undefined): CategoryStyl
 // ─── F-08 AI feasibility chips ──────────────────────────────────────────
 //
 // The 4-tier prescriptive chip. Tells the user HOW to ship a reducer, not
-// just whether it's feasible. Tokens map to Sunrise palette already defined
-// in tailwind.config.ts (cat-skill / plum / cat-cap / ink-500).
+// just whether it's feasible. Per UI Guidelines v0.1: ink-only on bone.
+// Non-color semantics carry the meaning via the emoji icon + label text.
 
 export interface FeasibilityStyle {
   /** Enum key from shared/schema.ts AiFeasibilitySchema. */
@@ -103,37 +101,41 @@ export interface FeasibilityStyle {
   ship: string;
 }
 
+// UI Guidelines v0.1: all tiers render as neutral ink-on-paper chips.
+// The emoji icon + label carry the distinction; color does not.
+const NEUTRAL_FEASIBILITY_TOKENS = {
+  fg: "text-ink",
+  bg: "bg-paper",
+} as const;
+
 const FEASIBILITY_STYLES: Record<AiFeasibility, FeasibilityStyle> = {
   skill: {
     key: "skill",
     label: "Skill",
     icon: "🛠️",
-    fg: "text-cat-skill-deep",
-    bg: "bg-cat-skill-bg",
+    ...NEUTRAL_FEASIBILITY_TOKENS,
     ship: "Ship today",
   },
   plugin: {
     key: "plugin",
     label: "Plugin",
     icon: "🧩",
-    fg: "text-plum",
-    bg: "bg-plum-bg",
+    ...NEUTRAL_FEASIBILITY_TOKENS,
     ship: "Ship this week",
   },
   agent: {
     key: "agent",
     label: "Agent",
     icon: "🤖",
-    fg: "text-cat-cap-deep",
-    bg: "bg-cat-cap-bg",
+    ...NEUTRAL_FEASIBILITY_TOKENS,
     ship: "Ship this quarter",
   },
   human: {
     key: "human",
     label: "Human review",
     icon: "👤",
-    fg: "text-ink-500",
-    bg: "bg-cream-2",
+    fg: "text-mute",
+    bg: "bg-paper",
     ship: "Not for AI",
   },
 };
@@ -165,6 +167,9 @@ export interface ConfidenceBand {
   bg: string;
 }
 
+// UI Guidelines v0.1: confidence is ink text only — no chip background.
+// All three bands return the same ink/paper tokens; callers should rely
+// on the icon + label to communicate band, not color.
 export function confidenceBand(confidence: number | null | undefined): ConfidenceBand {
   const c = typeof confidence === "number" ? confidence : 0;
   if (c >= 75) {
@@ -172,8 +177,8 @@ export function confidenceBand(confidence: number | null | undefined): Confidenc
       key: "strong",
       label: "Strong call",
       icon: "✓",
-      fg: "text-conf-strong",
-      bg: "bg-conf-strong-bg",
+      fg: "text-ink",
+      bg: "bg-paper",
     };
   }
   if (c >= 50) {
@@ -181,16 +186,16 @@ export function confidenceBand(confidence: number | null | undefined): Confidenc
       key: "lean",
       label: "Lean toward",
       icon: "~",
-      fg: "text-conf-lean",
-      bg: "bg-conf-lean-bg",
+      fg: "text-ink",
+      bg: "bg-paper",
     };
   }
   return {
     key: "flip",
     label: "Coin flip",
     icon: "?",
-    fg: "text-conf-flip",
-    bg: "bg-conf-flip-bg",
+    fg: "text-mute",
+    bg: "bg-paper",
   };
 }
 
