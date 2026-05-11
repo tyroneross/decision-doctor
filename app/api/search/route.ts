@@ -17,16 +17,20 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
+import { createHash } from "crypto";
 import { embedQuery } from "@/lib/ai-knowledge/embed/openai";
 import { bm25Search } from "@/lib/ai-knowledge/search/bm25-leg";
 import { vectorSearch } from "@/lib/ai-knowledge/search/vector-leg";
 import { kgSearch } from "@/lib/ai-knowledge/search/kg-leg";
+import { librarySearch } from "@/lib/ai-knowledge/search/library-leg";
 import { rrfFuse, type LegHit } from "@/lib/ai-knowledge/search/rrf-fusion";
 import { rerank } from "@/lib/ai-knowledge/rerank/bge-client";
 import { gpt4oRerank } from "@/lib/ai-knowledge/rerank/gpt4o-fallback";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
 import { runWithActor, withActor, db } from "@/lib/db/actor";
+import { auditEvents } from "@/lib/db/schema";
+import { checkRateLimit } from "@/lib/ratelimit";
 import type { RerankResult } from "@/lib/ai-knowledge/rerank/types";
 
 export const runtime = "nodejs";
@@ -37,7 +41,7 @@ const QuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional().default(10),
 });
 
-type LegName = "bm25" | "vector" | "kg";
+type LegName = "bm25" | "vector" | "kg" | "library";
 
 interface SearchResult {
   doc_id: string;
@@ -46,6 +50,7 @@ interface SearchResult {
   snippet: string;
   score: number;
   legs: LegName[];
+  kind?: string; // 'corpus' for existing legs; 'library:<table>' for library hits
 }
 
 export async function GET(req: Request) {
@@ -75,6 +80,25 @@ export async function GET(req: Request) {
   if (!actor && !guest) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
+
+  // S1: Rate limit — authed users share the same CAP bucket as /api/chat.
+  // Guests use a synthetic key; they get a lower effective cap from the
+  // shared in-memory bucket (single key for all guests in this process).
+  const rl = await checkRateLimit(
+    actor?.userId ?? "00000000-0000-0000-0000-guest000000000",
+  );
+  if (!rl.ok) {
+    return NextResponse.json(
+      {
+        error: "rate_limited",
+        message: "Search rate limit reached. Try again shortly.",
+        retry_after: Math.ceil((rl.resetAt - Date.now()) / 1000),
+        resetAt: new Date(rl.resetAt).toISOString(),
+      },
+      { status: 429 },
+    );
+  }
+
   // Synthetic UUIDs for guest's actor context — only used to call
   // runWithActor below; RLS GUC for app.current_user_id stays unset for
   // the global-only path.
@@ -92,10 +116,10 @@ export async function GET(req: Request) {
     );
   }
 
-  // Phase 2 — three legs in parallel. Each leg runs in its own tx so
-  // RLS GUCs scope correctly. We time each leg independently for the
-  // observability row.
-  const legTiming: Record<LegName, number> = { bm25: 0, vector: 0, kg: 0 };
+  // Phase 2 — four legs in parallel. Each corpus leg runs in its own tx so
+  // RLS GUCs scope correctly. Library leg uses runWithActor internally.
+  // We time each leg independently for the observability row.
+  const legTiming: Record<LegName, number> = { bm25: 0, vector: 0, kg: 0, library: 0 };
   const runLeg = <T>(
     name: LegName,
     fn: (tx: Parameters<Parameters<typeof withActor>[0]>[0]) => Promise<T>,
@@ -110,22 +134,38 @@ export async function GET(req: Request) {
     );
   };
 
-  const [bm25Hits, vectorHits, kgHits] = await Promise.all([
+  // S1: Library leg — runs its own runWithActor internally.
+  const libStart = Date.now();
+  const [bm25Hits, vectorHits, kgHits, libraryHits] = await Promise.all([
     runLeg("bm25", (tx) => bm25Search(tx, q, 20)).catch(() => []),
     runLeg("vector", (tx) => vectorSearch(tx, embedding, 20)).catch(() => []),
     runLeg("kg", (tx) => kgSearch(tx, q, 20)).catch(() => []),
+    librarySearch(q, { actor: { userId, tenantId } })
+      .then((hits) => {
+        legTiming.library = Date.now() - libStart;
+        return hits;
+      })
+      .catch(() => []),
   ]);
 
-  // Phase 3 — RRF fusion.
+  // Map library hits to LegHit shape for RRF fusion.
+  // Library hits use their own UUID as doc_id (not corpus_documents UUIDs).
+  const libraryLegHits: LegHit[] = (libraryHits as Array<{ doc_id: string; rank: number }>).map(
+    (h) => ({ doc_id: h.doc_id, rank: h.rank }),
+  );
+
+  // Phase 3 — RRF fusion across all 4 legs.
   const fused = rrfFuse({
     bm25: bm25Hits as LegHit[],
     vector: vectorHits as LegHit[],
     kg: kgHits as LegHit[],
+    library: libraryLegHits,
   });
 
   if (fused.length === 0) {
     const total = Date.now() - t0;
-    // Best-effort observability write; never block the response on it.
+    const queryHash = createHash("sha256").update(q).digest("hex").slice(0, 16);
+    // Best-effort observability writes; never block the response on them.
     void logSearch({
       userId,
       query: q,
@@ -138,6 +178,23 @@ export async function GET(req: Request) {
       degraded: false,
       degraded_reason: null,
     });
+    if (actor) {
+      void logAuditEvent({
+        userId: actor.userId,
+        tenantId: actor.tenantId,
+        queryHash,
+        legCounts: {
+          bm25: (bm25Hits as LegHit[]).length,
+          vector: (vectorHits as LegHit[]).length,
+          kg: (kgHits as LegHit[]).length,
+          library: (libraryHits as Array<unknown>).length,
+        },
+        latency_ms: total,
+        rerankSource: "passthrough",
+        degraded: false,
+        degradedReason: null,
+      });
+    }
     return NextResponse.json({
       results: [],
       total_ms: total,
@@ -146,34 +203,49 @@ export async function GET(req: Request) {
     });
   }
 
-  // Phase 4 — hydrate top candidates for rerank. Cap at 30 (matches the
-  // gpt-4o-mini fallback's MAX_DOCS).
-  const candidateIds = fused.slice(0, 30).map((f) => f.doc_id);
-  const candidateRows = await runWithActor(
-    { userId, tenantId },
-    async () =>
-      withActor(async (tx) =>
-        tx.execute(sql`
-          SELECT id, title, source_url, body
-            FROM corpus_documents
-           WHERE id IN (${sql.join(
-             candidateIds.map((id) => sql`${id}::uuid`),
-             sql`, `,
-           )})
-        `),
-      ),
+  // S1: Separate library hits from corpus hits so we can hydrate them
+  // independently. Library hits are already hydrated (title + snippet from
+  // librarySearch). Corpus hits need a DB fetch.
+  const libraryHitMap = new Map(
+    (libraryHits as Array<{ doc_id: string; kind: string; title: string; snippet: string }>).map(
+      (h) => [h.doc_id, h] as const,
+    ),
   );
+  const corpusCandidateIds = fused
+    .slice(0, 30)
+    .map((f) => f.doc_id)
+    .filter((id) => !libraryHitMap.has(id));
+
+  // Phase 4 — hydrate corpus candidates for rerank. Cap at 30.
+  // Library hits participate in RRF fusion but skip corpus hydration.
   const hydrated = new Map<
     string,
     { id: string; title: string; source_url: string; body: string }
   >();
-  for (const r of candidateRows.rows as Array<{
-    id: string;
-    title: string;
-    source_url: string;
-    body: string;
-  }>) {
-    hydrated.set(r.id, r);
+
+  if (corpusCandidateIds.length > 0) {
+    const candidateRows = await runWithActor(
+      { userId, tenantId },
+      async () =>
+        withActor(async (tx) =>
+          tx.execute(sql`
+            SELECT id, title, source_url, body
+              FROM corpus_documents
+             WHERE id IN (${sql.join(
+               corpusCandidateIds.map((id) => sql`${id}::uuid`),
+               sql`, `,
+             )})
+          `),
+        ),
+    );
+    for (const r of candidateRows.rows as Array<{
+      id: string;
+      title: string;
+      source_url: string;
+      body: string;
+    }>) {
+      hydrated.set(r.id, r);
+    }
   }
 
   let rerankResult: RerankResult;
@@ -181,7 +253,12 @@ export async function GET(req: Request) {
     rerankResult = await rerank(
       {
         query: q,
-        docs: candidateIds.flatMap((id) => {
+        docs: fused.slice(0, 30).flatMap((f) => {
+          const id = f.doc_id;
+          const libHit = libraryHitMap.get(id);
+          if (libHit) {
+            return [{ id, text: `${libHit.title}\n\n${libHit.snippet}`.slice(0, 1500) }];
+          }
           const row = hydrated.get(id);
           // Many openai-news docs have body=58 chars (CDP loader placeholder)
           // while title carries real signal. Always prepend title so the
@@ -195,7 +272,7 @@ export async function GET(req: Request) {
     );
   } catch (err) {
     rerankResult = {
-      doc_ids: candidateIds,
+      doc_ids: fused.slice(0, 30).map((f) => f.doc_id),
       degraded: true,
       degraded_reason: "fallback_failed",
       rerank_ms: 0,
@@ -203,13 +280,33 @@ export async function GET(req: Request) {
     };
   }
 
-  // Phase 5 — assemble final results.
+  // Phase 5 — assemble final results. Library hits surface with kind badge;
+  // corpus hits surface without kind (treated as 'corpus' implicitly).
   const results: SearchResult[] = rerankResult.doc_ids
     .slice(0, limit)
     .flatMap((id) => {
-      const row = hydrated.get(id);
       const fusedEntry = fused.find((f) => f.doc_id === id);
-      if (!row || !fusedEntry) return [];
+      if (!fusedEntry) return [];
+
+      // Library hit — already hydrated; no source_url (library rows don't have one).
+      const libHit = libraryHitMap.get(id);
+      if (libHit) {
+        return [
+          {
+            doc_id: id,
+            title: libHit.title,
+            source_url: "",
+            snippet: libHit.snippet,
+            score: fusedEntry.score,
+            legs: fusedEntry.legs as LegName[],
+            kind: libHit.kind,
+          },
+        ];
+      }
+
+      // Corpus hit.
+      const row = hydrated.get(id);
+      if (!row) return [];
       return [
         {
           doc_id: id,
@@ -224,9 +321,22 @@ export async function GET(req: Request) {
 
   const total_ms = Date.now() - t0;
 
-  // Phase 6 — observability write BEFORE the response. Best-effort; the
-  // outer response is the load-bearing piece. 100ms budget.
-  await logSearch({
+  // S1: SHA-256 hash of the query (first 16 hex chars) for audit log.
+  // We NEVER log raw query content — GDPR + compliance requirement.
+  const queryHash = createHash("sha256").update(q).digest("hex").slice(0, 16);
+
+  // Phase 6 — observability writes (best-effort, 100ms budget each):
+  //   a) ai_search_queries row (F-31 pattern — existing)
+  //   b) audit_events row (S1 — new; only for authed users, synthetic UUIDs
+  //      violate the tenants FK so guests are skipped)
+  const legCounts = {
+    bm25: (bm25Hits as LegHit[]).length,
+    vector: (vectorHits as LegHit[]).length,
+    kg: (kgHits as LegHit[]).length,
+    library: (libraryHits as Array<unknown>).length,
+  };
+
+  void logSearch({
     userId,
     query: q,
     result_count: results.length,
@@ -238,6 +348,20 @@ export async function GET(req: Request) {
     degraded: rerankResult.degraded,
     degraded_reason: rerankResult.degraded_reason,
   });
+
+  // S1: audit_events row — authed users only (tenants FK is NOT NULL).
+  if (actor) {
+    void logAuditEvent({
+      userId: actor.userId,
+      tenantId: actor.tenantId,
+      queryHash,
+      legCounts,
+      latency_ms: total_ms,
+      rerankSource: rerankResult.source,
+      degraded: rerankResult.degraded,
+      degradedReason: rerankResult.degraded_reason,
+    });
+  }
 
   return NextResponse.json({
     results,
@@ -258,6 +382,56 @@ interface SearchLogInput {
   total_ms: number;
   degraded: boolean;
   degraded_reason: string | null;
+}
+
+// S1: Audit event logger for search calls.
+// Only called for authed users. Raw query content is NEVER included.
+interface AuditSearchInput {
+  userId: string;
+  tenantId: string;
+  queryHash: string;
+  legCounts: Record<string, number>;
+  latency_ms: number;
+  rerankSource: string;
+  degraded: boolean;
+  degradedReason: string | null;
+}
+
+async function logAuditEvent(input: AuditSearchInput): Promise<void> {
+  const ABORT = new AbortController();
+  const t = setTimeout(() => ABORT.abort(), 100);
+  try {
+    await Promise.race([
+      runWithActor(
+        { userId: input.userId, tenantId: input.tenantId },
+        async () =>
+          withActor(async (tx) =>
+            tx.insert(auditEvents).values({
+              userId: input.userId,
+              tenantId: input.tenantId,
+              action: "search.call",
+              metadata: {
+                query_hash: input.queryHash,
+                leg_counts: input.legCounts,
+                latency_ms: input.latency_ms,
+                rerank_source: input.rerankSource,
+                degraded: input.degraded,
+                degraded_reason: input.degradedReason,
+              },
+            }),
+          ),
+      ),
+      new Promise<never>((_, reject) =>
+        ABORT.signal.addEventListener("abort", () =>
+          reject(new Error("logAuditEvent timeout")),
+        ),
+      ),
+    ]);
+  } catch {
+    // Non-fatal. Audit degradation is not a user-facing failure.
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 async function logSearch(input: SearchLogInput): Promise<void> {

@@ -22,6 +22,7 @@ import { getSessionActor } from "@/lib/auth-session";
 import { runWithActor, withActor } from "@/lib/db/actor";
 import { decisions, auditEvents } from "@/lib/db/schema";
 import { checkRateLimit } from "@/lib/ratelimit";
+import { detectPHI } from "@/lib/phi-guard";
 import {
   TemplateIdSchema,
   type DecisionInput,
@@ -113,6 +114,46 @@ export async function POST(req: Request) {
       },
       { status: 429 },
     );
+  }
+
+  // S1: PHI guard — scan every message content before invoking Groq.
+  // Returns 400 if ANY message contains PHI patterns. No LLM call is made.
+  // Audit row records the PHI-blocked event (no raw content — only reasons).
+  for (let i = 0; i < parsed.data.messages.length; i++) {
+    const msg = parsed.data.messages[i]!;
+    const phi = detectPHI(msg.content);
+    if (phi.hasPHI) {
+      // Best-effort audit row — fire-and-forget.
+      void runWithActor(
+        { userId: actor.userId, tenantId: actor.tenantId },
+        () =>
+          withActor(async (tx) => {
+            await tx.insert(auditEvents).values({
+              userId: actor.userId,
+              tenantId: actor.tenantId,
+              action: "chat.phi_blocked",
+              metadata: {
+                reasons: phi.reasons,
+                message_index: i,
+                message_role: msg.role,
+              },
+            });
+          }),
+      ).catch(() => {
+        // Audit is non-fatal.
+      });
+
+      return NextResponse.json(
+        {
+          phiBlocked: true,
+          reasons: phi.reasons,
+          messageIndex: i,
+          message:
+            "One or more messages appear to contain protected health information (PHI). Please remove patient identifiers and try again.",
+        },
+        { status: 400 },
+      );
+    }
   }
 
   // 4. Ask Groq for next message OR ready directive.

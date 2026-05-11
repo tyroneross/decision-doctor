@@ -309,6 +309,21 @@ export async function runDecision(
 //   6. Stage 8 promotion classifier (this chunk)
 // ---------------------------------------------------------------------------
 
+// S1: Citation token emission instruction block.
+// Appended to narrative-stage LLM prompts so the model emits [[doc:<uuid>]]
+// tokens that the CitationChip component (components/chat/CitationChip.tsx)
+// renders as clickable citation chips.
+const CITATION_INSTRUCTION_BLOCK = `
+## Citation tokens
+When your response references a fact that came from a retrieved source, emit the token [[doc:<uuid>]] immediately after the cited fact. The UI renders these as citation chips. Rules:
+- Only emit [[doc:<uuid>]] if the source appears in the Retrieved Sources list provided in the user context below.
+- Use the exact UUID from that list — no truncation or invention.
+- One token per factual claim per source.
+- If no retrieved source supports a fact, do not emit a token; state explicitly that you lack a grounded source.
+
+Example: "AI tools can reduce scheduling time by 30%[[doc:a1b2c3d4-e5f6-7890-abcd-ef1234567890]]."
+`;
+
 const RECOMMENDATION_SYSTEM_PROMPT = `You are the recommendation engine for Decision Doctor, an AI deployment strategist for solo healthcare practitioners.
 
 Given a pain path and challenge description, produce a concrete AI task recommendation.
@@ -474,11 +489,32 @@ export async function runRecommendation(
     candidateTasks: rawCandidates.slice(0, 3).map((c) => ({ id: c.id, title: c.title, description: c.description })),
   });
 
+  // S1: Build retrieved-source list from candidateTasks for citation grounding.
+  // At P0, candidate tasks are engine-generated, not yet library-retrieved, so
+  // the source list is minimal. When L2 wires real library retrieval into this
+  // path, replace the TODO stub with actual UUID + title pairs.
+  // TODO Iteration L2: replace with real library retrieval results (uuid + title).
+  const retrievedSources: Array<{ uuid: string; title: string; kind: string }> = rawCandidates
+    .slice(0, 3)
+    .map((c) => ({
+      uuid: c.id, // slug-based at P0; library UUIDs at L2+
+      title: c.title,
+      kind: "candidate_task",
+    }));
+
+  const retrievedSourcesBlock =
+    retrievedSources.length > 0
+      ? `\n\nRetrieved Sources:\n${retrievedSources.map((s) => `- [${s.uuid}] ${s.title} (${s.kind})`).join("\n")}`
+      : "";
+
+  const narrativeSystemPrompt = RECOMMENDATION_SYSTEM_PROMPT + CITATION_INSTRUCTION_BLOCK;
+  const narrativeUserPrompt = userPrompt + retrievedSourcesBlock;
+
   let llmAnswer = "";
   try {
     const llmResult = await callStage({
-      systemPrompt: RECOMMENDATION_SYSTEM_PROMPT,
-      userPrompt,
+      systemPrompt: narrativeSystemPrompt,
+      userPrompt: narrativeUserPrompt,
       responseSchema: {},
       temperature: 0.3,
     });
