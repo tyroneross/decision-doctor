@@ -3,11 +3,18 @@
   "_comment": "Decision Doctor monorepo: the Railway service `decision-doctor-workers` builds and runs ONLY the workers/ subdirectory. The Next.js web app at root deploys to Vercel separately and is NOT a Railway target. After Railway's Nixpacks→Railpack migration, the previous workers/railway.json config stopped being honored — Railpack autodetects Next.js at root and tries to build it, which fails because the workers service does not have BETTER_AUTH_SECRET/RESEND_API_KEY/etc. (those are Vercel env). This file overrides install/build/start to be workers-only.",
   "steps": {
     "install": {
+      "inputs": [
+        { "local": true, "include": ["workers/"] }
+      ],
       "commands": [
         "cd workers && pnpm install --frozen-lockfile"
       ]
     },
     "build": {
+      "inputs": [
+        { "step": "install", "include": ["."] },
+        { "local": true, "include": ["workers/"] }
+      ],
       "commands": [
         "echo 'workers service — no build step; tsx loads TS at runtime (Atomize-verified pattern)'"
       ]
