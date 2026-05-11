@@ -72,3 +72,7 @@ public/workbox-*.js.map
 .navgator/architecture/SUMMARY.md
 .navgator/architecture/SUMMARY_FULL.md
 # <<< NavGator safety guard
+
+# --- Build-loop scratch + Claude session state ---
+.build-loop/
+.claude/
