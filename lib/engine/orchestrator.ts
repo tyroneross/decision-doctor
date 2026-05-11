@@ -1,5 +1,10 @@
 // PRD §6.2 — Decision engine orchestrator.
 // Chains Stages 1-5; assembles the DecisionOutput contract.
+//
+// V2 peer: runRecommendation() — pain-to-AI recommendation engine.
+// Chains: pain-path classify (E2) → use-case retrieval (E2/L2) →
+//         candidate gen → scoring → Stage 8 promotion.
+// V1 runDecision() is untouched.
 
 import "server-only";
 import type { DecisionInput, DecisionOutput } from "@/shared/schema";
@@ -12,7 +17,10 @@ import { runStage4Outranking } from "@/lib/engine/stage4-outranking";
 import { runStage5Ranking } from "@/lib/engine/stage5-ranking";
 import { runStage6Feasibility } from "@/lib/engine/stage6-feasibility";
 import { runStage7Scaffold } from "@/lib/engine/stage7-scaffold";
-import type { TemplateId } from "@/shared/schema";
+import type { TemplateId, AiTaskRecommendation } from "@/shared/schema";
+import type { RecommendationInput } from "@/lib/engine/types";
+import { classifyPromotion } from "@/lib/engine/stage8-promotion";
+import { callStage } from "@/lib/groq";
 
 export interface RunDecisionResult {
   output: Omit<DecisionOutput, "decisionId" | "decidedAt">;
@@ -281,4 +289,291 @@ export async function runDecision(
   };
 
   return { output, llmCalls };
+}
+
+// ---------------------------------------------------------------------------
+// V2 — runRecommendation()
+//
+// Peer to runDecision(); implements the pain-to-AI recommendation pipeline.
+// V1 runDecision() is intentionally left untouched.
+//
+// Pipeline stages:
+//   1. pain-path classify (stub — E2 lands later)
+//   2. use-case retrieval (stub — E2/L2 land later)
+//   3. candidate generation (LLM-driven; minimal for P0)
+//   4. scoring (deterministic heuristic for P0; E2 adds 9-criteria scorer)
+//   5. starter solution + guardrails generation (LLM)
+//   6. Stage 8 promotion classifier (this chunk)
+// ---------------------------------------------------------------------------
+
+const RECOMMENDATION_SYSTEM_PROMPT = `You are the recommendation engine for Decision Doctor, an AI deployment strategist for solo healthcare practitioners.
+
+Given a pain path and challenge description, produce a concrete AI task recommendation.
+
+OUTPUT (JSON object only — no prose, no fences):
+{
+  "challengeSummary": "<1-2 sentence normalized restatement of the challenge — plain language, no jargon>",
+  "goal": "<1 sentence — what improvement the practitioner wants>",
+  "candidateTasks": [
+    {
+      "id": "<slug, lowercase-hyphenated>",
+      "title": "<≤80 char task title>",
+      "description": "<1 sentence what this task involves>",
+      "score": <0-100 relevance>,
+      "tags": ["<tag>"]
+    }
+  ],
+  "recommendedTask": "<title of the best candidate task>",
+  "recommendedApproach": "prompt" | "checklist" | "sop" | "skill" | "plugin" | "agent" | "human_only" | "existing_tool",
+  "whyThisTask": "<2-3 sentences — why this task over the others, connected to the stated challenge>",
+  "starterSolution": "<paste-ready solution — either a prompt to use in ChatGPT/Claude, or step-by-step instructions, ≤500 words>",
+  "guardrails": ["<safety or quality guardrail — ≤5 items>"],
+  "tryThisWeek": ["<concrete action the practitioner can take this week — ≤3 items>"],
+  "successMetric": "<one measurable outcome to track — e.g. 'Reduce time spent on X by Y per week'>",
+  "confidence": <0-100 integer>
+}
+
+Rules:
+- candidateTasks: 2-4 tasks. First = recommended. Others = alternatives considered.
+- recommendedApproach: match the starter solution type.
+- guardrails: healthcare-specific safety notes (PHI, clinical risk, patient-facing material needs clinician review).
+- successMetric: practical, measurable, 60-day horizon.
+- All content is for a solo healthcare practitioner. Never recommend action requiring staff, EHR vendor contracts, or significant capital.
+- JSON only. No commentary outside JSON.`;
+
+/**
+ * V2 recommendation orchestrator peer.
+ *
+ * Runs the pain-to-AI recommendation pipeline and returns an AiTaskRecommendation.
+ * Does NOT write to DB (caller/route handles persistence).
+ */
+export async function runRecommendation(
+  input: RecommendationInput,
+): Promise<AiTaskRecommendation> {
+  const methodTrace: AiTaskRecommendation["methodTrace"] = [];
+
+  // STAGE: pain-path classify
+  // TODO: Iteration E2 — replace stub with lib/engine/pain-path/classifier.ts
+  const selectedPainPath = input.painPath;
+  methodTrace.push({
+    stage: "pain-classify",
+    name: "pain-path",
+    output: { selectedPainPath, source: "input-direct" /* stub */ },
+  });
+
+  // STAGE: use-case retrieval
+  // TODO: Iteration E2/L2 — replace stub with searchLibrary() + use-case retrieval
+  methodTrace.push({
+    stage: "use-case-retrieval",
+    name: "library-retrieval",
+    output: { retrieved: 0, source: "stub-pending-L2" /* stub */ },
+  });
+
+  // STAGE: candidate generation + scoring (LLM)
+  const userPrompt = JSON.stringify({
+    painPath: selectedPainPath,
+    challengeText: input.challengeText,
+    goal: input.goal ?? null,
+  });
+
+  const llmResult = await callStage({
+    systemPrompt: RECOMMENDATION_SYSTEM_PROMPT,
+    userPrompt,
+    responseSchema: {},
+    temperature: 0.3,
+  });
+
+  const parsed = parseRecommendationJson(llmResult.answer);
+
+  // Normalise / coerce the LLM output into a valid shape.
+  const challengeSummary =
+    typeof parsed?.challengeSummary === "string"
+      ? parsed.challengeSummary.slice(0, 600)
+      : input.challengeText.slice(0, 600);
+
+  const goal =
+    typeof parsed?.goal === "string"
+      ? parsed.goal.slice(0, 400)
+      : (input.goal ?? "Reduce time on non-clinical tasks and improve practice efficiency.").slice(0, 400);
+
+  const rawCandidates: AiTaskRecommendation["candidateTasks"] = Array.isArray(parsed?.candidateTasks)
+    ? (parsed.candidateTasks as Array<unknown>)
+        .filter(isValidCandidateTask)
+        .slice(0, 10)
+        .map((t) => normalizeCandidateTask(t as Record<string, unknown>, selectedPainPath))
+    : [];
+
+  // Ensure at least 1 candidate.
+  if (rawCandidates.length === 0) {
+    rawCandidates.push(fallbackCandidate(selectedPainPath, input.challengeText));
+  }
+
+  const recommendedTask =
+    typeof parsed?.recommendedTask === "string"
+      ? parsed.recommendedTask.slice(0, 200)
+      : rawCandidates[0]!.title;
+
+  const recommendedApproach = isValidApproach(parsed?.recommendedApproach)
+    ? (parsed!.recommendedApproach as AiTaskRecommendation["recommendedApproach"])
+    : "prompt";
+
+  const whyThisTask =
+    typeof parsed?.whyThisTask === "string"
+      ? parsed.whyThisTask.slice(0, 600)
+      : `${recommendedTask} was selected as the most actionable AI task for your ${selectedPainPath} challenge.`;
+
+  const starterSolution =
+    typeof parsed?.starterSolution === "string"
+      ? parsed.starterSolution.slice(0, 2000)
+      : `Start by using this prompt in ChatGPT or Claude:\n\n"Help me ${recommendedTask.toLowerCase()}. Context: ${input.challengeText.slice(0, 200)}"`;
+
+  const guardrails: string[] = Array.isArray(parsed?.guardrails)
+    ? (parsed.guardrails as unknown[]).filter((g) => typeof g === "string").slice(0, 6) as string[]
+    : ["Do not include patient names, diagnoses, or MRN numbers in any AI prompt.", "Review AI-generated patient-facing content before sending."];
+
+  const tryThisWeek: string[] = Array.isArray(parsed?.tryThisWeek)
+    ? (parsed.tryThisWeek as unknown[]).filter((t) => typeof t === "string").slice(0, 5) as string[]
+    : [`Try the starter solution on one real ${selectedPainPath} task this week.`];
+
+  const successMetric =
+    typeof parsed?.successMetric === "string"
+      ? parsed.successMetric.slice(0, 300)
+      : `Reduce time spent on ${selectedPainPath.replace("_", " ")} tasks by at least 30 minutes per week within 60 days.`;
+
+  const confidence =
+    typeof parsed?.confidence === "number"
+      ? Math.min(100, Math.max(0, Math.round(parsed.confidence as number)))
+      : 60;
+
+  methodTrace.push({
+    stage: "candidate-gen",
+    name: "llm-candidates",
+    output: {
+      candidateCount: rawCandidates.length,
+      tokensIn: llmResult.tokensIn,
+      tokensOut: llmResult.tokensOut,
+    },
+  });
+
+  methodTrace.push({
+    stage: "scoring",
+    name: "candidate-scoring",
+    output: {
+      // TODO: Iteration E2 — replace with 9-criteria scoring output
+      topCandidateTitle: recommendedTask,
+      confidence,
+      source: "llm-inline-stub",
+    },
+  });
+
+  // STAGE 8: adoption-pathway promotion classifier.
+  const adoptionPathway = await classifyPromotion({
+    task: recommendedTask,
+    taskDescription: rawCandidates.find((c) => c.title === recommendedTask)?.description,
+    painPath: selectedPainPath,
+    scoring: { confidence, rationale: whyThisTask },
+  });
+
+  methodTrace.push({
+    stage: "stage8-promotion",
+    name: "adoption-pathway",
+    output: {
+      rungs: adoptionPathway.map((r) => ({ kind: r.kind, state: r.state, confidence: r.confidence })),
+    },
+  });
+
+  return {
+    selectedPainPath,
+    challengeSummary,
+    goal,
+    candidateTasks: rawCandidates,
+    recommendedTask,
+    recommendedApproach,
+    whyThisTask,
+    starterSolution,
+    guardrails,
+    tryThisWeek,
+    successMetric,
+    adoptionPathway,
+    confidence,
+    methodTrace,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Utilities for runRecommendation
+// ---------------------------------------------------------------------------
+
+function parseRecommendationJson(text: string): Record<string, unknown> | null {
+  if (!text) return null;
+  const cleaned = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/i, "");
+  try {
+    const parsed = JSON.parse(cleaned);
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    try {
+      return JSON.parse(match[0]);
+    } catch {
+      return null;
+    }
+  }
+}
+
+function isValidCandidateTask(t: unknown): boolean {
+  if (typeof t !== "object" || t === null) return false;
+  const r = t as Record<string, unknown>;
+  return typeof r.title === "string" && typeof r.description === "string";
+}
+
+function normalizeCandidateTask(
+  t: Record<string, unknown>,
+  painPath: RecommendationInput["painPath"],
+): AiTaskRecommendation["candidateTasks"][number] {
+  return {
+    id: typeof t.id === "string" ? t.id.slice(0, 64) : slugify(t.title as string),
+    title: (t.title as string).slice(0, 200),
+    description: (t.description as string).slice(0, 400),
+    painPath,
+    score: typeof t.score === "number" ? Math.min(100, Math.max(0, Math.round(t.score as number))) : 70,
+    tags: Array.isArray(t.tags) ? (t.tags as unknown[]).filter((x) => typeof x === "string").slice(0, 10) as string[] : [],
+  };
+}
+
+function fallbackCandidate(
+  painPath: RecommendationInput["painPath"],
+  challenge: string,
+): AiTaskRecommendation["candidateTasks"][number] {
+  const title = `Address ${painPath.replace("_", " ")} with AI assistance`;
+  return {
+    id: slugify(title),
+    title,
+    description: `Use an AI prompt to help with: ${challenge.slice(0, 180)}`,
+    painPath,
+    score: 60,
+    tags: [painPath],
+  };
+}
+
+const VALID_APPROACHES = new Set([
+  "existing_tool", "prompt", "checklist", "sop",
+  "skill", "plugin", "agent", "human_only",
+]);
+
+function isValidApproach(v: unknown): boolean {
+  return typeof v === "string" && VALID_APPROACHES.has(v);
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 64);
 }

@@ -1,4 +1,5 @@
 // PRD §6.1 + §6.3 — Zod schemas for DecisionInput and DecisionOutput
+// V2 additive: AdoptionPathwaySchema, AiTaskRecommendationSchema.
 // Shared between client (form validation) and server (route handler).
 
 import { z } from "zod";
@@ -205,6 +206,190 @@ export const DestinationSchema = z.object({
   artifactUri: z.string().optional(),
   error: z.string().optional(),
 });
+
+// ---------------------------------------------------------------------------
+// V2 Pain-path + Adoption-pathway schemas
+// ---------------------------------------------------------------------------
+
+export const PainPathIdSchema = z.enum([
+  "referrals",
+  "research",
+  "admin",
+  "capacity_growth",
+  "follow_up",
+  "custom",
+]);
+export type PainPathId = z.infer<typeof PainPathIdSchema>;
+
+// Builder-handoff seed schemas (server-side; consumed by builder bridges in U4).
+
+const PromptBuilderSeedSchema = z.object({
+  builderKind: z.literal("prompt"),
+  taskTitle: z.string().min(1).max(200),
+  taskDescription: z.string().max(400).nullable(),
+  painPath: PainPathIdSchema,
+  scoringRationale: z.string().max(400),
+  targetAudience: z.string().max(120),
+  outputSpec: z.string().max(200),
+  permissionTier: z.literal("T0"),
+});
+
+const ChecklistBuilderSeedSchema = z.object({
+  builderKind: z.literal("checklist"),
+  taskTitle: z.string().min(1).max(200),
+  taskDescription: z.string().max(400).nullable(),
+  painPath: PainPathIdSchema,
+  scoringRationale: z.string().max(400),
+  stepCountTarget: z.number().int().min(2).max(20),
+  format: z.literal("ordered-steps"),
+  permissionTier: z.literal("T0"),
+});
+
+const SkillBuilderSeedSchema = z.object({
+  builderKind: z.literal("skill"),
+  taskTitle: z.string().min(1).max(200),
+  taskDescription: z.string().max(400).nullable(),
+  painPath: PainPathIdSchema,
+  scoringRationale: z.string().max(400),
+  scaffoldTarget: z.literal("claude-code-skill"),
+  permissionTier: z.literal("T1"),
+});
+
+const PluginBuilderSeedSchema = z.object({
+  builderKind: z.literal("plugin"),
+  taskTitle: z.string().min(1).max(200),
+  taskDescription: z.string().max(400).nullable(),
+  painPath: PainPathIdSchema,
+  scoringRationale: z.string().max(400),
+  scaffoldTarget: z.literal("claude-code-plugin"),
+  permissionTier: z.literal("T2"),
+});
+
+const AgentBuilderSeedSchema = z.object({
+  builderKind: z.literal("agent"),
+  taskTitle: z.string().min(1).max(200),
+  taskDescription: z.string().max(400).nullable(),
+  painPath: PainPathIdSchema,
+  scoringRationale: z.string().max(400),
+  scaffoldTarget: z.literal("claude-code-plugin"),
+  permissionTier: z.literal("T3"),
+});
+
+const BuilderHandoffSeedSchema = z.discriminatedUnion("builderKind", [
+  PromptBuilderSeedSchema,
+  ChecklistBuilderSeedSchema,
+  SkillBuilderSeedSchema,
+  PluginBuilderSeedSchema,
+  AgentBuilderSeedSchema,
+]);
+
+/**
+ * One rung in the adoption pathway.
+ * The picker (U4 / <AdoptionPathwayPicker>) renders only rungs where
+ * state !== "not-recommended".
+ */
+export const AdoptionPathwayRungSchema = z.object({
+  kind: z.enum(["prompt", "checklist", "skill", "plugin", "agent"]),
+  /** Short action-oriented label (≤80 chars). */
+  label: z.string().min(1).max(80),
+  /** One-sentence rationale for this rung's state (≤280 chars). */
+  rationale: z.string().min(1).max(280),
+  /** 0-100 confidence that this rung fits. */
+  confidence: z.number().int().min(0).max(100),
+  builderHandoff: z.object({
+    /** Server-side typed payload for builder bridges (U4). */
+    seed: BuilderHandoffSeedSchema,
+  }),
+  state: z.enum(["recommended", "optional", "not-recommended"]),
+});
+export type AdoptionPathwayRung = z.infer<typeof AdoptionPathwayRungSchema>;
+
+/**
+ * Full adoption pathway: exactly 5 entries in order:
+ * prompt, checklist, skill, plugin, agent.
+ * Stage 8 sets this on every run; never null.
+ */
+export const AdoptionPathwaySchema = z
+  .tuple([
+    AdoptionPathwayRungSchema,
+    AdoptionPathwayRungSchema,
+    AdoptionPathwayRungSchema,
+    AdoptionPathwayRungSchema,
+    AdoptionPathwayRungSchema,
+  ])
+  .refine(
+    (rungs) => rungs.some((r) => r.state === "recommended"),
+    { message: "AdoptionPathway must have at least 1 recommended rung" },
+  );
+export type AdoptionPathway = z.infer<typeof AdoptionPathwaySchema>;
+
+// Candidate task schema.
+export const CandidateTaskSchema = z.object({
+  id: z.string().min(1).max(64),
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(400),
+  painPath: PainPathIdSchema,
+  score: z.number().min(0).max(100),
+  tags: z.array(z.string().min(1).max(64)).max(10),
+});
+export type CandidateTask = z.infer<typeof CandidateTaskSchema>;
+
+// Recommendation approach.
+export const RecommendationApproachSchema = z.enum([
+  "existing_tool",
+  "prompt",
+  "checklist",
+  "sop",
+  "skill",
+  "plugin",
+  "agent",
+  "human_only",
+]);
+
+// Method trace entry for the V2 recommendation pipeline.
+export const RecommendationMethodTraceEntrySchema = z.object({
+  stage: z.enum([
+    "pain-classify",
+    "use-case-retrieval",
+    "candidate-gen",
+    "scoring",
+    "stage8-promotion",
+  ]),
+  name: z.string().min(1).max(64),
+  output: z.unknown(),
+});
+
+/**
+ * AiTaskRecommendation — primary V2 output object.
+ * Returned by runRecommendation() and persisted in ai_recommendations.
+ */
+export const AiTaskRecommendationSchema = z.object({
+  selectedPainPath: PainPathIdSchema,
+  challengeSummary: z.string().min(1).max(600),
+  goal: z.string().min(1).max(400),
+  candidateTasks: z.array(CandidateTaskSchema).min(1).max(10),
+  recommendedTask: z.string().min(1).max(200),
+  recommendedApproach: RecommendationApproachSchema,
+  whyThisTask: z.string().min(1).max(600),
+  starterSolution: z.string().min(1).max(2000),
+  guardrails: z.array(z.string().min(1).max(200)).min(1).max(6),
+  tryThisWeek: z.array(z.string().min(1).max(200)).min(1).max(5),
+  successMetric: z.string().min(1).max(300),
+  adoptionPathway: AdoptionPathwaySchema,
+  confidence: z.number().min(0).max(100),
+  methodTrace: z.array(RecommendationMethodTraceEntrySchema),
+});
+export type AiTaskRecommendation = z.infer<typeof AiTaskRecommendationSchema>;
+
+// RecommendationInput schema (for route handlers — E3).
+export const RecommendationInputSchema = z.object({
+  painPath: PainPathIdSchema,
+  challengeText: z.string().min(1).max(800),
+  goal: z.string().min(1).max(400).optional(),
+  userId: z.string().uuid().optional(),
+  tenantId: z.string().uuid().optional(),
+});
+export type RecommendationInput = z.infer<typeof RecommendationInputSchema>;
 
 export const DecisionOutputSchema = z.object({
   decisionId: z.string().uuid(),
