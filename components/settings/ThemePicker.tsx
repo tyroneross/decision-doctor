@@ -4,7 +4,7 @@
 //
 // Three radio-style cards (F default, A Case File, B Conversation). Picking
 // one writes to localStorage["dd:theme"] AND mutates
-// <html>.dataset.theme so the page re-skins instantly without a reload.
+// <html> data-theme so the page re-skins instantly without a reload.
 //
 // SSR-safe: the root layout (app/layout.tsx) renders <html data-theme="F">
 // on the server, then a tiny inline <script> in <head> reads localStorage
@@ -13,15 +13,13 @@
 // boot sequence.
 //
 // Per UI Guidelines v0.1: ink-only on bone. Visual preview comes from
-// rendering three mini-cards that themselves carry the data-theme override
-// inline (via dangerouslySetInnerHTML for the inline style? — no, simpler:
-// each card uses inline style:vars to depict that theme's tokens without
-// affecting the rest of the page).
+// three mini-swatches that carry inline style values for each theme's
+// tokens — they always reflect the underlying values without affecting
+// the rest of the page.
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
-
-export type ThemeKey = "F" | "A" | "B";
+import { type ThemeKey, getInitialTheme, setTheme } from "@/lib/theme";
 
 const THEMES: Array<{
   key: ThemeKey;
@@ -78,29 +76,18 @@ const THEMES: Array<{
   },
 ];
 
-const STORAGE_KEY = "dd:theme";
-
 export function ThemePicker() {
   const [active, setActive] = useState<ThemeKey>("F");
 
-  // On mount: read the current theme from <html>.dataset (set by the inline
-  // boot script) so the radio reflects reality.
+  // On mount: read the current theme via getInitialTheme() which checks the
+  // <html> data-theme attribute set by the inline boot script first.
   useEffect(() => {
-    if (typeof document === "undefined") return;
-    const current = document.documentElement.dataset.theme;
-    if (current === "A" || current === "B" || current === "F") {
-      setActive(current);
-    }
+    setActive(getInitialTheme());
   }, []);
 
   const select = (key: ThemeKey) => {
     setActive(key);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, key);
-    } catch {
-      /* storage disabled — fail silent, the in-memory choice still applies */
-    }
-    document.documentElement.setAttribute("data-theme", key);
+    setTheme(key);
   };
 
   return (
@@ -178,7 +165,7 @@ export function ThemePicker() {
         })}
       </div>
       <p className="mt-3 text-[12px] text-mute">
-        Your choice is saved on this device. Themes don't change layout —
+        Your choice is saved on this device. Themes don&apos;t change layout —
         just the accent color and surface tones.
       </p>
     </fieldset>
