@@ -1,168 +1,136 @@
 "use client";
 
 import { useState } from "react";
-import { signIn, signUp } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { signIn, signUp } from "@/lib/auth-client";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
-type Mode = "magic" | "password" | "create";
-
+/**
+ * D0 — Single-screen sign-in / sign-up.
+ *
+ * One screen, one button: "Send magic link · or sign in".
+ *
+ * Submit branches:
+ *   - password.length > 0 → signIn.email(email, password)
+ *   - password empty       → signIn.magicLink(email, callbackURL: /app)
+ *
+ * Account creation: email + password is enough (Better Auth's email/password
+ * flow auto-creates if not found, when configured server-side; magic-link
+ * path provisions on first verification regardless).
+ *
+ * Redirects on success to /app/decisions for now (decisions list is the
+ * established post-auth landing). Once C5 ships /app (search-first F1
+ * home), update this to /app.
+ */
 export default function SignInPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("magic");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const submit = async () => {
+  const canSubmit = !busy && /.+@.+\..+/.test(email);
+
+  async function submit(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!canSubmit) return;
     setBusy(true);
     setErr(null);
     setMsg(null);
     try {
-      if (mode === "magic") {
-        const res = await signIn.magicLink({ email, callbackURL: "/app/decisions" });
-        if (res.error) throw new Error(res.error.message);
-        setMsg("Check your email for a sign-in link. Link expires in 10 minutes.");
-      } else if (mode === "password") {
+      if (password.length > 0) {
+        // Try sign-in first; fall through to sign-up on USER_NOT_FOUND.
+        // Better Auth's `autoSignIn: true` (lib/auth.ts) means the
+        // signUp.email call also signs the new account in.
         const res = await signIn.email({ email, password });
-        if (res.error) throw new Error(res.error.message);
+        if (res.error) {
+          const code = res.error.code ?? "";
+          const msg = res.error.message ?? "";
+          if (code === "USER_NOT_FOUND" || /not.*found|no.*user/i.test(msg)) {
+            const sup = await signUp.email({
+              email,
+              password,
+              name: email.split("@")[0] ?? "",
+            });
+            if (sup.error) throw new Error(sup.error.message);
+          } else {
+            throw new Error(msg);
+          }
+        }
         router.push("/app/decisions");
       } else {
-        const res = await signUp.email({ email, password, name });
+        const res = await signIn.magicLink({
+          email,
+          callbackURL: "/app/decisions",
+        });
         if (res.error) throw new Error(res.error.message);
-        router.push("/app/decisions");
+        setMsg("Check your email — your sign-in link expires in 60 min.");
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
-  };
-
-  const canSubmit =
-    !busy &&
-    email.includes("@") &&
-    (mode === "magic" || password.length >= 8) &&
-    (mode !== "create" || name.trim().length > 0);
+  }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-12">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-ink-900">Decision Doctor</h1>
-        <p className="text-sm text-ink-500">
-          Transparent decisions for solo healthcare practitioners.
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-12">
+      <header className="space-y-1">
+        <h1 className="text-[32px] font-bold leading-tight text-text">
+          decision doctor
+        </h1>
+        <p className="text-[12px] font-medium text-mute">
+          sign in to your practice
         </p>
-      </div>
+      </header>
 
-      <div className="mt-8 flex gap-1 text-sm" role="tablist">
-        {(
-          [
-            ["magic", "Magic link"],
-            ["password", "Sign in"],
-            ["create", "Create account"],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={mode === key}
-            onClick={() => {
-              setMode(key);
-              setErr(null);
-              setMsg(null);
-            }}
-            className={
-              // min-h-11 = 44px = mobile touch-target floor (PRD §8 / WCAG 2.2).
-              // Active tab: brand underline; idle: ink-500 with hover-to-ink.
-              "min-h-11 rounded px-3 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 " +
-              (mode === key
-                ? "border-b-2 border-brand-600 text-ink-900 font-medium"
-                : "text-ink-500 hover:text-ink-900")
-            }
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <form className="mt-8 space-y-4" onSubmit={submit}>
+        <Input
+          type="email"
+          required
+          autoComplete="email"
+          autoFocus
+          label="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-      <form
-        className="mt-6 space-y-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (canSubmit) submit();
-        }}
-      >
-        {mode === "create" && (
-          <label className="block text-sm">
-            <span className="text-ink-700">Name</span>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full min-h-11 rounded border-ink-300 px-3 focus:border-accent-600 focus:ring-accent-600"
-            />
-          </label>
-        )}
+        <Input
+          type="password"
+          autoComplete="current-password"
+          label="Password (optional)"
+          placeholder="leave blank for magic link"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-        <label className="block text-sm">
-          <span className="text-ink-700">Email</span>
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full min-h-11 rounded border-ink-300 px-3 focus:border-accent-600 focus:ring-accent-600"
-          />
-        </label>
-
-        {mode !== "magic" && (
-          <label className="block text-sm">
-            <span className="text-ink-700">Password (8+ chars)</span>
-            <input
-              type="password"
-              required
-              minLength={8}
-              autoComplete={mode === "create" ? "new-password" : "current-password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full min-h-11 rounded border-ink-300 px-3 focus:border-accent-600 focus:ring-accent-600"
-            />
-          </label>
-        )}
-
-        <button
+        <Button
           type="submit"
+          variant="primary"
+          full
           disabled={!canSubmit}
-          className={
-            // min-h-11 = 44px touch-target floor (PRD §8 / WCAG 2.5.8).
-            // Enabled bg-brand-600 on white = 5.4:1 (AA-large);
-            // disabled text-ink-700 on bg-ink-100 = 7.2:1.
-            "w-full min-h-11 rounded-md py-3 text-sm font-medium shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 " +
-            (canSubmit
-              ? "bg-brand-600 text-white hover:bg-brand-700 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]"
-              : "bg-ink-100 text-ink-700 cursor-not-allowed")
-          }
+          aria-busy={busy}
         >
-          {busy
-            ? "Working..."
-            : mode === "magic"
-              ? "Send magic link"
-              : mode === "password"
-                ? "Sign in"
-                : "Create account"}
-        </button>
+          {busy ? "Working…" : "Send magic link · or sign in"}
+        </Button>
 
-        {msg && <p className="text-sm status-ok">{msg}</p>}
-        {err && <p className="text-sm status-error">{err}</p>}
+        {msg && (
+          <p role="status" className="text-[13px] status-ok">
+            {msg}
+          </p>
+        )}
+        {err && (
+          <p role="alert" className="text-[13px] status-error">
+            {err}
+          </p>
+        )}
       </form>
 
-      <p className="mt-6 text-xs text-ink-500">
-        We never store names of clients, patients, or PHI. Decisions are
-        described in your own words but kept short and Zod-validated server-side.
+      <p className="mt-8 text-[13px] font-normal text-mute leading-relaxed">
+        Magic links expire in 60 min. Sessions are 7-day rolling. SSO is
+        post-MVP.
       </p>
     </main>
   );
