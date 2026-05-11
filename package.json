@@ -13,7 +13,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "test": "vitest"
+    "test": "vitest",
+    "library:seed": "tsx scripts/seed-library.ts",
+    "library:seed:dry": "tsx scripts/seed-library.ts --dry-run",
+    "library:reset": "tsx scripts/seed-library.ts --reset"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",
