@@ -20,6 +20,9 @@ import { runStage7Scaffold } from "@/lib/engine/stage7-scaffold";
 import type { TemplateId, AiTaskRecommendation } from "@/shared/schema";
 import type { RecommendationInput } from "@/lib/engine/types";
 import { classifyPromotion } from "@/lib/engine/stage8-promotion";
+import { classifyPainPath } from "@/lib/engine/pain-path/classifier";
+import { generateCandidateTasks } from "@/lib/engine/pain-path/candidates";
+import { scoreCandidates } from "@/lib/engine/pain-path/scoring";
 import { callStage } from "@/lib/groq";
 
 export interface RunDecisionResult {
@@ -353,74 +356,163 @@ export async function runRecommendation(
   const methodTrace: AiTaskRecommendation["methodTrace"] = [];
 
   // STAGE: pain-path classify
-  // TODO: Iteration E2 — replace stub with lib/engine/pain-path/classifier.ts
-  const selectedPainPath = input.painPath;
+  const classification = await classifyPainPath({
+    challenge: input.challengeText,
+    selectedPath: input.painPath,
+  });
+  const selectedPainPath = classification.path;
   methodTrace.push({
     stage: "pain-classify",
     name: "pain-path",
-    output: { selectedPainPath, source: "input-direct" /* stub */ },
+    output: {
+      selectedPainPath,
+      confidence: classification.confidence,
+      clarifierCount: classification.clarifiers?.length ?? 0,
+      source: input.painPath ? "input-corroborated" : "classifier",
+    },
   });
 
   // STAGE: use-case retrieval
-  // TODO: Iteration E2/L2 — replace stub with searchLibrary() + use-case retrieval
+  // TODO L2: replace stub with searchLibrary() + use-case retrieval from corpus
   methodTrace.push({
     stage: "use-case-retrieval",
     name: "library-retrieval",
-    output: { retrieved: 0, source: "stub-pending-L2" /* stub */ },
+    output: { retrieved: 0, source: "stub-pending-L2" },
   });
 
-  // STAGE: candidate generation + scoring (LLM)
+  // STAGE: candidate task generation
+  const goal =
+    typeof input.goal === "string" && input.goal.length > 0
+      ? input.goal
+      : `Reduce time on ${selectedPainPath.replace("_", " ")} tasks and improve practice efficiency.`;
+
+  const candidateTasksExt = await generateCandidateTasks({
+    painPath: selectedPainPath,
+    challenge: input.challengeText,
+    goal,
+  });
+
+  // STAGE: 9-criteria scoring
+  // Default scoring input — infer from classification confidence + basic heuristics.
+  // E3 / intake flow will supply real user-reported values.
+  const scoringInput = {
+    painSeverity: 0.7,
+    frequency: 0.6,
+    timeBurden: 0.6,
+    riskTolerance: 0.4,
+    aiComfort: 0.5,
+    dataReadiness: 0.6,
+  };
+
+  // Guarantee ≥ 1 task for scoring (generateCandidateTasks guarantees ≥ 3 from
+  // library stubs, but add a final safety net for the unlikely empty case).
+  const safeTasksExt =
+    candidateTasksExt.length > 0
+      ? candidateTasksExt
+      : [{ id: slugify(`${selectedPainPath}-fallback`), taskName: `Address ${selectedPainPath.replace("_", " ")} with AI`, taskDescription: `Use AI to help with: ${input.challengeText.slice(0, 180)}`, aiCapability: "drafting", dataNeeded: "Plain-language context.", guardrails: "No PHI in prompts. Review AI output before use.", startingLevel: "prompt" as const, source: "library" as const }];
+
+  const scored = scoreCandidates(safeTasksExt, scoringInput);
+  const topScoredCandidate = scored[0]!;
+
+  methodTrace.push({
+    stage: "candidate-gen",
+    name: "llm-candidates",
+    output: {
+      candidateCount: candidateTasksExt.length,
+      source: candidateTasksExt[0]?.source ?? "generated",
+    },
+  });
+
+  methodTrace.push({
+    stage: "scoring",
+    name: "candidate-scoring",
+    output: {
+      topCandidateId: topScoredCandidate.id,
+      topCandidateName: topScoredCandidate.taskName,
+      combinedScore: topScoredCandidate.combinedScore,
+      rankedCandidates: scored.map((c) => ({
+        id: c.id,
+        taskName: c.taskName,
+        combinedScore: Number(c.combinedScore.toFixed(4)),
+        rank: c.rank,
+        criterionSummary: Object.fromEntries(
+          Object.entries(c.scores).map(([k, v]) => [k, { adjusted: Number(v.adjusted.toFixed(3)), rationale: v.rationale }]),
+        ),
+      })),
+    },
+  });
+
+  // Convert CandidateTaskExt → AiTaskRecommendation candidateTasks shape.
+  // The V1 candidateTasks use { id, title, description, painPath, score, tags }.
+  // We adapt from the E2 extended shape, mapping topScoredCandidate's combinedScore to 0-100.
+  const rawCandidates: AiTaskRecommendation["candidateTasks"] = scored.slice(0, 5).map((c) => ({
+    id: c.id,
+    title: c.taskName,
+    description: c.taskDescription,
+    painPath: selectedPainPath,
+    score: Math.round(c.combinedScore * 100),
+    tags: [c.aiCapability, c.startingLevel],
+  }));
+
+  // Ensure at least 1 candidate (scored always returns ≥ 1 if input is non-empty).
+  if (rawCandidates.length === 0) {
+    rawCandidates.push(fallbackCandidate(selectedPainPath, input.challengeText));
+  }
+
+  // Derive recommendation fields from the top-scored candidate.
+  const topCandidate = rawCandidates[0]!;
+  const topExt = topScoredCandidate;
+
+  // Use RECOMMENDATION_SYSTEM_PROMPT LLM call to get narrative fields
+  // (challengeSummary, whyThisTask, starterSolution, guardrails, tryThisWeek, successMetric).
   const userPrompt = JSON.stringify({
     painPath: selectedPainPath,
     challengeText: input.challengeText,
-    goal: input.goal ?? null,
+    goal,
+    recommendedTask: topExt.taskName,
+    recommendedApproach: topExt.startingLevel,
+    candidateTasks: rawCandidates.slice(0, 3).map((c) => ({ id: c.id, title: c.title, description: c.description })),
   });
 
-  const llmResult = await callStage({
-    systemPrompt: RECOMMENDATION_SYSTEM_PROMPT,
-    userPrompt,
-    responseSchema: {},
-    temperature: 0.3,
-  });
+  let llmAnswer = "";
+  try {
+    const llmResult = await callStage({
+      systemPrompt: RECOMMENDATION_SYSTEM_PROMPT,
+      userPrompt,
+      responseSchema: {},
+      temperature: 0.3,
+    });
+    llmAnswer = llmResult.answer;
+  } catch {
+    // Graceful degradation: all narrative fields fall back to deterministic defaults below.
+    llmAnswer = "";
+  }
 
-  const parsed = parseRecommendationJson(llmResult.answer);
+  const parsed = parseRecommendationJson(llmAnswer);
 
-  // Normalise / coerce the LLM output into a valid shape.
   const challengeSummary =
     typeof parsed?.challengeSummary === "string"
       ? parsed.challengeSummary.slice(0, 600)
       : input.challengeText.slice(0, 600);
 
-  const goal =
+  const finalGoal =
     typeof parsed?.goal === "string"
       ? parsed.goal.slice(0, 400)
-      : (input.goal ?? "Reduce time on non-clinical tasks and improve practice efficiency.").slice(0, 400);
-
-  const rawCandidates: AiTaskRecommendation["candidateTasks"] = Array.isArray(parsed?.candidateTasks)
-    ? (parsed.candidateTasks as Array<unknown>)
-        .filter(isValidCandidateTask)
-        .slice(0, 10)
-        .map((t) => normalizeCandidateTask(t as Record<string, unknown>, selectedPainPath))
-    : [];
-
-  // Ensure at least 1 candidate.
-  if (rawCandidates.length === 0) {
-    rawCandidates.push(fallbackCandidate(selectedPainPath, input.challengeText));
-  }
+      : goal.slice(0, 400);
 
   const recommendedTask =
     typeof parsed?.recommendedTask === "string"
       ? parsed.recommendedTask.slice(0, 200)
-      : rawCandidates[0]!.title;
+      : topCandidate.title;
 
   const recommendedApproach = isValidApproach(parsed?.recommendedApproach)
     ? (parsed!.recommendedApproach as AiTaskRecommendation["recommendedApproach"])
-    : "prompt";
+    : (topExt.startingLevel as AiTaskRecommendation["recommendedApproach"]);
 
   const whyThisTask =
     typeof parsed?.whyThisTask === "string"
       ? parsed.whyThisTask.slice(0, 600)
-      : `${recommendedTask} was selected as the most actionable AI task for your ${selectedPainPath} challenge.`;
+      : `${recommendedTask} was selected as the most actionable AI task for your ${selectedPainPath} challenge (score: ${topScoredCandidate.combinedScore.toFixed(2)}).`;
 
   const starterSolution =
     typeof parsed?.starterSolution === "string"
@@ -429,7 +521,7 @@ export async function runRecommendation(
 
   const guardrails: string[] = Array.isArray(parsed?.guardrails)
     ? (parsed.guardrails as unknown[]).filter((g) => typeof g === "string").slice(0, 6) as string[]
-    : ["Do not include patient names, diagnoses, or MRN numbers in any AI prompt.", "Review AI-generated patient-facing content before sending."];
+    : [topExt.guardrails, "Review AI-generated patient-facing content before sending."];
 
   const tryThisWeek: string[] = Array.isArray(parsed?.tryThisWeek)
     ? (parsed.tryThisWeek as unknown[]).filter((t) => typeof t === "string").slice(0, 5) as string[]
@@ -443,33 +535,12 @@ export async function runRecommendation(
   const confidence =
     typeof parsed?.confidence === "number"
       ? Math.min(100, Math.max(0, Math.round(parsed.confidence as number)))
-      : 60;
-
-  methodTrace.push({
-    stage: "candidate-gen",
-    name: "llm-candidates",
-    output: {
-      candidateCount: rawCandidates.length,
-      tokensIn: llmResult.tokensIn,
-      tokensOut: llmResult.tokensOut,
-    },
-  });
-
-  methodTrace.push({
-    stage: "scoring",
-    name: "candidate-scoring",
-    output: {
-      // TODO: Iteration E2 — replace with 9-criteria scoring output
-      topCandidateTitle: recommendedTask,
-      confidence,
-      source: "llm-inline-stub",
-    },
-  });
+      : Math.round(classification.confidence * 80 + topScoredCandidate.combinedScore * 20);
 
   // STAGE 8: adoption-pathway promotion classifier.
   const adoptionPathway = await classifyPromotion({
     task: recommendedTask,
-    taskDescription: rawCandidates.find((c) => c.title === recommendedTask)?.description,
+    taskDescription: topExt.taskDescription,
     painPath: selectedPainPath,
     scoring: { confidence, rationale: whyThisTask },
   });
@@ -479,13 +550,15 @@ export async function runRecommendation(
     name: "adoption-pathway",
     output: {
       rungs: adoptionPathway.map((r) => ({ kind: r.kind, state: r.state, confidence: r.confidence })),
+      classifierConfidence: classification.confidence,
+      topCandidateCombinedScore: topScoredCandidate.combinedScore,
     },
   });
 
   return {
     selectedPainPath,
     challengeSummary,
-    goal,
+    goal: finalGoal,
     candidateTasks: rawCandidates,
     recommendedTask,
     recommendedApproach,

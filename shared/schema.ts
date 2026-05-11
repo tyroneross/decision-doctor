@@ -391,6 +391,91 @@ export const RecommendationInputSchema = z.object({
 });
 export type RecommendationInput = z.infer<typeof RecommendationInputSchema>;
 
+// ---------------------------------------------------------------------------
+// E2 — Pain-path classifier + 9-criteria scoring schemas
+// ---------------------------------------------------------------------------
+
+/**
+ * PainPathSchema: alias for the canonical PainPathIdSchema.
+ * Exported under the name expected by E2 consumers.
+ */
+export const PainPathSchema = PainPathIdSchema;
+export type PainPath = z.infer<typeof PainPathSchema>;
+
+/** Classification output from classifyPainPath(). */
+export const PainPathClassificationSchema = z.object({
+  path: PainPathIdSchema,
+  /** 0-1 confidence. Values below 0.7 indicate ambiguity. */
+  confidence: z.number().min(0).max(1),
+  /** Present when confidence < 0.7 — chips asking the user to confirm their path. */
+  clarifiers: z
+    .array(
+      z.object({
+        kind: z.literal("chips"),
+        fieldId: z.string().min(1).max(64),
+        label: z.string().min(1).max(120),
+        hint: z.string().max(200).optional(),
+        options: z.array(z.object({ value: z.string().min(1).max(64), label: z.string().min(1).max(80) })).min(2).max(8),
+        defaultValue: z.string().max(64).optional(),
+      }),
+    )
+    .optional(),
+});
+export type PainPathClassification = z.infer<typeof PainPathClassificationSchema>;
+
+/** A candidate AI task produced by generateCandidateTasks(). */
+export const CandidateTaskExtSchema = z.object({
+  id: z.string().min(1).max(64),
+  taskName: z.string().min(1).max(80),
+  taskDescription: z.string().min(1).max(300),
+  aiCapability: z.string().min(1).max(64),
+  dataNeeded: z.string().min(1).max(200),
+  guardrails: z.string().min(1).max(280),
+  startingLevel: z.enum(["prompt", "checklist", "skill", "plugin", "agent"]),
+  source: z.enum(["library", "generated"]),
+});
+export type CandidateTaskExt = z.infer<typeof CandidateTaskExtSchema>;
+
+/** Input to scoreCandidates(). Captures user-reported context. */
+export const ScoringInputSchema = z.object({
+  painSeverity: z.number().min(0).max(1),
+  frequency: z.number().min(0).max(1),
+  timeBurden: z.number().min(0).max(1),
+  riskTolerance: z.number().min(0).max(1),
+  aiComfort: z.number().min(0).max(1),
+  dataReadiness: z.number().min(0).max(1),
+  weights: z
+    .record(
+      z.enum([
+        "pain_severity", "frequency", "time_burden", "business_impact",
+        "ai_fit", "risk", "data_readiness", "adoption_friction", "setup_effort",
+      ]),
+      z.number().min(0).max(1),
+    )
+    .optional(),
+});
+export type ScoringInput = z.infer<typeof ScoringInputSchema>;
+
+const CriterionScoreSchema = z.object({
+  raw: z.number().min(0).max(1),
+  adjusted: z.number().min(0).max(1),
+  rationale: z.string().min(1).max(280),
+});
+
+/** A candidate task with 9-criteria scoring and rank. */
+export const ScoredCandidateSchema = CandidateTaskExtSchema.extend({
+  scores: z.record(
+    z.enum([
+      "pain_severity", "frequency", "time_burden", "business_impact",
+      "ai_fit", "risk", "data_readiness", "adoption_friction", "setup_effort",
+    ]),
+    CriterionScoreSchema,
+  ),
+  combinedScore: z.number().min(0).max(1),
+  rank: z.number().int().min(1),
+});
+export type ScoredCandidate = z.infer<typeof ScoredCandidateSchema>;
+
 export const DecisionOutputSchema = z.object({
   decisionId: z.string().uuid(),
   decidedAt: z.coerce.date(),
