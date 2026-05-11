@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 
-// Empty state — ink-only hero card, single primary CTA to F1 home (/app).
+// Empty state — ink-only hero card, single primary CTA into chat.
 // Per UI Guidelines v0.1: terracotta-on-bone, no gradient, no coral shadow,
 // no color-as-decoration. Visual containment via Card primitive (single
 // border, single shadow). Color carries meaning only on the hours-saved
@@ -29,9 +29,9 @@ export function EmptyState() {
         </p>
         <div className="mt-5">
           {/* Single dominant CTA — Hick's law / NN/g first-run pattern.
-              Target F1 home (search-first entry), NOT chat. */}
+              Target chat (the primary conversational entry). */}
           <Link
-            href="/app"
+            href="/app/chat"
             className={
               "inline-flex h-12 items-center gap-2 rounded-[10px] " +
               "bg-ink px-6 text-[15px] font-semibold text-paper " +
