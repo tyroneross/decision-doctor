@@ -260,9 +260,32 @@ Round-1 (`buildathon-round-1.2`) shipped F-08/F-09/F-10/F-11. Round-2 introduces
 - **ADR-007** — Embedding model = `text-embedding-3-small` at **768 dimensions** via OpenAI's native Matryoshka `dimensions:` parameter. ≥97% MTEB quality retention at 50% storage. Locks in Atomize's outstanding DEBT-3 fix from day 1. Source: same research doc §2.1.
 - **ADR-008** — Search strategy = **hybrid pgvector + BM25 with Reciprocal Rank Fusion** `k=60` in app code. Vector-only = 78% recall@10; hybrid w/ RRF = 91%. Never silent threshold fallback (Atomize DEBT-10). BM25 backend chosen per ADR-012. Source: same research doc §3.
 - **ADR-009** — Tenant isolation = **single DB with `scope` column + RLS for v1**; physical DB-per-tenant deferred to v2 HIPAA path. DD rejects PHI in v1 (ADR-002), so the HIPAA driver behind Perplexity's two-pool recommendation doesn't apply. Migration trigger: when PHI is first accepted. Pattern target: Neon `db-per-tenant` (`github.com/neondatabase/ai-vector-db-per-tenant`). Source: `docs/architecture/perplexity-guidance-reconciliation-2026-05-10.md`.
-- **ADR-010** — Reranker = **Cohere Rerank-4 Fast** as Phase-2 layer. Top-20 RRF → top-5 reranked. Adds ~120ms latency, ~$0.50/1000 queries. +28–40% accuracy per MIT cross-encoder study. Graceful degradation: if Cohere unreachable, return RRF top-5 directly with degraded flag set. Alternative fallback: Voyage Rerank 2.5 ($0.05/1000) or self-hosted ms-marco. Source: same reconciliation doc.
+- **ADR-010 (revised 2026-05-10)** — Reranker = **BGE-reranker-v2-m3 self-hosted** on the Railway worker as the primary cross-encoder; **OpenAI `gpt-4o-mini` listwise rerank** as the managed fallback. Top-20 RRF → top-5 reranked. BGE: $0/query, ~145ms, nDCG@10 0.715 (comparable to Cohere). gpt-4o-mini fallback: ~$0.0009/query, no new vendor (OpenAI already in stack for embeddings per ADR-007). **Cohere is OUT** of the stack (was originally selected; revised after vendor-consolidation review). Salesforce LlamaRank on Together AI is the documented escape hatch if BGE infra proves heavy AND gpt-4o-mini brittleness emerges, but not adopted by default. ONNX-in-Node deployment for BGE (no Python sidecar). Graceful degradation: BGE failure → gpt-4o-mini listwise; gpt-4o-mini failure → return RRF top-5 directly with degraded flag set. Source: `docs/architecture/perplexity-guidance-reconciliation-2026-05-10.md` + ADR-013 reranker analysis.
 - **ADR-011** — pgvector ≥ **0.8.0 required** for iterative scans (9× faster filtered/RLS queries). Confirmed available on current Neon tier per `.build-loop/neon-tier-check.json` (commit `41e1acf`). Schema patterns must filter on indexed columns first then HNSW order. Source: same reconciliation doc.
 - **ADR-012** — BM25 backend = **ParadeDB `pg_search` 0.15.26** (Tantivy-backed). Available on current Neon tier per Move 1 check. Skips the tsvector intermediate step Perplexity recommended. True BM25 ranking outperforms `ts_rank` on standard IR benchmarks. Fallback to `tsvector` if `pg_search` is ever unavailable (schema keeps both options). Source: same reconciliation doc.
+
+- **ADR-013** — **LLM workload-aware routing** within Groq + cross-provider rules. Supersedes ADR-001's single-model lock.
+
+  **Groq routing table** (implemented in `lib/llm-routing.ts`, planned with F-32):
+
+  | Workload | Model | $/M (in/out) | TPS | Why |
+  |---|---|---|---|---|
+  | Stage 0 PEDE classifier (F-11, deterministic JSON) | **GPT-OSS 20B** | $0.075/$0.30 | 1000 | Native structured outputs + 1000 TPS + temp=0 reliability |
+  | Stage 6 feasibility classifier (F-08, deterministic JSON) | **GPT-OSS 20B** | $0.075/$0.30 | 1000 | Same reasoning |
+  | Stage 1 values + Stage 3 weights (reasoning) | **Llama 3.3 70B** | $0.59/$0.79 | 394 | Quality + speed |
+  | Stage 5 rationale (prose, short) | **Llama 3.3 70B** | $0.59/$0.79 | 394 | Same |
+  | F-32 chat responses (UI-responsive) | **Llama 4 Scout** | $0.11/$0.34 | 750 | Cheapest fast model — feels instant |
+  | F-11 reframe/decline copy (trivial) | **Llama 3.1 8B** | $0.05/$0.08 | 840 | Cheapest, fastest |
+
+  **Cross-provider rules:**
+  - **Embeddings**: OpenAI `text-embedding-3-small` @ 768 dims (ADR-007). Batch API for ingest-time.
+  - **Reranker**: BGE-v2-m3 self-host primary; OpenAI `gpt-4o-mini` listwise fallback (ADR-010 revised).
+  - **Complex clinical synthesis**: Claude Haiku via Anthropic API. Triggers: workflow recommendation from N≥3 retrieved documents, structured clinical output.
+  - **TogetherAI deferred** until any of: (a) fine-tuning becomes valuable (clinical-vertical embeddings or 70B), (b) DeepSeek-R1 or Qwen-Coder becomes essential for a specific workload Groq doesn't host, (c) per-tenant model selection lands (v2 multi-tenant per ADR-009), (d) daily token volume crosses ~130M (Together's serverless break-even).
+
+  **Cost projection at MVP scale (~100 decisions/day + 100 chat sessions + 10 corpus searches):** ~$1.20/day on Groq + ~$0.15/day on Anthropic + ~$1/mo embeddings + ~$0/mo BGE reranker = **~$45/month total LLM spend.**
+
+  Source: web research 2026-05-10 (Groq pricing docs, Together AI pricing, OpenAI embeddings/chat pricing, Cohere reranker benchmarks).
 
 **New data points (D-30, D-31):**
 
@@ -766,15 +789,17 @@ Before Claude Code / Codex starts:
 
 ## 15. ADRs
 
-### ADR-001 — LLM = Groq, model `openai/gpt-oss-120b`
+### ADR-001 — LLM provider = Groq (workload-aware routing per ADR-013)
 
-**What's locked:** Groq, model pinned via `GROQ_MODEL` env var.
+**What's locked:** Groq is the default provider for all engine + chat workloads. **Workload-aware routing per ADR-013** replaces the original single-model lock (`openai/gpt-oss-120b`) — different stages map to different Groq models based on cost × speed × determinism need. Anthropic (Claude Haiku) reserved for complex synthesis per ADR-010 reconciliation. OpenAI used only for embeddings (ADR-007) and the fallback listwise reranker (ADR-010 revised).
 
-**What it means for the build:** Groq returns the model's reasoning content as a separate field (not buried in the answer text), which is what lets the UI show the math without us writing a parser. ~500 tokens/sec keeps the "submit form → see recommendation" round-trip under 6 seconds on a phone.
+**What it means for the build:** Groq returns the model's reasoning content as a separate field (not buried in the answer text), which is what lets the UI show the math without us writing a parser. Groq's LPU + 394–1000 TPS keeps the "submit form → see recommendation" round-trip under 6 seconds on a phone across the full model range. Routing is implemented in `lib/llm-routing.ts` (planned with F-32).
 
-**Change cost later:** Swap models within Groq = env var change. Move off Groq = M (~6 hr) — adapter layer + prompt tweak.
+**Change cost later:** Swap models within Groq = update routing table in `lib/llm-routing.ts`. Add TogetherAI = adapter layer + routing table extension (deferral triggers documented in ADR-013).
 
-**Maps to north-star:** "20 minutes" + "the math made it feel safe". Speed makes the time budget viable; reasoning extraction is what lets the UI show the math.
+**Maps to north-star:** "20 minutes" + "the math made it feel safe". Per-workload routing keeps the time budget viable across the heaviest reasoning calls AND the chattiest UI surfaces.
+
+**Supersedes:** the original "model = `openai/gpt-oss-120b`" lock. Historical note: that single-model approach was correct for the original decision-engine-only scope; the chat-first wave (F-30..F-32) introduced 4× more LLM call sites with very different latency/cost profiles, which is what motivated the routing table.
 
 ### ADR-002 — No PHI in v1 intake
 
