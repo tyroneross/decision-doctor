@@ -11,6 +11,7 @@ import { handleArxivEmbed } from "./adapters/arxiv-embed.js";
 import { fetchRssFeed } from "./adapters/rss.js";
 import { fetchAnthropicNews } from "./adapters/anthropic-sitemap.js";
 import { handleContentExtract } from "./adapters/content-extract.js";
+import { handleAiSummarize } from "./adapters/ai-summarize.js";
 
 let _boss: PgBoss | null = null;
 let _started = false;
@@ -51,6 +52,7 @@ export async function startQueue(): Promise<PgBoss> {
   await boss.createQueue("rss-fetch");
   await boss.createQueue("anthropic-news-fetch");
   await boss.createQueue("content-extract");
+  await boss.createQueue("ai-summarize");
   await boss.createQueue("test-job");
 
   // ---- Register handlers --------------------------------------------------
@@ -108,8 +110,25 @@ export async function startQueue(): Promise<PgBoss> {
       const out = [];
       for (const job of jobs) {
         const r = await handleContentExtract({ documentId: job.data.documentId });
-        // Fan out downstream — arxiv-embed re-runs on enriched body.
+        // Fan out downstream — all three run against the enriched body.
         await boss.send("arxiv-embed", { documentId: job.data.documentId });
+        await boss.send("ai-summarize", { documentId: job.data.documentId });
+        out.push({ id: job.id, ...r });
+      }
+      return out;
+    },
+  );
+
+  // ai-summarize: Groq Llama 3.3 70B JSON-mode summary written into
+  // metadata.ai_summary. SMB-persona constrained; graceful-degrade on
+  // Groq error. Payload: { documentId: string }
+  await boss.work<{ documentId: string }>(
+    "ai-summarize",
+    { batchSize: 1 },
+    async (jobs) => {
+      const out = [];
+      for (const job of jobs) {
+        const r = await handleAiSummarize({ documentId: job.data.documentId });
         out.push({ id: job.id, ...r });
       }
       return out;
@@ -204,6 +223,7 @@ export async function queueCount(): Promise<number> {
     "rss-fetch",
     "anthropic-news-fetch",
     "content-extract",
+    "ai-summarize",
     "test-job",
   ];
   let total = 0;
