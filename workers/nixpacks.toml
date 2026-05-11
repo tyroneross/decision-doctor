@@ -1,0 +1,14 @@
+# Railway Nixpacks build config for decision-doctor-workers.
+#
+# We add `chromium` to the Nix package set so the content-extract handler's
+# CDP path (used for JS-rendered sources like openai-news) can spawn a system
+# Chrome. BrowserManager (src/cdp/browser.ts) finds it via /usr/bin/chromium
+# path detection.
+#
+# Start command keeps the Atomize-verified `node --import tsx` pattern.
+
+[phases.setup]
+nixPkgs = ["nodejs_22", "pnpm", "chromium"]
+
+[start]
+cmd = "node --import tsx src/index.ts"
