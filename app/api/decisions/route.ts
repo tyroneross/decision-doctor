@@ -6,6 +6,7 @@ import { runWithActor, withActor } from "@/lib/db/actor";
 import { decisions, auditEvents } from "@/lib/db/schema";
 import { DecisionInputSchema } from "@/shared/schema";
 import { getSessionActor } from "@/lib/auth-session";
+import { isGuestRequest } from "@/lib/auth-guest";
 import { runDecision } from "@/lib/engine/orchestrator";
 import { GROQ_MODEL } from "@/lib/groq";
 import { checkRateLimit } from "@/lib/ratelimit";
@@ -14,14 +15,21 @@ import { desc, eq } from "drizzle-orm";
 // LD-08 — Edge runtime breaks the Neon WebSocket pool that RLS depends on.
 export const runtime = "nodejs";
 
+// Synthetic uuid used to satisfy DecisionInputSchema for guest runs. The
+// engine's pure pipeline doesn't read it; persistence is skipped in guest mode.
+const GUEST_PLACEHOLDER_UUID = "00000000-0000-0000-0000-000000000000";
+
 export async function POST(req: Request) {
   const actor = await getSessionActor();
-  if (!actor) {
+  const guest = !actor && (await isGuestRequest());
+  if (!actor && !guest) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // T-10 — per-user rate limit (20 / 24h).
-  const rl = await checkRateLimit(actor.userId);
+  // T-10 — per-user rate limit (20 / 24h). Guests share a single bucket
+  // so unlimited browse-then-submit doesn't spam Groq from this surface.
+  const rateKey = actor ? actor.userId : "guest:shared";
+  const rl = await checkRateLimit(rateKey);
   if (!rl.ok) {
     return Response.json(
       {
@@ -41,12 +49,13 @@ export async function POST(req: Request) {
   // PHI rejection: Zod schema rejects free-form long strings (T-09).
   const body = await req.json().catch(() => ({}));
   // Force the input.context to the server-side actor — never trust client.
+  // Guests get placeholder UUIDs (engine doesn't persist their runs).
   const enriched = {
     ...body,
     context: {
       ...(body?.context ?? {}),
-      userId: actor.userId,
-      tenantId: actor.tenantId,
+      userId: actor ? actor.userId : GUEST_PLACEHOLDER_UUID,
+      tenantId: actor ? actor.tenantId : GUEST_PLACEHOLDER_UUID,
     },
   };
   const parsed = DecisionInputSchema.safeParse(enriched);
@@ -76,15 +85,37 @@ export async function POST(req: Request) {
     );
   }
 
+  // Guest mode — engine ran cleanly; skip DB persist + audit. Return the
+  // full output with a guestMode flag so the client can route to the
+  // session-storage-backed preview page instead of a persisted detail.
+  // (Outer guard ensures: !actor implies guest. This block both ships the
+  //  guest response AND narrows `actor` to non-null for the persist path.)
+  if (!actor) {
+    return Response.json(
+      {
+        guestMode: true,
+        decisionId: "guest",
+        decidedAt: new Date(),
+        ...engineResult.output,
+      },
+      { status: 200 },
+    );
+  }
+
+  // Pull into locals so TS preserves the non-null narrowing into the
+  // runWithActor / withActor closures below.
+  const userId = actor.userId;
+  const tenantId = actor.tenantId;
+
   return runWithActor(
-    { userId: actor.userId, tenantId: actor.tenantId },
+    { userId, tenantId },
     async () =>
       withActor(async (tx) => {
         const [row] = await tx
           .insert(decisions)
           .values({
-            userId: actor.userId,
-            tenantId: actor.tenantId,
+            userId,
+            tenantId,
             templateId: parsed.data.templateId,
             title: engineResult.output.recommendation.option,
             intake: parsed.data.fields,
@@ -100,8 +131,8 @@ export async function POST(req: Request) {
 
         // T-10 audit log: one row per Groq call (P1 / AT1) + one summary row.
         const auditRows = engineResult.llmCalls.map((c) => ({
-          userId: actor.userId,
-          tenantId: actor.tenantId,
+          userId,
+          tenantId,
           action: "groq.call",
           targetId: row!.id,
           metadata: {
@@ -113,8 +144,8 @@ export async function POST(req: Request) {
           },
         }));
         auditRows.push({
-          userId: actor.userId,
-          tenantId: actor.tenantId,
+          userId,
+          tenantId,
           action: "decision.create",
           targetId: row!.id,
           metadata: {
