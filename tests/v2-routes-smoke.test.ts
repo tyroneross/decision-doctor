@@ -236,3 +236,28 @@ describe("NoPhiNotice promotion to components/ui/", () => {
     ).toBe(true);
   });
 });
+
+// ── 6. Search entry-point wiring ───────────────────────────────────────────
+
+describe("AI-adoption search entry points", () => {
+  it("home composer routes submitted text to /app/ask", () => {
+    expect(
+      fileContains("app/app/_components/HomeComposer.tsx", "/app/ask?q="),
+      "Home search must open the AI-adoption Q&A surface"
+    ).toBe(true);
+  });
+
+  it("/app/ask consumes q= URL params for direct search entry", () => {
+    expect(
+      fileContains("app/app/ask/page.tsx", "new URLSearchParams(window.location.search)"),
+      "/app/ask should auto-submit URL query text"
+    ).toBe(true);
+  });
+
+  it("desktop Library nav points to the searchable library page", () => {
+    expect(
+      fileContains("app/app/_components/DesktopSidebar.tsx", 'href: "/app/library"'),
+      "Desktop Library nav must not skip straight to the plugin subpage"
+    ).toBe(true);
+  });
+});
