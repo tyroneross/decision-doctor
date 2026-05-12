@@ -20,8 +20,8 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Decision Doctor",
-  description: "Transparent decisions for solo healthcare practitioners.",
+  title: "Aida",
+  description: "Let AI help you so you can help others.",
   manifest: "/manifest.json",
 };
 

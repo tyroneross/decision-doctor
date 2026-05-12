@@ -56,7 +56,7 @@ export function NoPhiNotice({ warning = false, reasons = [] }: NoPhiNoticeProps)
     <Callout eyebrow="Privacy reminder">
       <p className="text-[13px] leading-relaxed" style={{ color: "var(--mute)" }}>
         Don&rsquo;t include patient names, MRNs, dates of birth, or specific clinical
-        details. Decision Doctor processes general descriptions of your workflow
+        details. Aida processes general descriptions of your workflow
         challenges, not patient data.
       </p>
     </Callout>

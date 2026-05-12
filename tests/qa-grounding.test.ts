@@ -148,4 +148,56 @@ describe("formatSourcesForPrompt", () => {
       /### Source \[cccccccc-0000-0000-0000-000000000003\] \(kind: corpus\)/,
     );
   });
+
+  // ─── C10 body_kind trust-hint emission ─────────────────────────────────────
+
+  it("emits a 'Trust: source_summary' hint for partial-trust corpus hits", () => {
+    const src = makeSource({
+      kind: "corpus",
+      body_kind: "source_summary",
+    });
+    const result = formatSourcesForPrompt([src]);
+    expect(result).toContain("Trust: source_summary");
+    expect(result).toContain("curated summary");
+  });
+
+  it("emits no Trust line for full_text corpus hits", () => {
+    const src = makeSource({
+      kind: "corpus",
+      body_kind: "full_text",
+    });
+    const result = formatSourcesForPrompt([src]);
+    expect(result).not.toContain("Trust:");
+  });
+
+  it("emits no Trust line for NULL body_kind (back-compat)", () => {
+    const src = makeSource({
+      kind: "corpus",
+      body_kind: null,
+    });
+    const result = formatSourcesForPrompt([src]);
+    expect(result).not.toContain("Trust:");
+  });
+
+  it("emits no Trust line for non-corpus library kinds", () => {
+    const src = makeSource({
+      kind: "use_case",
+      // even with body_kind set, library kinds are user-curated full-text
+      body_kind: "source_summary",
+    });
+    const result = formatSourcesForPrompt([src]);
+    expect(result).not.toContain("Trust:");
+  });
+
+  it("flags blocked / degraded / metadata_only as non-authoritative (defense in depth)", () => {
+    for (const kind of ["blocked", "degraded", "metadata_only"] as const) {
+      const src = makeSource({
+        kind: "corpus",
+        body_kind: kind,
+      });
+      const result = formatSourcesForPrompt([src]);
+      expect(result).toContain(`Trust: ${kind}`);
+      expect(result).toContain("did not pass");
+    }
+  });
 });

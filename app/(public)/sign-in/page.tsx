@@ -78,9 +78,12 @@ export default function SignInPage() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-12">
       <header className="space-y-1">
         <h1 className="text-[32px] font-bold leading-tight text-text">
-          decision doctor
+          Aida
         </h1>
-        <p className="text-[12px] font-medium text-mute">
+        <p className="text-[13px] font-medium text-mute">
+          Let AI help you so you can help others.
+        </p>
+        <p className="text-[12px] font-medium text-mute pt-1">
           sign in to your practice
         </p>
       </header>

@@ -42,7 +42,7 @@ export interface Stage8Input {
 // System prompt for the Groq call
 // ---------------------------------------------------------------------------
 
-const STAGE8_SYSTEM_PROMPT = `You are the adoption-pathway classifier for Decision Doctor, an AI deployment strategist for solo healthcare practitioners.
+const STAGE8_SYSTEM_PROMPT = `You are the adoption-pathway classifier for Aida, an AI assistant helping solo healthcare practitioners spend less time on admin and more time on patients.
 
 Given a recommended AI task for a solo healthcare practitioner, classify which adoption-pathway rungs best fit the task. Return ONLY JSON.
 

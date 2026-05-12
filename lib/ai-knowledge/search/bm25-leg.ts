@@ -49,12 +49,23 @@ export async function bm25Search(
   const trimmed = query.trim();
   if (!trimmed) return [];
 
+  // V2 trust filter: only `full_text` and `source_summary` body_kinds are
+  // eligible as candidates. NULL body_kind is treated as `full_text` for
+  // back-compat (pre-backfill rows). `blocked` / `degraded` / `metadata_only`
+  // are excluded — they may contain Cloudflare challenge text or other
+  // non-article content the V2 ingest pipeline classified as low trust.
+  // Source of truth for the kinds: lib/corpus/body-kind.ts +
+  // workers/src/ingestion/quality.ts (EXTRACTOR_VERSION 2026-05-11.ingestion-v2.1).
   const andRows = await tx.execute(sql`
     WITH tsq AS (SELECT websearch_to_tsquery('english', ${trimmed}) AS q)
     SELECT id AS doc_id,
            ts_rank_cd(search_tsv, tsq.q, 32) AS rank
       FROM corpus_documents, tsq
      WHERE search_tsv @@ tsq.q
+       AND (
+         (metadata->'content_extract'->>'body_kind') IS NULL
+         OR (metadata->'content_extract'->>'body_kind') IN ('full_text','source_summary')
+       )
      ORDER BY rank DESC
      LIMIT ${limit}
   `);
@@ -73,6 +84,10 @@ export async function bm25Search(
            ts_rank_cd(search_tsv, tsq.q, 32) AS rank
       FROM corpus_documents, tsq
      WHERE search_tsv @@ tsq.q
+       AND (
+         (metadata->'content_extract'->>'body_kind') IS NULL
+         OR (metadata->'content_extract'->>'body_kind') IN ('full_text','source_summary')
+       )
      ORDER BY rank DESC
      LIMIT ${limit}
   `);

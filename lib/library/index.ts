@@ -28,10 +28,17 @@ import {
 } from "@/lib/db/schema";
 import { runWithActor, withActor } from "@/lib/db/actor";
 import { eq, or } from "drizzle-orm";
+import { type BodyKind, normalizeBodyKind, isBlockedBodyKind } from "@/lib/corpus/body-kind";
 
 // ---- Public type exports ----------------------------------------------------
 
-export type LibraryKind = "use_case" | "prompt" | "skill" | "plugin" | "corpus";
+export type LibraryKind =
+  | "use_case"
+  | "prompt"
+  | "skill"
+  | "plugin"
+  | "corpus"
+  | "kb_article";
 
 export interface LibraryHit {
   kind: LibraryKind;
@@ -42,6 +49,19 @@ export interface LibraryHit {
   source_path?: PainPath;
   library_id?: string;
   corpus_doc_id?: string;
+  /**
+   * KB-only: the article slug. Present only when kind === 'kb_article'.
+   * UI uses this to link to /app/learn/<slug>.
+   */
+  slug?: string;
+  /**
+   * V2 trust-tier for corpus hits (kind === 'corpus'). Library kinds and KB
+   * articles leave this undefined — they are user-curated and treated as full-text.
+   * NULL on a corpus hit = pre-backfill row, treated as `full_text` for
+   * back-compat. `blocked`/`degraded`/`metadata_only` rows are filtered
+   * before hydration so they should never reach the UI.
+   */
+  body_kind?: BodyKind | null;
 }
 
 export type { PainPath, StartingLevel };
@@ -460,8 +480,18 @@ export async function searchLibrary(
   const userId = opts.userId ?? "00000000-0000-0000-0000-000000000000";
   const tenantId = opts.tenantId ?? "00000000-0000-0000-0000-000000000000";
 
-  const activeKinds = opts.kinds ?? (["use_case", "prompt", "skill", "plugin", "corpus"] as LibraryKind[]);
+  const activeKinds =
+    opts.kinds ??
+    ([
+      "use_case",
+      "prompt",
+      "skill",
+      "plugin",
+      "corpus",
+      "kb_article",
+    ] as LibraryKind[]);
   const includeCorpus = !opts.onlyMine && (opts.includeCorpus !== false) && activeKinds.includes("corpus");
+  const includeKb = activeKinds.includes("kb_article");
 
   const hits: LibraryHit[] = [];
 
@@ -558,6 +588,30 @@ export async function searchLibrary(
     }),
   );
 
+  // --- KB fan-out (separate from the library transaction because kb_articles
+  //     has a different shape — no pain_path column — and uses lib/kb's own
+  //     RLS-scoped retrieval helper). KB rows have no body_kind filter; they
+  //     are curated content. ---
+  if (includeKb) {
+    try {
+      const { searchKbArticles } = await import("@/lib/kb");
+      const kbHits = await searchKbArticles({ userId, tenantId }, trimmed);
+      for (const kb of kbHits) {
+        hits.push({
+          kind: "kb_article",
+          id: kb.id,
+          title: kb.title,
+          snippet: (kb.summary || "").slice(0, 300).replace(/\s+/g, " "),
+          score: Number(kb.rank),
+          library_id: kb.id,
+          slug: kb.slug,
+        });
+      }
+    } catch (err) {
+      console.warn("[searchLibrary] KB fan-out failed:", err);
+    }
+  }
+
   // --- Corpus fan-out (outside the library RLS transaction) ---
   if (includeCorpus) {
     try {
@@ -605,6 +659,10 @@ async function fetchCorpusHits(
                      ts_rank_cd(search_tsv, to_tsquery('english', ${orQuery}), 32) AS rank
                 FROM corpus_documents
                WHERE search_tsv @@ to_tsquery('english', ${orQuery})
+                 AND (
+                   (metadata->'content_extract'->>'body_kind') IS NULL
+                   OR (metadata->'content_extract'->>'body_kind') IN ('full_text','source_summary')
+                 )
                ORDER BY rank DESC
                LIMIT 20
             `);
@@ -628,19 +686,28 @@ async function fetchCorpusHits(
 
       if (corpusRows.length === 0) return [];
 
-      // Hydrate title + snippet from corpus_documents.
+      // Hydrate title + snippet + body_kind from corpus_documents. C10:
+      // body_kind comes from metadata->'content_extract' (not yet a column).
+      // Defense in depth: skip any row whose body_kind is blocked / degraded /
+      // metadata_only even though bm25Search already filters them.
       const ids = corpusRows.slice(0, 20).map((r) => r.doc_id);
       const docResult = await tx.execute(sql`
-        SELECT id, title, body
+        SELECT id, title, body,
+               (metadata->'content_extract'->>'body_kind') AS body_kind
           FROM corpus_documents
          WHERE id IN (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})
       `);
-      const docMap = new Map<string, { title: string; body: string }>();
+      const docMap = new Map<
+        string,
+        { title: string; body: string; body_kind: string | null }
+      >();
       for (const r of docResult.rows as Array<{
         id: string;
         title: string;
         body: string;
+        body_kind: string | null;
       }>) {
+        if (isBlockedBodyKind(r.body_kind)) continue;
         docMap.set(r.id, r);
       }
 
@@ -655,6 +722,7 @@ async function fetchCorpusHits(
             snippet: doc.body.slice(0, 300).replace(/\s+/g, " "),
             score: row.rank,
             corpus_doc_id: row.doc_id,
+            body_kind: normalizeBodyKind(doc.body_kind),
           },
         ];
       });

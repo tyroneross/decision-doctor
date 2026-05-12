@@ -20,6 +20,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionActor } from "@/lib/auth-session";
 import { saveUserUseCase } from "@/lib/library";
+import { isBlockedBodyKind } from "@/lib/corpus/body-kind";
 
 // Hardening item 7.
 export const runtime = "nodejs";
@@ -53,6 +54,27 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "bad_request", detail: parsed.error.flatten() },
       { status: 400 },
+    );
+  }
+
+  // C10 guard: refuse to promote any item whose source is classified as
+  // blocked/degraded/metadata_only. The frontend already filters these out
+  // of search results, but this is defense in depth — a hand-crafted POST
+  // (curl, scripted client) must not bypass the trust filter.
+  // We accept either a top-level body_kind property in the request body or
+  // metadata.body_kind so callers can propagate the field naturally.
+  const incomingBodyKind =
+    (body as { body_kind?: unknown }).body_kind ??
+    (parsed.data.metadata as { body_kind?: unknown } | undefined)?.body_kind ??
+    (parsed.data.metadata as { corpus_body_kind?: unknown } | undefined)?.corpus_body_kind;
+  if (isBlockedBodyKind(incomingBodyKind)) {
+    return NextResponse.json(
+      {
+        error: "blocked_body_kind",
+        message:
+          "This source did not pass the corpus quality gate and cannot be saved to your library.",
+      },
+      { status: 422 },
     );
   }
 

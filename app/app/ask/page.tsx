@@ -266,7 +266,7 @@ export default function AskPage() {
             className="text-[16px] font-semibold leading-[22px]"
             style={{ color: "var(--ink)" }}
           >
-            Ask Decision Doctor
+            Ask Aida
           </h1>
           <p className="text-[13px] leading-[18px]" style={{ color: "var(--mute)" }}>
             AI tooling and adoption questions, grounded in your library and the corpus.

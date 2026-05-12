@@ -15,7 +15,7 @@
 //   - Authed: redirect to /app/recommendations/<id>.
 //   - Guest: stash recommendation in sessionStorage, redirect to guest-preview.
 //
-// Progress UI: 4-stage indicator (~12-15s engine end-to-end).
+// Progress UI: honest indeterminate spinner (~12-15s engine end-to-end).
 // Error: 404 or engine not deployed → "retry" button.
 //
 // Theme tokens only. Zero per-pain colors.
@@ -33,13 +33,6 @@ import { PAIN_PATHS } from "@/components/pain-cards/PainCardGrid";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const PROGRESS_STAGES = [
-  "Classifying your challenge...",
-  "Retrieving use-case library...",
-  "Scoring candidates...",
-  "Building your recommendation...",
-];
 
 // The 5 intake clarifier questions (chip-based, per PRD P0-02).
 // fieldId matches ScoringInput fields.
@@ -156,9 +149,11 @@ export function NewRecommendationClient({
   const [phiWarning, setPhiWarning] = useState(false);
   const [phiReasons, setPhiReasons] = useState<string[]>([]);
 
-  // Progress + submit state
+  // Progress + submit state. We don't fake per-stage progress; the engine
+  // call is opaque from the client side, so a single indeterminate spinner
+  // with an honest "12-15s" expectation hint is more truthful than a 4-step
+  // dots animation tied to setTimeout.
   const [submitting, setSubmitting] = useState(false);
-  const [progressStage, setProgressStage] = useState(0);
   const [engineError, setEngineError] = useState<string | null>(null);
 
   // Handle step skip logic: if initialPath and initialChallenge are both set,
@@ -222,19 +217,23 @@ export function NewRecommendationClient({
     setSubmitting(true);
     setEngineError(null);
 
-    // Animate progress stages over ~12 seconds.
-    const intervals: ReturnType<typeof setInterval>[] = [];
-    PROGRESS_STAGES.forEach((_, idx) => {
-      const timeout = setTimeout(
-        () => setProgressStage(idx),
-        idx * 3000
-      );
-      intervals.push(timeout as unknown as ReturnType<typeof setInterval>);
-    });
-
-    function clearTimers() {
-      intervals.forEach((t) => clearTimeout(t as unknown as ReturnType<typeof setTimeout>));
-    }
+    // Pack intake answers into the scoringInput payload. Stored as numeric
+    // strings; parseFloat is safe because the chip-option values were
+    // hardcoded above (0.2, 0.5, 0.75, 1, etc.). dataReadiness has no
+    // intake question — orchestrator applies its server-side default.
+    const scoringInput = {
+      painSeverity: parseFloat(answers.pain_severity ?? ""),
+      frequency: parseFloat(answers.frequency ?? ""),
+      timeBurden: parseFloat(answers.time_burden ?? ""),
+      riskTolerance: parseFloat(answers.risk_tolerance ?? ""),
+      aiComfort: parseFloat(answers.ai_comfort ?? ""),
+    };
+    // Drop NaN entries so the server-side defaults take over rather than
+    // failing Zod validation. Defensive — pre-filled defaults mean every
+    // field should parse, but the user could conceivably skip a question.
+    const cleanScoring = Object.fromEntries(
+      Object.entries(scoringInput).filter(([, v]) => Number.isFinite(v)),
+    );
 
     try {
       const res = await fetch("/api/recommendations", {
@@ -243,11 +242,9 @@ export function NewRecommendationClient({
         body: JSON.stringify({
           painPath,
           challengeText: challenge.trim(),
-          goal: "", // TODO: Iteration P1 — add goal capture step
+          scoringInput: cleanScoring,
         }),
       });
-
-      clearTimers();
 
       if (res.status === 404 || res.status === 503) {
         setEngineError(
@@ -286,7 +283,6 @@ export function NewRecommendationClient({
         router.push(`/app/recommendations/${data.id}`);
       }
     } catch {
-      clearTimers();
       setEngineError("Network error. Please check your connection and try again.");
       setSubmitting(false);
     }
@@ -298,34 +294,27 @@ export function NewRecommendationClient({
 
   if (submitting) {
     return (
-      <div className="max-w-xl mx-auto px-5 py-12 space-y-6">
-        <div className="space-y-2">
+      <div className="max-w-xl mx-auto px-5 py-16 space-y-4">
+        <div className="flex items-center gap-3">
+          {/* Indeterminate spinner — pure CSS, no animation library. */}
+          <span
+            aria-hidden="true"
+            className="inline-block w-4 h-4 rounded-full border-2 animate-spin"
+            style={{
+              borderColor: "var(--line)",
+              borderTopColor: "var(--ink)",
+            }}
+          />
           <p
             className="text-[14px] font-medium"
             style={{ color: "var(--ink)" }}
           >
-            {PROGRESS_STAGES[progressStage]}
-          </p>
-          {/* Stage dots */}
-          <div className="flex gap-2 items-center">
-            {PROGRESS_STAGES.map((_, i) => (
-              <div
-                key={i}
-                className="h-2 rounded-full transition-all duration-500"
-                style={{
-                  width: i <= progressStage ? "32px" : "8px",
-                  backgroundColor: i <= progressStage ? "var(--ink)" : "var(--line)",
-                }}
-              />
-            ))}
-          </div>
-          <p
-            className="text-[12px]"
-            style={{ color: "var(--mute)" }}
-          >
-            This usually takes 12-15 seconds.
+            Working on your recommendation
           </p>
         </div>
+        <p className="text-[12px]" style={{ color: "var(--mute)" }}>
+          This usually takes 12 to 15 seconds.
+        </p>
       </div>
     );
   }

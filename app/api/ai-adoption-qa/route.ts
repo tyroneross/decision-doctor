@@ -27,6 +27,7 @@ import { createHash } from "crypto";
 import { sql } from "drizzle-orm";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
+import { GUEST_TENANT_ID, GUEST_USER_ID } from "@/lib/guest-identity";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { detectPHI } from "@/lib/phi-guard";
 import { runWithActor, withActor, db } from "@/lib/db/actor";
@@ -39,6 +40,8 @@ import {
 } from "@/lib/qa/personalizer";
 import { createSSEResponse } from "@/lib/qa/stream";
 import type { SourceForGrounding } from "@/lib/qa/grounding";
+import type { BodyKind } from "@/lib/corpus/body-kind";
+import { isBlockedBodyKind } from "@/lib/corpus/body-kind";
 
 export const runtime = "nodejs";
 
@@ -73,8 +76,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const userId = actor?.userId ?? "00000000-0000-0000-0000-000000000000";
-  const tenantId = actor?.tenantId ?? "00000000-0000-0000-0000-000000000000";
+  const userId = actor?.userId ?? GUEST_USER_ID;
+  const tenantId = actor?.tenantId ?? GUEST_TENANT_ID;
 
   // --- 2. Rate limit ---
   if (RATE_LIMITING) {
@@ -190,14 +193,18 @@ export async function POST(req: NextRequest) {
     console.warn("[qa-route] search fetch failed:", err);
   }
 
-  // --- 6. Take top 5 for synthesis ---
-  const topHits = searchHits.slice(0, SYNTHESIS_TOP_K);
+  // --- 6. Take top 5 for synthesis (after dropping any blocked/degraded
+  //         corpus hits that slipped past the upstream filter — defense in
+  //         depth before we hand sources to the LLM). ---
+  const trustedHits = searchHits.filter((h) => !isBlockedBodyKind(h.body_kind));
+  const topHits = trustedHits.slice(0, SYNTHESIS_TOP_K);
   const sources: SourceForGrounding[] = topHits.map((h) => ({
     uuid: h.doc_id,
     kind: normalizeKind(h.kind),
     title: h.title,
     body: h.snippet,
     score: h.score,
+    body_kind: h.body_kind ?? null,
   }));
 
   // --- 7. Personalization (authed only) ---
@@ -316,6 +323,7 @@ interface SearchHit {
   snippet: string;
   score: number;
   kind?: string;
+  body_kind?: BodyKind | null;
 }
 
 function normalizeKind(

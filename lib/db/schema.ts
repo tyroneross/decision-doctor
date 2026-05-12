@@ -408,6 +408,33 @@ export const recommendations = pgTable(
   }),
 );
 
+// --- Knowledge Base articles (V2: /app/learn) ---
+// Scope-based RLS mirrors library_use_cases. See drizzle/0009_kb_articles.sql.
+export const kbArticles = pgTable(
+  "kb_articles",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    scope: text("scope").notNull(),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull().default(""),
+    body: text("body").notNull(),
+    readingMinutes: integer("reading_minutes"),
+    displayOrder: integer("display_order").notNull().default(100),
+    metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    scopeIdx: index("kb_articles_scope_idx").on(t.scope),
+    orderIdx: index("kb_articles_order_idx").on(t.displayOrder),
+  }),
+);
+
 // Type exports — plural matches DB; type names stay singular for ergonomics.
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -429,6 +456,8 @@ export type LibraryPlugin = typeof libraryPlugins.$inferSelect;
 export type NewLibraryPlugin = typeof libraryPlugins.$inferInsert;
 export type Recommendation = typeof recommendations.$inferSelect;
 export type NewRecommendation = typeof recommendations.$inferInsert;
+export type KbArticle = typeof kbArticles.$inferSelect;
+export type NewKbArticle = typeof kbArticles.$inferInsert;
 
 // --- Plugin & Skill Library (0009) ---
 // Separate surface from library_* (0007). Tables: plugins, skills, plugin_skills,

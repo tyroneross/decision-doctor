@@ -13,6 +13,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/Button";
+import { type BodyKind, bodyKindBadgeLabel } from "@/lib/corpus/body-kind";
 
 type Scope = "global" | "my" | "both";
 
@@ -23,6 +24,7 @@ interface SearchResult {
   snippet: string;
   score: number;
   legs: string[];
+  body_kind?: BodyKind | null;
 }
 
 interface SearchResponse {
@@ -103,7 +105,7 @@ export function CommandPalette() {
     return () => ctrl.abort();
   }, [debouncedQ, scope]);
 
-  const useAsContext = (docId: string) => {
+  const applyAsContext = (docId: string) => {
     setOpen(false);
     router.push(`/app/chat?context=${encodeURIComponent(docId)}`);
   };
@@ -181,7 +183,7 @@ export function CommandPalette() {
                     <div className="text-[12px] text-mute mt-0.5 line-clamp-2">
                       {r.snippet}
                     </div>
-                    <div className="text-[11px] text-mute mt-1 flex gap-1.5">
+                    <div className="text-[11px] text-mute mt-1 flex gap-1.5 flex-wrap">
                       {r.legs.map((leg) => (
                         <span
                           key={leg}
@@ -190,11 +192,24 @@ export function CommandPalette() {
                           {leg}
                         </span>
                       ))}
+                      {(() => {
+                        const label = bodyKindBadgeLabel(r.body_kind);
+                        if (!label) return null;
+                        return (
+                          <span
+                            key="body-kind"
+                            className="inline-flex items-center rounded-full px-1.5 py-px border border-mute/40 text-mute"
+                            title="This source did not pass the full-text quality gate."
+                          >
+                            {label}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </a>
                   <Button
                     variant="secondary"
-                    onClick={() => useAsContext(r.doc_id)}
+                    onClick={() => applyAsContext(r.doc_id)}
                     className="shrink-0 !py-1.5 !text-[12px]"
                   >
                     Use as context

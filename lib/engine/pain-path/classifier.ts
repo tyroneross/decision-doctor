@@ -161,7 +161,7 @@ function classifyWithHeuristics(text: string): HeuristicResult {
 // LLM classification
 // ---------------------------------------------------------------------------
 
-const CLASSIFIER_SYSTEM_PROMPT = `You are the pain-path classifier for Decision Doctor, an AI deployment strategist for solo healthcare practitioners.
+const CLASSIFIER_SYSTEM_PROMPT = `You are the pain-path classifier for Aida, an AI assistant helping solo healthcare practitioners spend less time on admin and more time on patients.
 
 Given a free-text challenge description, classify it into the most appropriate pain path. Return ONLY JSON.
 

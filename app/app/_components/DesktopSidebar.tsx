@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Lock,
   Library,
+  GraduationCap,
 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { SignOutButton } from "./sign-out";
@@ -65,6 +66,12 @@ const WORKSPACE: WorkspaceItem[] = [
     match: (p) => p.startsWith("/app/chat"),
   },
   {
+    href: "/app/learn",
+    label: "Learn",
+    icon: GraduationCap,
+    match: (p) => p.startsWith("/app/learn"),
+  },
+  {
     href: "/app/history",
     label: "History",
     icon: FileText,
@@ -116,7 +123,7 @@ export function DesktopSidebar({
           href="/app"
           className="block text-[20px] font-bold leading-tight text-ink"
         >
-          decision doctor
+          Aida
         </Link>
         {(totalHrs > 0 || skillCount > 0) && (
           <p className="mt-1 text-[12px] font-medium text-mute leading-snug">

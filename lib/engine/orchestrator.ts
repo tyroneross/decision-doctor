@@ -324,7 +324,7 @@ When your response references a fact that came from a retrieved source, emit the
 Example: "AI tools can reduce scheduling time by 30%[[doc:a1b2c3d4-e5f6-7890-abcd-ef1234567890]]."
 `;
 
-const RECOMMENDATION_SYSTEM_PROMPT = `You are the recommendation engine for Decision Doctor, an AI deployment strategist for solo healthcare practitioners.
+const RECOMMENDATION_SYSTEM_PROMPT = `You are the recommendation engine for Aida, an AI assistant helping solo healthcare practitioners spend less time on admin and more time on patients.
 
 Given a pain path and challenge description, produce a concrete AI task recommendation.
 
@@ -408,15 +408,21 @@ export async function runRecommendation(
   });
 
   // STAGE: 9-criteria scoring
-  // Default scoring input — infer from classification confidence + basic heuristics.
-  // E3 / intake flow will supply real user-reported values.
+  //
+  // Caller-supplied values from the E3 intake flow take precedence; any
+  // missing field falls back to a stable default. dataReadiness has no
+  // intake question (intentionally — the intake is 5 questions max), so it
+  // always defaults server-side. Defaults mirror the prior hardcoded set
+  // EXCEPT dataReadiness which moves from 0.6 → 0.5 to match the neutral
+  // midpoint the other unscored fields use.
+  const intakeScoring = input.scoringInput ?? {};
   const scoringInput = {
-    painSeverity: 0.7,
-    frequency: 0.6,
-    timeBurden: 0.6,
-    riskTolerance: 0.4,
-    aiComfort: 0.5,
-    dataReadiness: 0.6,
+    painSeverity: intakeScoring.painSeverity ?? 0.7,
+    frequency: intakeScoring.frequency ?? 0.6,
+    timeBurden: intakeScoring.timeBurden ?? 0.6,
+    riskTolerance: intakeScoring.riskTolerance ?? 0.4,
+    aiComfort: intakeScoring.aiComfort ?? 0.5,
+    dataReadiness: intakeScoring.dataReadiness ?? 0.5,
   };
 
   // Guarantee ≥ 1 task for scoring (generateCandidateTasks guarantees ≥ 3 from

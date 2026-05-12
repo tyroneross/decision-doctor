@@ -1,7 +1,7 @@
 {
-  "name": "Decision Doctor",
-  "short_name": "Decision Dr",
-  "description": "Transparent decisions for solo healthcare practitioners.",
+  "name": "Aida",
+  "short_name": "Aida",
+  "description": "Let AI help you so you can help others.",
   "start_url": "/app/decisions",
   "display": "standalone",
   "background_color": "#ffffff",
