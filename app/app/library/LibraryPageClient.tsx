@@ -7,6 +7,8 @@
 // On any change (with 300ms debounce on search) fetches /api/library/search.
 
 import * as React from "react";
+import Link from "next/link";
+import { GraduationCap, ArrowRight } from "lucide-react";
 import { SearchBar } from "@/components/library/SearchBar";
 import { UniversalSearchToggle } from "@/components/library/UniversalSearchToggle";
 import { FilterChips } from "@/components/library/FilterChips";
@@ -23,6 +25,7 @@ const KIND_OPTIONS = [
   { value: "prompt", label: "Prompts" },
   { value: "skill", label: "Skills" },
   { value: "plugin", label: "Plugins" },
+  { value: "kb_article", label: "Learn" },
   { value: "corpus", label: "Corpus" },
 ];
 
@@ -219,6 +222,37 @@ export function LibraryPageClient({
         />
       );
     }
+    if (hit.kind === "kb_article") {
+      const slug = hit.slug ?? "";
+      return (
+        <article
+          key={hit.id}
+          className="bg-paper border border-line rounded-xl p-4 flex flex-col gap-2"
+        >
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-mute">
+            <GraduationCap size={12} aria-hidden />
+            <span className="font-semibold">Learn</span>
+          </div>
+          <h3 className="text-[15px] font-semibold text-ink leading-snug">
+            {hit.title}
+          </h3>
+          {hit.snippet && (
+            <p className="text-[13px] text-text leading-relaxed line-clamp-3">
+              {hit.snippet}
+            </p>
+          )}
+          {slug && (
+            <Link
+              href={`/app/learn/${slug}`}
+              className="inline-flex items-center gap-1 text-[12px] font-medium text-ink"
+            >
+              Read article
+              <ArrowRight size={12} aria-hidden />
+            </Link>
+          )}
+        </article>
+      );
+    }
     return (
       <UseCaseCard
         key={hit.id}
@@ -231,6 +265,7 @@ export function LibraryPageClient({
         sourceUrl={hit.corpus_doc_id ? undefined : undefined}
         isAuthed={isAuthed}
         onSave={isAuthed ? handleSave : undefined}
+        bodyKind={hit.body_kind}
       />
     );
   }

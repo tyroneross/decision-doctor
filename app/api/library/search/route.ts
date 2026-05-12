@@ -23,7 +23,7 @@ export const runtime = "nodejs";
 const GUEST_USER_ID = "00000000-0000-0000-0000-000000000000";
 const GUEST_TENANT_ID = "00000000-0000-0000-0000-000000000000";
 
-const VALID_KINDS = ["use_case", "prompt", "skill", "plugin", "corpus"] as const;
+const VALID_KINDS = ["use_case", "prompt", "skill", "plugin", "corpus", "kb_article"] as const;
 const VALID_PATHS = [
   "referrals",
   "research",

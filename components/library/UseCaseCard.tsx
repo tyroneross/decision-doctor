@@ -18,6 +18,7 @@
 import * as React from "react";
 import { Button } from "@/components/ui/Button";
 import type { LibraryKind, PainPath } from "@/lib/library";
+import { type BodyKind, bodyKindBadgeLabel } from "@/lib/corpus/body-kind";
 
 // Label maps for display.
 const KIND_LABELS: Record<LibraryKind, string> = {
@@ -26,6 +27,7 @@ const KIND_LABELS: Record<LibraryKind, string> = {
   skill: "skill",
   plugin: "plugin",
   corpus: "corpus",
+  kb_article: "learn",
 };
 
 // Map PainPath IDs to human-readable short labels for the card meta row.
@@ -52,6 +54,14 @@ export interface UseCaseCardProps {
   onSave?: (id: string) => void;
   /** Whether the current user is authenticated. Hides Save for guests. */
   isAuthed?: boolean;
+  /**
+   * V2 trust tier. When set to `source_summary` (or any non-full_text value
+   * that slips past upstream filters), the card renders a "Source summary
+   * only" badge so users know the body is not the original article text.
+   * Null/undefined means full-text (back-compat). Only meaningful for
+   * `kind === 'corpus'`.
+   */
+  bodyKind?: BodyKind | null;
 }
 
 export function UseCaseCard({
@@ -64,9 +74,11 @@ export function UseCaseCard({
   sourceUrl,
   onSave,
   isAuthed = false,
+  bodyKind,
 }: UseCaseCardProps) {
   const kindLabel = KIND_LABELS[kind] ?? kind;
   const pathLabel = painPath ? (PATH_SHORT[painPath] ?? painPath) : null;
+  const trustBadge = kind === "corpus" ? bodyKindBadgeLabel(bodyKind) : null;
 
   return (
     <article className="bg-paper border border-line rounded-xl p-4 flex flex-col gap-3">
@@ -82,6 +94,15 @@ export function UseCaseCard({
           </span>
           {pathLabel && (
             <span className="text-[12px] text-mute">{pathLabel}</span>
+          )}
+          {trustBadge && (
+            <span
+              className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium leading-none border border-mute/50 text-mute"
+              title="This source did not pass the full-text quality gate."
+              aria-label={`Trust tier: ${trustBadge}`}
+            >
+              {trustBadge}
+            </span>
           )}
         </div>
         {score !== undefined && score > 0 && (
