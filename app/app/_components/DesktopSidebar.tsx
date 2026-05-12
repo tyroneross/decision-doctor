@@ -3,7 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageSquare, FileText, Sparkles, ShieldCheck } from "lucide-react";
+import {
+  MessageSquare,
+  FileText,
+  Sparkles,
+  ShieldCheck,
+  Library,
+} from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { SignOutButton } from "./sign-out";
 
@@ -55,6 +61,12 @@ const WORKSPACE = [
     label: "Skills",
     icon: Sparkles,
     match: (p: string) => p.startsWith("/app/skills"),
+  },
+  {
+    href: "/app/library/plugins",
+    label: "Library",
+    icon: Library,
+    match: (p: string) => p.startsWith("/app/library"),
   },
   {
     href: "/app/audit",
