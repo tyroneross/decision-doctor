@@ -111,13 +111,31 @@ export function DesktopSidebar({
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const [pendingDelete, setPendingDelete] = React.useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = React.useState<string | null>(null);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
-  async function handleDelete(id: string, title: string) {
-    if (typeof window === "undefined") return;
-    const ok = window.confirm(
-      `Delete "${title}"? This can't be undone.`,
-    );
-    if (!ok) return;
+  // Dismiss the inline confirm on Escape or click-outside.
+  React.useEffect(() => {
+    if (!confirmingId) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setConfirmingId(null);
+    }
+    function onClickOutside(e: MouseEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest("[data-confirm-row]")) return;
+      setConfirmingId(null);
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClickOutside);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onClickOutside);
+    };
+  }, [confirmingId]);
+
+  async function runDelete(id: string) {
+    setConfirmingId(null);
+    setDeleteError(null);
     setPendingDelete(id);
     try {
       const res = await fetch(`/api/decisions/${id}`, { method: "DELETE" });
@@ -125,13 +143,12 @@ export function DesktopSidebar({
         // SSR refresh re-queries layout.tsx → drops the row.
         router.refresh();
       } else {
-        const body = await res.json().catch(() => ({}));
-        console.warn("[sidebar] delete failed:", res.status, body);
-        window.alert("Couldn't delete that decision. Please try again.");
+        console.warn("[sidebar] delete failed:", res.status);
+        setDeleteError(id);
       }
     } catch (err) {
       console.warn("[sidebar] delete error:", err);
-      window.alert("Network error. Please try again.");
+      setDeleteError(id);
     } finally {
       setPendingDelete(null);
     }
@@ -235,39 +252,76 @@ export function DesktopSidebar({
           <ul className="mt-1 space-y-0.5">
             {recentDecisions.slice(0, 5).map((d) => {
               const isDeleting = pendingDelete === d.id;
+              const isConfirming = confirmingId === d.id;
+              const failed = deleteError === d.id;
               return (
                 <li
                   key={d.id}
+                  data-confirm-row={isConfirming ? "true" : undefined}
                   className={twMerge(
                     "group relative flex items-center rounded-md",
-                    "hover:bg-line/30",
+                    !isConfirming && "hover:bg-line/30",
+                    isConfirming && "bg-line/40 ring-1 ring-ink/20",
                     isDeleting && "opacity-50"
                   )}
                 >
-                  <Link
-                    href={`/app/history/${d.id}`}
-                    className="flex-1 min-w-0 px-3 py-1 text-[13px] text-mute hover:text-text leading-snug line-clamp-1"
-                    title={d.title}
-                  >
-                    {d.title}
-                  </Link>
-                  {!guest && (
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(d.id, d.title)}
-                      disabled={isDeleting}
-                      aria-label={`Delete decision: ${d.title}`}
-                      title="Delete this decision"
-                      className={twMerge(
-                        "shrink-0 px-2 py-1 text-mute opacity-0",
-                        "transition-opacity",
-                        "group-hover:opacity-100 focus-visible:opacity-100",
-                        "hover:text-red-600",
-                        "disabled:cursor-not-allowed"
+                  {isConfirming ? (
+                    <div className="flex flex-1 min-w-0 items-center gap-1.5 px-2 py-1">
+                      <span
+                        className="flex-1 min-w-0 text-[12px] text-ink leading-snug line-clamp-1"
+                        title={d.title}
+                      >
+                        Delete?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => runDelete(d.id)}
+                        aria-label={`Confirm delete: ${d.title}`}
+                        className="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold text-paper bg-red-600 hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/30"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingId(null)}
+                        aria-label="Cancel delete"
+                        className="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium text-mute hover:text-ink"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Link
+                        href={`/app/history/${d.id}`}
+                        className="flex-1 min-w-0 px-3 py-1 text-[13px] text-mute hover:text-text leading-snug line-clamp-1"
+                        title={failed ? "Delete failed — try again" : d.title}
+                      >
+                        {d.title}
+                      </Link>
+                      {!guest && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleteError(null);
+                            setConfirmingId(d.id);
+                          }}
+                          disabled={isDeleting}
+                          aria-label={`Delete decision: ${d.title}`}
+                          title="Delete this decision"
+                          className={twMerge(
+                            "shrink-0 px-2 py-1 text-mute opacity-0",
+                            "transition-opacity",
+                            "group-hover:opacity-100 focus-visible:opacity-100",
+                            "hover:text-red-600",
+                            failed && "opacity-100 text-red-600",
+                            "disabled:cursor-not-allowed"
+                          )}
+                        >
+                          <Trash2 size={14} aria-hidden />
+                        </button>
                       )}
-                    >
-                      <Trash2 size={14} aria-hidden />
-                    </button>
+                    </>
                   )}
                 </li>
               );

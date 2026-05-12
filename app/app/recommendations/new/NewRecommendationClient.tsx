@@ -1,8 +1,10 @@
 "use client";
 
+import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { twMerge } from "tailwind-merge";
 import type { PainPathId } from "@/lib/engine/types";
 import type { ResolvedActor } from "@/lib/auth-session";
 import type {
@@ -16,6 +18,20 @@ import { Chip } from "@/components/ui/Chip";
 import { NoPhiNotice } from "@/components/recommendations/NoPhiNotice";
 import { detectPHI } from "@/lib/phi-guard";
 import { PATH_KICKOFFS, type PathKickoff } from "./path-kickoff";
+
+function appendLine(value: string, line: string): string {
+  if (value.includes(line)) return value;
+  const trimmed = value.replace(/\s+$/, "");
+  return trimmed ? `${trimmed}\n${line}` : line;
+}
+
+function removeLine(value: string, line: string): string {
+  return value
+    .split("\n")
+    .filter((l) => l !== line)
+    .join("\n")
+    .replace(/^\s+/, "");
+}
 
 export interface NewRecommendationClientProps {
   initialPath: PainPathId | null;
@@ -400,6 +416,42 @@ function PathKickoffView({
   busy: boolean;
   error: string | null;
 }) {
+  // Selections from the starter-assets + info-needed lists. Clicking a card
+  // or pill toggles selection; the selected items are inlined into the
+  // detail box so the user's "Start" submission carries them forward.
+  const [selectedArtifacts, setSelectedArtifacts] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+  const [selectedInfo, setSelectedInfo] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+
+  function toggleArtifact(key: string, line: string) {
+    setSelectedArtifacts((prev) => {
+      const next = new Set(prev);
+      const hadIt = next.has(key);
+      if (hadIt) next.delete(key);
+      else next.add(key);
+      // Mirror into the detail box. Append on add; remove the exact line on remove.
+      if (hadIt) onChange(removeLine(value, line));
+      else onChange(appendLine(value, line));
+      return next;
+    });
+  }
+
+  function toggleInfo(item: string) {
+    setSelectedInfo((prev) => {
+      const next = new Set(prev);
+      const line = `- I'll share: ${item}`;
+      const hadIt = next.has(item);
+      if (hadIt) next.delete(item);
+      else next.add(item);
+      if (hadIt) onChange(removeLine(value, line));
+      else onChange(appendLine(value, line));
+      return next;
+    });
+  }
+
   const canStart =
     !busy &&
     !warning &&
@@ -458,23 +510,50 @@ function PathKickoffView({
         >
           Starter assets to consider
         </h2>
+        <p className="mt-1 text-[12px] text-mute">
+          Click a card to include it in your start message.
+        </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          {kickoff.artifacts.map((artifact) => (
-            <article
-              key={`${artifact.kind}:${artifact.title}`}
-              className="rounded-xl border border-line bg-paper p-4"
-            >
-              <p className="text-[11px] font-medium uppercase tracking-wider text-mute">
-                {artifact.kind}
-              </p>
-              <h3 className="mt-1 text-[14px] font-semibold leading-snug text-ink">
-                {artifact.title}
-              </h3>
-              <p className="mt-2 text-[12px] leading-relaxed text-mute">
-                {artifact.description}
-              </p>
-            </article>
-          ))}
+          {kickoff.artifacts.map((artifact) => {
+            const key = `${artifact.kind}:${artifact.title}`;
+            const line = `- Want a starter ${artifact.kind.toLowerCase()}: "${artifact.title}"`;
+            const selected = selectedArtifacts.has(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggleArtifact(key, line)}
+                aria-pressed={selected}
+                className={twMerge(
+                  "text-left rounded-xl border bg-paper p-4 transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
+                  selected
+                    ? "border-ink ring-1 ring-ink/30 bg-line/30"
+                    : "border-line hover:border-ink/40 hover:bg-line/20",
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-mute">
+                    {artifact.kind}
+                  </p>
+                  {selected && (
+                    <span
+                      aria-hidden
+                      className="text-[11px] font-semibold text-ink"
+                    >
+                      ✓ Selected
+                    </span>
+                  )}
+                </div>
+                <h3 className="mt-1 text-[14px] font-semibold leading-snug text-ink">
+                  {artifact.title}
+                </h3>
+                <p className="mt-2 text-[12px] leading-relaxed text-mute">
+                  {artifact.description}
+                </p>
+              </button>
+            );
+          })}
         </div>
       </section>
 
@@ -488,15 +567,30 @@ function PathKickoffView({
         >
           What I still need
         </h2>
+        <p className="mt-1 text-[12px] text-mute">
+          Tap the ones you can share — we&apos;ll add them to your message.
+        </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          {kickoff.infoNeeded.map((item) => (
-            <span
-              key={item}
-              className="rounded-[10px] border border-line px-3 py-1.5 text-[12px] font-medium text-text"
-            >
-              {item}
-            </span>
-          ))}
+          {kickoff.infoNeeded.map((item) => {
+            const selected = selectedInfo.has(item);
+            return (
+              <button
+                key={item}
+                type="button"
+                onClick={() => toggleInfo(item)}
+                aria-pressed={selected}
+                className={twMerge(
+                  "rounded-[10px] border px-3 py-1.5 text-[12px] font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
+                  selected
+                    ? "border-ink bg-ink text-paper"
+                    : "border-line text-text hover:border-ink/40 hover:bg-line/20",
+                )}
+              >
+                {selected ? `✓ ${item}` : item}
+              </button>
+            );
+          })}
         </div>
       </section>
 
