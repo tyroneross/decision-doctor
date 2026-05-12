@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signUp } from "@/lib/auth-client";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -23,7 +23,21 @@ import { Button } from "@/components/ui/Button";
  * C5). The decisions list is one bottom-nav tap away.
  */
 export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInPageInner />
+    </Suspense>
+  );
+}
+
+function SignInPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const reason = searchParams.get("reason");
+  const reasonHint =
+    reason === "save-artifact"
+      ? "Sign in to save the artifact you just generated."
+      : null;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -88,7 +102,16 @@ export default function SignInPage() {
         </p>
       </header>
 
-      <form className="mt-8" onSubmit={submit}>
+      {reasonHint && (
+        <p
+          role="status"
+          className="mt-6 rounded-md border border-line bg-surface-2 px-3 py-2 text-[13px] text-ink"
+        >
+          {reasonHint}
+        </p>
+      )}
+
+      <form className={reasonHint ? "mt-4" : "mt-8"} onSubmit={submit}>
         {/* Credentials group — email + password belong together (one
             "enter your details" intent). Tight 12px gap groups them
             visually per Gestalt proximity. */}

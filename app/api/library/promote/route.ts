@@ -1,18 +1,20 @@
 // POST /api/library/promote
 //
-// Authed-only: runs the appropriate builder bridge, validates output through
-// the quality gate, then inserts into library_skills or library_plugins.
+// Two-mode: authed users get the artifact persisted to library_skills /
+// library_plugins; guests (dd:guest cookie) get the same generated artifact
+// returned in-band with `guestMode: true` and no DB write.
 //
 // Body:
 //   {
 //     kind: 'prompt' | 'skill' | 'plugin',
-//     recommendationId: string,  // UUID
+//     recommendationId: string,  // UUID for authed; literal "guest" for guests
 //     painPath: PainPath,
 //     payload: BuilderHandoffSeed,  // typed seed from Stage 8 builderHandoff
 //   }
 //
-// Quality gate failure returns 422 with structured diagnostics.
-// Audit row written on every attempt (action: 'recommendation.promote').
+// Quality gate failure returns 422 with structured diagnostics (both modes).
+// Audit row written on every authed attempt (action: 'recommendation.promote').
+// Guests skip the audit write — there's no userId to attach.
 //
 // Hardening item 7.
 
@@ -20,6 +22,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionActor } from "@/lib/auth-session";
+import { isGuestRequest } from "@/lib/auth-guest";
 import { promoteToSkill, promoteToPlugin } from "@/lib/library";
 import { generatePrompt } from "@/lib/builders/prompt-bridge";
 import { generateSkill } from "@/lib/builders/skill-bridge";
@@ -44,9 +47,11 @@ const PainPathSchema = z.enum([
 ]);
 
 // Seed payload schema — permissive on the seed contents (validated by quality gate).
+// recommendationId accepts a UUID (authed flow) OR the literal "guest" (guest flow,
+// no DB row to reference).
 const PromoteSchema = z.object({
   kind: z.enum(["prompt", "skill", "plugin"]),
-  recommendationId: z.string().uuid(),
+  recommendationId: z.union([z.string().uuid(), z.literal("guest")]),
   painPath: PainPathSchema,
   payload: z.record(z.string(), z.unknown()),
 });
@@ -57,7 +62,8 @@ const PromoteSchema = z.object({
 
 export async function POST(req: Request) {
   const actor = await getSessionActor();
-  if (!actor) {
+  const guest = !actor && (await isGuestRequest());
+  if (!actor && !guest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -104,7 +110,9 @@ export async function POST(req: Request) {
       gateKind = "plugin";
     }
   } catch (err) {
-    await writeAuditEvent(actor, recommendationId, kind, false, Date.now() - now);
+    if (actor) {
+      await writeAuditEvent(actor, recommendationId, kind, false, Date.now() - now);
+    }
     console.error("[promote] Bridge generation failed:", err);
     return NextResponse.json(
       { error: "bridge_error", detail: String(err) },
@@ -115,13 +123,23 @@ export async function POST(req: Request) {
   // --- Quality gate ---
   const gateResult = await validateArtifact(gateKind, artifact);
   if (!gateResult.passed) {
-    await writeAuditEvent(actor, recommendationId, kind, false, Date.now() - now);
+    if (actor) {
+      await writeAuditEvent(actor, recommendationId, kind, false, Date.now() - now);
+    }
     return NextResponse.json(
       {
         error: "quality_gate_failed",
         diagnostics: gateResult,
       },
       { status: 422 },
+    );
+  }
+
+  // --- Guest mode: return artifact in-band, no DB write ---
+  if (!actor) {
+    return NextResponse.json(
+      { guestMode: true, kind: gateKind, artifact },
+      { status: 200 },
     );
   }
 

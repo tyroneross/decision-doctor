@@ -31,6 +31,10 @@ interface QualityGateDiagnostic {
 interface PromoteSuccessResponse {
   skill?: { id: string; title: string };
   plugin?: { id: string; title: string };
+  // Guest mode: no DB row, artifact returned in-band.
+  guestMode?: boolean;
+  kind?: "prompt" | "skill" | "plugin";
+  artifact?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -41,6 +45,11 @@ type FlowState =
   | { stage: "idle" }
   | { stage: "generating"; rung: AdoptionPathwayRung }
   | { stage: "success"; artifactId: string; artifactTitle: string; kind: string }
+  | {
+      stage: "guest_success";
+      kind: "prompt" | "skill" | "plugin";
+      artifact: Record<string, unknown>;
+    }
   | { stage: "quality_gate_failed"; blockers: string[]; warnings: string[]; rung: AdoptionPathwayRung }
   | { stage: "error"; message: string; rung: AdoptionPathwayRung };
 
@@ -107,6 +116,17 @@ export function PromoteFlow({
       }
 
       const data = (await res.json()) as PromoteSuccessResponse;
+
+      // Guest mode: artifact is returned in-band, not persisted.
+      if (data.guestMode && data.artifact && data.kind) {
+        setFlowState({
+          stage: "guest_success",
+          kind: data.kind,
+          artifact: data.artifact,
+        });
+        return;
+      }
+
       const artifact = data.skill ?? data.plugin;
       setFlowState({
         stage: "success",
@@ -258,6 +278,113 @@ export function PromoteFlow({
           </Button>
           <Button variant="ghost" onClick={handleReset}>
             Back
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  // ---- Guest success (artifact returned in-band, not saved) ----
+  if (flowState.stage === "guest_success") {
+    const { kind, artifact } = flowState;
+    const title = String(
+      artifact.name ?? artifact.title ?? "Generated artifact",
+    );
+    const body =
+      kind === "skill"
+        ? String(artifact.skillMdBody ?? "")
+        : kind === "plugin"
+          ? String(artifact.pluginJson ?? "")
+          : String(artifact.instructions ?? "");
+    const ext = kind === "plugin" ? "json" : "md";
+    const slug =
+      title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60) || "artifact";
+    const filename = `aida-${kind}-${slug}.${ext}`;
+    const icon = kind === "skill" ? "🛠️" : kind === "plugin" ? "🧩" : "📝";
+    const kindLabel =
+      kind === "skill" ? "Skill" : kind === "plugin" ? "Plugin" : "Prompt";
+
+    return (
+      <Card className="space-y-4">
+        <div className="flex items-start gap-3">
+          <span aria-hidden className="text-[22px] leading-none">
+            {icon}
+          </span>
+          <div>
+            <p
+              className="text-[15px] font-semibold"
+              style={{ color: "var(--ok)" }}
+            >
+              {kindLabel} ready
+            </p>
+            <p
+              className="mt-0.5 text-[14px] font-medium"
+              style={{ color: "var(--ink)" }}
+            >
+              {title}
+            </p>
+            <p className="mt-1 text-[13px]" style={{ color: "var(--mute)" }}>
+              Generated in guest mode &mdash; not saved to your library. Sign in
+              to save.
+            </p>
+          </div>
+        </div>
+
+        <pre
+          className="max-h-[360px] overflow-auto rounded-md p-3 text-[12px] leading-relaxed"
+          style={{
+            background: "var(--surface-2, #f5f5f4)",
+            color: "var(--ink)",
+            border: "1px solid var(--line, #e7e5e4)",
+            fontFamily:
+              "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}
+        >
+          {body || "(empty artifact body)"}
+        </pre>
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button
+            variant="primary"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(body);
+              } catch {
+                // Clipboard may be unavailable in non-secure contexts; ignore.
+              }
+            }}
+          >
+            Copy to clipboard
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              const blob = new Blob([body], {
+                type: ext === "json" ? "application/json" : "text/markdown",
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Download
+          </Button>
+          <Link href="/sign-in?reason=save-artifact">
+            <Button variant="ghost">Sign in to save &rarr;</Button>
+          </Link>
+          <Button variant="ghost" onClick={handleReset}>
+            Generate another
           </Button>
         </div>
       </Card>
