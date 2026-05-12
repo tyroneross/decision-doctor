@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Transparent decision engine for solo healthcare practitioners. See decision-doctor-prd.md.",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "Apache-2.0",
   "author": "Tyrone Ross",
   "scripts": {
     "dev": "next dev",
