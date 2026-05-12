@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   extractArticleText,
+  findRssSummaryByUrl,
   shouldSkipContentExtract,
 } from "../src/adapters/content-extract.js";
 import {
@@ -171,5 +172,21 @@ describe("ingestion quality gates", () => {
     expect(extracted).toContain("ImportantHeaderArticle");
     expect(extracted.split(/\s+/).length).toBeGreaterThan(200);
     expect(extracted).not.toContain("Home Products Pricing");
+  });
+
+  it("matches RSS summaries by URL without query strings or trailing slashes", () => {
+    const summary = findRssSummaryByUrl(
+      [
+        {
+          link: "https://openai.com/index/example-announcement/",
+          guid: "rss-guid",
+          title: "Example Announcement",
+          description: "A reliable RSS summary for a blocked article page.",
+        },
+      ],
+      "https://openai.com/index/example-announcement?utm_source=rss",
+    );
+
+    expect(summary).toBe("A reliable RSS summary for a blocked article page.");
   });
 });
