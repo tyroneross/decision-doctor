@@ -69,6 +69,9 @@ vi.mock("@/lib/db/actor", () => ({
       }),
       select: () => ({
         from: () => ({
+          where: () => ({
+            limit: async () => dbState.selectRows,
+          }),
           orderBy: () => ({
             limit: async () => dbState.selectRows,
           }),
@@ -91,6 +94,7 @@ vi.mock("@/lib/engine/orchestrator", () => ({
 // ─── Import after mocks ──────────────────────────────────────────────────
 
 import { POST, GET } from "@/app/api/recommendations/route";
+import { GET as GET_BY_ID } from "@/app/api/recommendations/[id]/route";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
 import { checkRateLimit } from "@/lib/ratelimit";
@@ -342,6 +346,22 @@ describe("POST /api/recommendations", () => {
     expect(lastInsertedRec()).toBeNull();
   });
 
+  it("T-REC-3b: POST with empty optional goal is accepted", async () => {
+    vi.mocked(getSessionActor).mockResolvedValue(ACTOR_A);
+
+    const res = await POST(
+      makeReq("POST", { ...VALID_BODY, goal: "" }) as never,
+    );
+    expect(res.status).toBe(200);
+    expect(runRecommendation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        painPath: VALID_BODY.painPath,
+        challengeText: VALID_BODY.challengeText,
+        goal: undefined,
+      }),
+    );
+  });
+
   it("T-REC-4: POST rate limited → 429", async () => {
     vi.mocked(getSessionActor).mockResolvedValue(ACTOR_A);
     vi.mocked(checkRateLimit).mockResolvedValue({
@@ -445,5 +465,82 @@ describe("GET /api/recommendations", () => {
     const body = await res.json();
     expect(body.items).toHaveLength(0);
     expect(body.hasMore).toBe(false);
+  });
+});
+
+describe("GET /api/recommendations/[id]", () => {
+  const REC_ID = "11111111-1111-4111-8111-111111111111";
+
+  function makeCtx(id = REC_ID) {
+    return { params: Promise.resolve({ id }) };
+  }
+
+  function makeRecommendationRow() {
+    return {
+      id: REC_ID,
+      userId: ACTOR_A.userId,
+      tenantId: ACTOR_A.tenantId,
+      painPath: MOCK_RECOMMENDATION.selectedPainPath,
+      challengeSummary: MOCK_RECOMMENDATION.challengeSummary,
+      goal: MOCK_RECOMMENDATION.goal,
+      intake: VALID_BODY,
+      candidateTasks: MOCK_RECOMMENDATION.candidateTasks,
+      recommendedTask: {
+        title: MOCK_RECOMMENDATION.recommendedTask,
+        approach: MOCK_RECOMMENDATION.recommendedApproach,
+        why: MOCK_RECOMMENDATION.whyThisTask,
+      },
+      starterSolution: { text: MOCK_RECOMMENDATION.starterSolution },
+      guardrails: MOCK_RECOMMENDATION.guardrails,
+      successMetric: MOCK_RECOMMENDATION.successMetric,
+      adoptionPathway: MOCK_RECOMMENDATION.adoptionPathway,
+      methodTrace: MOCK_RECOMMENDATION.methodTrace,
+      baseline: null,
+      status: "planned",
+      confidence: "0.82",
+      createdAt: new Date("2026-05-11T00:00:00Z"),
+      updatedAt: new Date("2026-05-11T00:00:00Z"),
+    };
+  }
+
+  it("T-REC-9: GET by id unauthenticated → 401", async () => {
+    const res = await GET_BY_ID(
+      makeReq("GET", undefined, `http://localhost/api/recommendations/${REC_ID}`) as never,
+      makeCtx() as never,
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("T-REC-10: GET by id as authed user → hydrated recommendation", async () => {
+    vi.mocked(getSessionActor).mockResolvedValue(ACTOR_A);
+    dbState.selectRows = [makeRecommendationRow()];
+
+    const res = await GET_BY_ID(
+      makeReq("GET", undefined, `http://localhost/api/recommendations/${REC_ID}`) as never,
+      makeCtx() as never,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.id).toBe(REC_ID);
+    expect(body.guestMode).toBe(false);
+    expect(body.recommendation).toMatchObject({
+      selectedPainPath: "admin",
+      recommendedTask: MOCK_RECOMMENDATION.recommendedTask,
+      recommendedApproach: MOCK_RECOMMENDATION.recommendedApproach,
+      confidence: 82,
+    });
+  });
+
+  it("T-REC-11: GET by id missing row → 404", async () => {
+    vi.mocked(getSessionActor).mockResolvedValue(ACTOR_A);
+    dbState.selectRows = [];
+
+    const res = await GET_BY_ID(
+      makeReq("GET", undefined, `http://localhost/api/recommendations/${REC_ID}`) as never,
+      makeCtx() as never,
+    );
+
+    expect(res.status).toBe(404);
   });
 });

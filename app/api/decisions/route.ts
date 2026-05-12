@@ -7,6 +7,7 @@ import { decisions, auditEvents } from "@/lib/db/schema";
 import { DecisionInputSchema } from "@/shared/schema";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
+import { GUEST_PLACEHOLDER_UUID } from "@/lib/guest-identity";
 import { runDecision } from "@/lib/engine/orchestrator";
 import { GROQ_MODEL } from "@/lib/groq";
 import { checkRateLimit } from "@/lib/ratelimit";
@@ -14,10 +15,6 @@ import { desc, eq } from "drizzle-orm";
 
 // LD-08 — Edge runtime breaks the Neon WebSocket pool that RLS depends on.
 export const runtime = "nodejs";
-
-// Synthetic uuid used to satisfy DecisionInputSchema for guest runs. The
-// engine's pure pipeline doesn't read it; persistence is skipped in guest mode.
-const GUEST_PLACEHOLDER_UUID = "00000000-0000-0000-0000-000000000000";
 
 export async function POST(req: Request) {
   const actor = await getSessionActor();

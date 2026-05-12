@@ -51,12 +51,6 @@ export function SkillPanel({ skills }: Props) {
   const panelMode = params.get("panel");
   const collapsed = panelMode === "collapsed";
 
-  if (collapsed) {
-    return (
-      <CollapsedRail />
-    );
-  }
-
   const active = React.useMemo(() => {
     if (!skillParam) return null;
     const [decisionId, idxRaw] = skillParam.split(":");
@@ -67,6 +61,12 @@ export function SkillPanel({ skills }: Props) {
       skills.find((s) => s.decisionId === decisionId && s.index === idx) ?? null
     );
   }, [skillParam, skills]);
+
+  if (collapsed) {
+    return (
+      <CollapsedRail />
+    );
+  }
 
   if (!active) {
     return (

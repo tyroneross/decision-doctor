@@ -31,7 +31,7 @@ import {
 } from "../ingestion/quality.js";
 
 export const KG_EXTRACT_PROMPT_VERSION = "2026-05-11.1";
-const MODEL = "llama-3.3-70b-versatile";
+const MODEL = process.env.KG_EXTRACT_MODEL ?? "llama-3.3-70b-versatile";
 
 const ALLOWED_ENTITY_TYPES = new Set([
   "organization",

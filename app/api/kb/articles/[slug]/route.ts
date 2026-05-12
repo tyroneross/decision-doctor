@@ -6,12 +6,10 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
+import { GUEST_TENANT_ID, GUEST_USER_ID } from "@/lib/guest-identity";
 import { getKbArticleBySlug } from "@/lib/kb";
 
 export const runtime = "nodejs";
-
-const GUEST_USER_ID = "00000000-0000-0000-0000-000000000000";
-const GUEST_TENANT_ID = "00000000-0000-0000-0000-000000000000";
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,128}$/;
 

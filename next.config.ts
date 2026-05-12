@@ -28,9 +28,21 @@ const config: NextConfig = {
   async headers() {
     // Dev needs 'unsafe-eval' for React Refresh; production stays strict.
     const isDev = process.env.NODE_ENV !== "production";
+    const enableVercelToolbar =
+      process.env.VERCEL === "1" &&
+      process.env.VERCEL_PREVIEW_FEEDBACK_ENABLED !== "0";
     const scriptSrc = isDev
       ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-      : "script-src 'self' 'unsafe-inline'";
+      : `script-src 'self' 'unsafe-inline'${enableVercelToolbar ? " https://vercel.live" : ""}`;
+    const styleSrc = `style-src 'self' 'unsafe-inline'${enableVercelToolbar ? " https://vercel.live" : ""}`;
+    const connectSrc = `connect-src 'self' https://api.groq.com https://api.resend.com${enableVercelToolbar ? " https://vercel.live wss://ws-us3.pusher.com" : ""}`;
+    const imgSrc = `img-src 'self' data: https:${enableVercelToolbar ? " blob:" : ""}`;
+    const frameSrc = enableVercelToolbar
+      ? "frame-src https://vercel.live"
+      : "";
+    const fontSrc = enableVercelToolbar
+      ? "font-src 'self' https://vercel.live https://assets.vercel.com"
+      : "";
     return [
       {
         source: "/:path*",
@@ -43,9 +55,11 @@ const config: NextConfig = {
             value:
               "default-src 'self'; " +
               scriptSrc + "; " +
-              "style-src 'self' 'unsafe-inline'; " +
-              "img-src 'self' data: https:; " +
-              "connect-src 'self' https://api.groq.com https://api.resend.com; " +
+              styleSrc + "; " +
+              imgSrc + "; " +
+              connectSrc + "; " +
+              (frameSrc ? frameSrc + "; " : "") +
+              (fontSrc ? fontSrc + "; " : "") +
               "frame-ancestors 'none';",
           },
         ],

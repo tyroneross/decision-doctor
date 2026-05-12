@@ -20,13 +20,13 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { isGuestRequest } from "@/lib/auth-guest";
 import { getSessionActor } from "@/lib/auth-session";
+import { GUEST_PLACEHOLDER_UUID } from "@/lib/guest-identity";
 import { getUseCaseWithPrompt } from "@/lib/library";
 import { UseCaseDetailClient } from "./UseCaseDetailClient";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const GUEST_UUID = "00000000-0000-0000-0000-000000000000";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -51,8 +51,8 @@ export default async function UseCaseDetailPage({ params }: Props) {
   if (!session?.user && !guest) redirect("/sign-in");
 
   const actor = session?.user ? await getSessionActor() : null;
-  const userId = actor?.userId ?? GUEST_UUID;
-  const tenantId = actor?.tenantId ?? GUEST_UUID;
+  const userId = actor?.userId ?? GUEST_PLACEHOLDER_UUID;
+  const tenantId = actor?.tenantId ?? GUEST_PLACEHOLDER_UUID;
 
   const loaded = await getUseCaseWithPrompt(userId, tenantId, id);
   if (!loaded) {

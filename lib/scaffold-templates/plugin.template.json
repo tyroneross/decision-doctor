@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "{{description}}",
   "author": "Aida",
-  "homepage": "https://decision-doctor-xi.vercel.app",
+  "homepage": "{{homepage}}",
   "commands": [
     {
       "name": "{{slug}}",

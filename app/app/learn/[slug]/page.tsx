@@ -7,13 +7,12 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { isGuestRequest } from "@/lib/auth-guest";
 import { getSessionActor } from "@/lib/auth-session";
+import { GUEST_PLACEHOLDER_UUID } from "@/lib/guest-identity";
 import { getKbArticleBySlug } from "@/lib/kb";
 import { ArticleView } from "./ArticleView";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const GUEST_UUID = "00000000-0000-0000-0000-000000000000";
 
 export default async function KbArticlePage(props: {
   params: Promise<{ slug: string }>;
@@ -32,8 +31,8 @@ export default async function KbArticlePage(props: {
   }
 
   const actor = isAuthed ? await getSessionActor() : null;
-  const userId = actor?.userId ?? GUEST_UUID;
-  const tenantId = actor?.tenantId ?? GUEST_UUID;
+  const userId = actor?.userId ?? GUEST_PLACEHOLDER_UUID;
+  const tenantId = actor?.tenantId ?? GUEST_PLACEHOLDER_UUID;
 
   const article = await getKbArticleBySlug({ userId, tenantId }, slug);
   if (!article) notFound();

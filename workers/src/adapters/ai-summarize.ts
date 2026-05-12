@@ -24,7 +24,7 @@ import {
 } from "../ingestion/quality.js";
 
 export const AI_SUMMARIZE_PROMPT_VERSION = "2026-05-11.1";
-const MODEL = "llama-3.3-70b-versatile";
+const MODEL = process.env.AI_SUMMARIZE_MODEL ?? "llama-3.3-70b-versatile";
 
 const SYSTEM_PROMPT = `You are an analyst summarizing AI-industry articles for a solo psychiatrist who runs a small private practice and evaluates AI tools as a small-business owner. The user is a clinician but you are NOT advising on medical decisions and you do NOT reference patients or PHI. Frame every application generically — treat the user as someone who happens to be a clinician, not as a clinician seeking clinical AI guidance.
 

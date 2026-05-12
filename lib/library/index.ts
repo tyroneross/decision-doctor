@@ -29,6 +29,7 @@ import {
 import { runWithActor, withActor } from "@/lib/db/actor";
 import { eq, or } from "drizzle-orm";
 import { type BodyKind, normalizeBodyKind, isBlockedBodyKind } from "@/lib/corpus/body-kind";
+import { GUEST_TENANT_ID, GUEST_USER_ID } from "@/lib/guest-identity";
 
 // ---- Public type exports ----------------------------------------------------
 
@@ -477,8 +478,8 @@ export async function searchLibrary(
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  const userId = opts.userId ?? "00000000-0000-0000-0000-000000000000";
-  const tenantId = opts.tenantId ?? "00000000-0000-0000-0000-000000000000";
+  const userId = opts.userId ?? GUEST_USER_ID;
+  const tenantId = opts.tenantId ?? GUEST_TENANT_ID;
 
   const activeKinds =
     opts.kinds ??

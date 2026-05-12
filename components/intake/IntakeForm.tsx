@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AhpPairwise, type AhpCriterion } from "@/components/elicitation/AhpPairwise";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { GUEST_PLACEHOLDER_UUID } from "@/lib/guest-identity";
 
 type FieldKind = "number" | "text" | "select" | "boolean";
 type Field = {
@@ -92,8 +93,8 @@ export function IntakeForm({ template }: { template: PublicTemplate }) {
         fields: notes.trim() ? { ...values, _notes: notes.trim() } : values,
         // userId/tenantId are server-overridden, but Zod requires shape; pass uuid-zero placeholders.
         context: {
-          userId: "00000000-0000-0000-0000-000000000000",
-          tenantId: "00000000-0000-0000-0000-000000000000",
+          userId: GUEST_PLACEHOLDER_UUID,
+          tenantId: GUEST_PLACEHOLDER_UUID,
         },
         // F-10: route to Stage 1B (AHP) only when the user opted in AND filled
         // enough pairs. Otherwise the server-side default LLM path runs.

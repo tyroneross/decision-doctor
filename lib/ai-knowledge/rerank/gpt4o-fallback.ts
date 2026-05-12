@@ -10,7 +10,7 @@ import "server-only";
 import OpenAI from "openai";
 import type { RerankInput, RerankResult } from "./types";
 
-const MODEL = "gpt-4o-mini";
+const MODEL = process.env.OPENAI_RERANK_MODEL ?? "gpt-4o-mini";
 
 let _client: OpenAI | null = null;
 function client(): OpenAI {
