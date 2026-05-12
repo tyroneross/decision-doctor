@@ -11,6 +11,15 @@
 // updates a module-local last-fire map exposed via /cron-status.
 import cron from "node-cron";
 import { getBoss } from "./queue.js";
+import { getPool } from "./db.js";
+
+// Threshold above which the embed-gap health-check logs a warning event.
+// Set to 100 per the F-31 recall-fixes plan: any sustained gap >100 means
+// the embed-document queue is falling behind ingestion. Tunable via env so
+// ops can dampen alerts during legitimate large backfills.
+const EMBED_GAP_WARN_THRESHOLD = Number(
+  process.env.EMBED_GAP_WARN_THRESHOLD ?? 100,
+);
 
 let _registered = false;
 
@@ -96,6 +105,47 @@ const REGISTRY: ScheduleDef[] = [
     fire: async () => {
       // TODO(F-31): wire when the Perplexity hub adapter lands.
       // Perplexity Hub may need scraping (need to verify feed availability).
+    },
+  },
+
+  // ----- F-31 FIX-2: embed-gap health-check -----
+  // Detects when corpus_documents are accumulating without matching
+  // corpus_embeddings rows. Emits a structured warning event so Railway log
+  // tailing / metric scraping can alert. Cadence: hourly at :05 (offset from
+  // the arxiv-cs-ai-hourly :00 tick to avoid contention with the embed jobs
+  // that arxiv-fetch chain-enqueues). Pure read query — no writes, no jobs.
+  {
+    name: "embed-gap-health-hourly",
+    cron: "5 * * * *",
+    fire: async () => {
+      const pool = getPool();
+      const { rows } = await pool.query<{
+        total: string;
+        embedded: string;
+        gap: string;
+      }>(
+        `SELECT
+           (SELECT count(*) FROM corpus_documents)::text AS total,
+           (SELECT count(DISTINCT document_id) FROM corpus_embeddings)::text AS embedded,
+           ((SELECT count(*) FROM corpus_documents) -
+            (SELECT count(DISTINCT document_id) FROM corpus_embeddings))::text AS gap`,
+      );
+      const r = rows[0]!;
+      const gap = Number(r.gap);
+      const total = Number(r.total);
+      const pct = total > 0 ? Math.round((gap / total) * 10000) / 100 : 0;
+      const level = gap > EMBED_GAP_WARN_THRESHOLD ? "warn" : "info";
+      console.log(
+        JSON.stringify({
+          event: "embed-gap-health",
+          level,
+          total,
+          embedded: Number(r.embedded),
+          gap,
+          gap_pct: pct,
+          threshold: EMBED_GAP_WARN_THRESHOLD,
+        }),
+      );
     },
   },
 
