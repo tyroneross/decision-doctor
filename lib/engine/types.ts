@@ -298,6 +298,12 @@ export interface AiTaskRecommendation {
 
 /**
  * Input to runRecommendation().
+ *
+ * scoringInput is an optional partial set of user-reported context that
+ * feeds the 9-criteria scorer. The intake collects 5 of the 6 fields;
+ * dataReadiness has no question and falls back to a server default.
+ * Older callers / guest surfaces / API consumers without intake omit
+ * scoringInput entirely and the orchestrator applies its full default set.
  */
 export interface RecommendationInput {
   painPath: PainPathId;
@@ -305,6 +311,15 @@ export interface RecommendationInput {
   challengeText: string;
   /** Desired outcome / goal from the intake. */
   goal?: string;
+  /** User-reported scoring context from the intake (E3 wiring). */
+  scoringInput?: {
+    painSeverity?: number;
+    frequency?: number;
+    timeBurden?: number;
+    riskTolerance?: number;
+    aiComfort?: number;
+    dataReadiness?: number;
+  };
   /** User context forwarded for RLS (server overrides client-supplied). */
   userId?: string;
   tenantId?: string;
