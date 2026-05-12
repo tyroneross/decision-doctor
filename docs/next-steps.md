@@ -171,4 +171,4 @@ This doc is the **execution playbook** for what to dispatch next. Items are orde
 - `docs/research/f08-f09-plan-2026-05-10.md` — concrete file diffs for the next 2 chunks
 - `docs/research/algorithm-problem-fit-2026-05-10.md` — algorithm × problem-type matrix
 - `docs/research/question-type-coverage-2026-05-10.md` — coverage tracker with status + F-criteria mapping
-- `STATUS.md` — historical build phases + open follow-ups (Vercel preview env, Resend domain, Sentry)
+- `docs/handover/STATUS.md` — historical build phases + open follow-ups (Vercel preview env, Resend domain, Sentry)

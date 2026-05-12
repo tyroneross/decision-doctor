@@ -248,4 +248,4 @@ When build-loop's `architecture-scan` runs in Phase 1 Assess or Phase 4 Review:
 - `docs/research/f08-f09-plan-2026-05-10.md` — Vercel vs Railway capacity assessment (§2)
 - `docs/ux/considerations.md` — UX nav paths + inputs/outputs (mirror of this doc on the UX side)
 - `docs/design/calm-precision.md` — design system reference
-- `STATUS.md` — build phase + open follow-ups
+- `docs/handover/STATUS.md` — build phase + open follow-ups

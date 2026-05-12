@@ -35,7 +35,7 @@ railway variables set \
 railway up --service decision-doctor-workers
 ```
 
-See `../WORKERS_DEPLOY.md` for the full deploy checklist.
+See `../docs/operations/workers-deploy.md` for the full deploy checklist.
 
 ## Architecture
 

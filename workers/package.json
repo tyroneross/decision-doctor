@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "description": "Background worker service for Decision Doctor — pg-boss queue + node-cron schedules + arXiv/Anthropic/OpenAI/Perplexity ingest adapters. Runs on Railway.",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "author": "Tyrone Ross",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

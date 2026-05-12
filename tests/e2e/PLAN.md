@@ -157,4 +157,4 @@ That's expected for a hackathon.
 | Scalability (§7) | S-1 + S-2 within p95 < 6 s; S-3 < 5 % errors |
 | Dependency map (§8) | No undocumented SPOF; every dep has a failure-mode entry |
 
-If any gate misses, write a simplification or hardening task to STATUS.md "Open follow-ups".
+If any gate misses, write a simplification or hardening task to `docs/handover/STATUS.md` "Open follow-ups".

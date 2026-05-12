@@ -149,7 +149,7 @@ Human-readable architecture summary lives at `docs/architecture/architecture.md`
 | Research log — F-08/F-09 architecture plan | `docs/research/f08-f09-plan-2026-05-10.md` |
 | Next-steps execution plan | `docs/next-steps.md` |
 | Hackathon material | `Reference files/Hackathon and Rubric/` (gitignored) |
-| Status + open follow-ups | `STATUS.md` |
+| Status + open follow-ups | `docs/handover/STATUS.md` |
 | Mockups (visual north star) | `/Users/tyroneross/dev/git-folder/UI Guidance/mockups/decision-doctor--v2-*` |
 
 When adding a new doc, place it in the matching subfolder and add a row to this table.
