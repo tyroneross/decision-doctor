@@ -359,6 +359,86 @@ export const RecommendationMethodTraceEntrySchema = z.object({
   output: z.unknown(),
 });
 
+// ---------------------------------------------------------------------------
+// Workflow v2 — ActivityStep + WorkflowRecommendation zod schemas
+// ---------------------------------------------------------------------------
+
+const DataSensitivitySchema = z.enum(["low", "pii", "phi"]);
+const ValueClassSchema = z.enum(["value-add", "necessary-non-value-add", "waste"]);
+const EloundouBetaSchema = z.union([z.literal(0), z.literal(0.5), z.literal(1)]);
+const AiRungSchema = z.enum(["none", "prompt", "skill", "plugin", "agent"]);
+const StepOriginSchema = z.enum(["existing", "new"]);
+const BuilderPermissionTierSchema = z.enum(["T0", "T1", "T2", "T3"]);
+
+export const ActivityStepSchema = z.object({
+  id: z.string().min(1).max(32),
+  parentId: z.string().nullable(),
+  order: z.number().int().min(0),
+  title: z.string().min(1).max(200),
+  origin: StepOriginSchema,
+  inputs: z.array(z.string()),
+  outputs: z.array(z.string()),
+  currentTool: z.string().nullable(),
+  jobRole: z.string().min(1).max(120),
+  dataNeeded: z.array(z.object({ source: z.string(), sensitivity: DataSensitivitySchema })),
+  integrations: z.array(z.string()),
+  valueClass: ValueClassSchema,
+  estDurationMins: z.number().positive().nullable(),
+  frequencyPerMonth: z.number().positive().nullable(),
+  aiSuitability: z.object({
+    eloundouBeta: EloundouBetaSchema,
+    predictability: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+    volume: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+    dataAvailability: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+    exceptionFrequency: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+    compositeScore: z.number().min(0).max(1),
+  }),
+  aiRung: AiRungSchema,
+  aiSuggestion: z.object({
+    label: z.string(),
+    summary: z.string(),
+    artifactSeed: z.string().nullable(),
+    permissionTier: BuilderPermissionTierSchema,
+    upstreamPlugin: z.object({
+      name: z.string(),
+      repoUrl: z.string(),
+      installCommand: z.string(),
+    }).optional(),
+  }).nullable(),
+  systemImpact: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+  userPain: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+  lynchpinScore: z.number().min(0).max(1),
+  isLynchpin: z.boolean(),
+  evolutionNotes: z.string().nullable(),
+});
+export type ActivityStep = z.infer<typeof ActivityStepSchema>;
+
+export const WorkflowRecommendationSchema = z.object({
+  workflowTitle: z.string().min(1).max(200),
+  outcome: z.string().min(1).max(400),
+  scope: z.object({
+    in: z.array(z.string()),
+    out: z.array(z.string()),
+  }),
+  steps: z.array(ActivityStepSchema),
+  startHere: z.object({
+    stepIds: z.array(z.string()).min(1).max(3),
+    rationale: z.string().min(1).max(400),
+  }),
+  horizon: z.array(z.object({
+    label: z.enum(["this week", "this month", "this quarter", "this year"]),
+    description: z.string().min(1).max(400),
+    upliftedStepIds: z.array(z.string()),
+    newStepIds: z.array(z.string()),
+  })),
+  artifacts: z.array(z.object({
+    stepId: z.string(),
+    rung: z.enum(["prompt", "skill", "plugin", "agent"]),
+    body: z.string(),
+  })),
+});
+export type WorkflowRecommendation = z.infer<typeof WorkflowRecommendationSchema>;
+
 /**
  * AiTaskRecommendation — primary V2 output object.
  * Returned by runRecommendation() and persisted in ai_recommendations.
@@ -371,6 +451,7 @@ export const AiTaskRecommendationSchema = z.object({
   recommendedTask: z.string().min(1).max(200),
   recommendedApproach: RecommendationApproachSchema,
   whyThisTask: z.string().min(1).max(600),
+  /** @deprecated kept for one release; read from `output.body` when kind === "checklist" */
   starterSolution: z.string().min(1).max(2000),
   guardrails: z.array(z.string().min(1).max(200)).min(1).max(6),
   tryThisWeek: z.array(z.string().min(1).max(200)).min(1).max(5),
@@ -378,6 +459,10 @@ export const AiTaskRecommendationSchema = z.object({
   adoptionPathway: AdoptionPathwaySchema,
   confidence: z.number().min(0).max(100),
   methodTrace: z.array(RecommendationMethodTraceEntrySchema),
+  output: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("checklist"), body: z.string() }),
+    z.object({ kind: z.literal("workflow"), workflow: WorkflowRecommendationSchema }),
+  ]).optional(),
 });
 export type AiTaskRecommendation = z.infer<typeof AiTaskRecommendationSchema>;
 

@@ -275,6 +275,111 @@ export interface RecommendationMethodTraceEntry {
   output: unknown;
 }
 
+// ---------------------------------------------------------------------------
+// Workflow v2 — primitive scalar types
+// ---------------------------------------------------------------------------
+
+/** HTA depth — cap at 3 per the spec. */
+export type HtaLevel = 1 | 2 | 3;
+
+/** Lean value-stream classification per step. */
+export type ValueClass = "value-add" | "necessary-non-value-add" | "waste";
+
+/** Eloundou et al. (Science 2024) β-exposure: 0 = not, 0.5 = LLM + software, 1 = standalone LLM. */
+export type EloundouBeta = 0 | 0.5 | 1;
+
+/** AI maturity rung the step starts on. Maps to the existing AdoptionPathwayKind set + a `none` floor. */
+export type AiRung = "none" | "prompt" | "skill" | "plugin" | "agent";
+
+/** Step origin — does this step exist in today's workflow, or only emerge once AI is introduced? */
+export type StepOrigin = "existing" | "new";
+
+/** Data sensitivity for a per-step data requirement. */
+export type DataSensitivity = "low" | "pii" | "phi";
+
+// (reuse existing BuilderPermissionTier — don't redeclare)
+
+// ---------------------------------------------------------------------------
+// Workflow v2 — ActivityStep
+// ---------------------------------------------------------------------------
+
+export interface ActivityStep {
+  /** Dotted HTA id: "1", "1.2", "1.2.3" — depth ≤ 3. */
+  id: string;
+  parentId: string | null;
+  /** Sibling order at this depth, 0-indexed. */
+  order: number;
+  /** Imperative verb phrase. */
+  title: string;
+  origin: StepOrigin;
+  /** Strings describing what arrives at this step. */
+  inputs: string[];
+  outputs: string[];
+  /** How it's done today (Outlook, Excel, manual notes); null = no current tool. */
+  currentTool: string | null;
+  /** Owner — free text role label like "Practice manager". */
+  jobRole: string;
+  dataNeeded: Array<{ source: string; sensitivity: DataSensitivity }>;
+  integrations: string[];
+  valueClass: ValueClass;
+  estDurationMins: number | null;
+  frequencyPerMonth: number | null;
+  aiSuitability: {
+    eloundouBeta: EloundouBeta;
+    predictability: 1 | 2 | 3 | 4 | 5;
+    volume: 1 | 2 | 3 | 4 | 5;
+    dataAvailability: 1 | 2 | 3 | 4 | 5;
+    exceptionFrequency: 1 | 2 | 3 | 4 | 5; // 1 = many exceptions, 5 = none
+    compositeScore: number; // 0..1
+  };
+  aiRung: AiRung;
+  aiSuggestion: {
+    label: string;
+    summary: string;
+    artifactSeed: string | null;
+    permissionTier: BuilderPermissionTier;
+    /** Populated by catalog matcher when aiRung === "plugin" and a match exists. */
+    upstreamPlugin?: { name: string; repoUrl: string; installCommand: string };
+  } | null;
+  systemImpact: 1 | 2 | 3 | 4 | 5;
+  userPain: 1 | 2 | 3 | 4 | 5;
+  lynchpinScore: number; // 0..1
+  isLynchpin: boolean;
+  evolutionNotes: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Workflow v2 — WorkflowRecommendation
+// ---------------------------------------------------------------------------
+
+export interface WorkflowRecommendation {
+  workflowTitle: string;
+  outcome: string;
+  scope: { in: string[]; out: string[] };
+  steps: ActivityStep[];
+  /** Top 1–3 lynchpin step IDs. */
+  startHere: {
+    stepIds: string[];
+    rationale: string;
+  };
+  horizon: Array<{
+    label: "this week" | "this month" | "this quarter" | "this year";
+    description: string;
+    upliftedStepIds: string[];
+    newStepIds: string[];
+  }>;
+  /** Per-lynchpin artifact (prompt body / skill scaffold / plugin spec). */
+  artifacts: Array<{
+    stepId: string;
+    rung: Exclude<AiRung, "none">;
+    body: string;
+  }>;
+}
+
+// ---------------------------------------------------------------------------
+// AiTaskRecommendation — primary V2 output object
+// ---------------------------------------------------------------------------
+
 /**
  * Primary output of the V2 recommendation engine (runRecommendation()).
  * Mirrors AiTaskRecommendationSchema in shared/schema.ts.
@@ -287,6 +392,7 @@ export interface AiTaskRecommendation {
   recommendedTask: string;
   recommendedApproach: RecommendationApproach;
   whyThisTask: string;
+  /** @deprecated kept for one release; read from `output.body` when kind === "checklist" */
   starterSolution: string;
   guardrails: string[];
   tryThisWeek: string[];
@@ -294,6 +400,9 @@ export interface AiTaskRecommendation {
   adoptionPathway: AdoptionPathway;
   confidence: number;
   methodTrace: RecommendationMethodTraceEntry[];
+  output?:
+    | { kind: "checklist"; body: string }
+    | { kind: "workflow"; workflow: WorkflowRecommendation };
 }
 
 /**

@@ -9,7 +9,7 @@ loadEnv({ path: path.resolve(process.cwd(), ".env.local") });
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.test.ts", "lib/engine/__tests__/**/*.test.ts"],
     testTimeout: 15_000, // integration tests against Neon may take a few seconds
     hookTimeout: 15_000,
     globals: false,
