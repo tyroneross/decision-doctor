@@ -19,6 +19,8 @@ import {
   reframeMessageFor,
 } from "@/lib/engine/stage0-classifier";
 import { getSessionActor } from "@/lib/auth-session";
+import { isGuestRequest } from "@/lib/auth-guest";
+import { GUEST_USER_ID, GUEST_TENANT_ID } from "@/lib/guest-identity";
 import { runWithActor, withActor } from "@/lib/db/actor";
 import { decisions, auditEvents } from "@/lib/db/schema";
 import { checkRateLimit } from "@/lib/ratelimit";
@@ -89,11 +91,18 @@ const AssistantPayloadSchema = z.discriminatedUnion("status", [
 ]);
 
 export async function POST(req: Request) {
-  // 1. Auth
-  const actor = await getSessionActor();
-  if (!actor) {
+  // 1. Auth — guests allowed. Engine + Groq run normally; only DB persist
+  // is skipped. Guest actor uses synthetic UUIDs and RLS-narrowed scope.
+  const sessionActor = await getSessionActor();
+  const guest = !sessionActor && (await isGuestRequest());
+  if (!sessionActor && !guest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  const actor = sessionActor ?? {
+    userId: GUEST_USER_ID,
+    tenantId: GUEST_TENANT_ID,
+  };
+  const isGuest = !sessionActor;
 
   // 2. Parse + validate
   const body = await req.json().catch(() => null);
@@ -103,8 +112,9 @@ export async function POST(req: Request) {
   }
 
   // 3. Rate limit (shared bucket with /api/decisions — chat-driven runs cost
-  //    the same Groq budget).
-  const rl = await checkRateLimit(actor.userId);
+  //    the same Groq budget). Guests share a single bucket via "guest:shared"
+  //    so a stampede on the demo doesn't burn unbounded Groq credits.
+  const rl = await checkRateLimit(isGuest ? "guest:shared" : actor.userId);
   if (!rl.ok) {
     return NextResponse.json(
       {
@@ -123,25 +133,28 @@ export async function POST(req: Request) {
     const msg = parsed.data.messages[i]!;
     const phi = detectPHI(msg.content);
     if (phi.hasPHI) {
-      // Best-effort audit row — fire-and-forget.
-      void runWithActor(
-        { userId: actor.userId, tenantId: actor.tenantId },
-        () =>
-          withActor(async (tx) => {
-            await tx.insert(auditEvents).values({
-              userId: actor.userId,
-              tenantId: actor.tenantId,
-              action: "chat.phi_blocked",
-              metadata: {
-                reasons: phi.reasons,
-                message_index: i,
-                message_role: msg.role,
-              },
-            });
-          }),
-      ).catch(() => {
-        // Audit is non-fatal.
-      });
+      // Best-effort audit row — fire-and-forget. Skipped for guests (no
+      // tenant FK + nothing to attribute to).
+      if (!isGuest) {
+        void runWithActor(
+          { userId: actor.userId, tenantId: actor.tenantId },
+          () =>
+            withActor(async (tx) => {
+              await tx.insert(auditEvents).values({
+                userId: actor.userId,
+                tenantId: actor.tenantId,
+                action: "chat.phi_blocked",
+                metadata: {
+                  reasons: phi.reasons,
+                  message_index: i,
+                  message_role: msg.role,
+                },
+              });
+            }),
+        ).catch(() => {
+          // Audit is non-fatal.
+        });
+      }
 
       return NextResponse.json(
         {
@@ -286,9 +299,12 @@ export async function POST(req: Request) {
     ];
   }
 
-  // Persist + audit (best-effort)
+  // Persist + audit (best-effort). Skipped entirely for guests — the
+  // recommendation is returned ephemerally with decisionId="ephemeral".
   let decisionId: string | undefined;
-  try {
+  if (isGuest) {
+    // No-op; guests never write to decisions or audit tables.
+  } else try {
     await runWithActor(
       { userId: actor.userId, tenantId: actor.tenantId },
       () =>

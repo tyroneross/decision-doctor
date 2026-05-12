@@ -212,9 +212,10 @@ export default async function AppLayout({
 
       <MobileBottomNav guest={guest} />
       <ServiceWorkerRegister />
-      {/* ⌘K palette hits /api/search which 401s for guests; hide rather
-          than wire a noisy fetch the user can't act on. */}
-      {!guest && <CommandPalette />}
+      {/* ⌘K palette hits /api/search. Backend accepts guests via
+          GUEST_USER_ID + RLS-narrowed global scope — palette is available
+          to everyone; guests get global-corpus results only. */}
+      <CommandPalette />
       {guest && <GuestBanner />}
     </div>
   );
