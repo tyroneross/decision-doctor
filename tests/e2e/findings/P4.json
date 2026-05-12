@@ -9,13 +9,13 @@
     "recommendation": "shift mix (accept insurance) OR restructure pricing (sliding scale / packages); cutting cash rate alone unlikely to fix demand",
     "confidenceRange": "55-75"
   },
-  "latencyMs": 3077,
+  "latencyMs": 6968,
   "error": null,
   "output": {
     "recommendation": {
       "option": "Add a tiered or premium service line",
-      "confidence": 57,
-      "rationale": "Adding a premium service line lets you keep the current base rate, preserving patient retention, while generating higher‑margin revenue to support operational sustainability, which aligns with your low risk tolerance."
+      "confidence": 59,
+      "rationale": "Adding a premium tier lets you keep current patients while boosting revenue and covering operating costs, matching your focus on retention, sustainability, and low‑risk stability."
     },
     "alternatives": [
       {
@@ -40,16 +40,17 @@
         "output": {
           "values": [
             "patient retention",
-            "operational sustainability"
+            "operational sustainability",
+            "revenue stability"
           ],
           "adjustedWeights": {
-            "revenue": 0.1842105263157895,
-            "retention": 0.39473684210526316,
-            "sustainability": 0.26315789473684215,
-            "signaling": 0.15789473684210528
+            "revenue": 0.18584070796460175,
+            "retention": 0.3716814159292035,
+            "sustainability": 0.26548672566371684,
+            "signaling": 0.17699115044247787
           },
-          "rationale": "Low risk tolerance and cash‑only practice make keeping patients and sustainable pricing more important than short‑term revenue gains.",
-          "reasoning": "We need to produce JSON with values (1-3 short statements), weightAdjustments mapping criterion ids to numbers between 0.5 and 2.0, and rationale sentence.\n\nWe have intake: currentRateUSD 140, monthsSinceLastIncrease 18, insuranceShare 0, cashShare 100, avgFillRate 55, competitorBenchmarkUSD 130, riskTolerance low.\n\nInterpretation: Solo practitioner charges $140, hasn't increased in 18 months, all cash patients, fill rate 55% (low), competitor benchmark $130 (lower). Low risk tolerance.\n\nThus they likely care about sustainability (avoid losing patients), retention (need to keep existing patients), revenue impact but low risk tolerance may make them cautious about raising price too much. Since competitor lower, raising price may hurt retention. So weight adjustments: increase retention and sustainability, decrease revenue impact maybe? Also market signaling maybe moderate.\n\nWe need 1-3 short value statements: e.g., \"patient retention\", \"operational sustainability\", \"cash flow stability\". Choose 2-3.\n\nWeight adjustments: default weights: revenue 0.3, retention 0.3, sustainability 0.2, signaling 0.2.\n\nGiven low risk tolerance, they prioritize retention and sustainability over revenue. So increase retention weight factor 1.5, sustainability 1.5, maybe decrease revenue 0.7, signaling maybe 0.9.\n\nAll factors must be between 0.5 and 2.0.\n\nProvide JSON.\n\nCheck validity.\n\nLet's craft:\n\n{\n \"values\":[\"patient retention\",\"operational sustainability\"],\n \"weightAdjustments\":{\"revenue\":0.7,\"retention\":1.5,\"sustainability\":1.5,\"signaling\":0.9},\n \"rationale\":\"Low risk tolerance and cash‑only practice make keeping patients and sustainable pricing more important than short‑term revenue gains.\"\n}\n\nMake sure compact JSON, no extra spaces? It's okay.\n\nCheck numbers: all within range.\n\nReturn only JSON."
+          "rationale": "Low risk tolerance and low fill rate push the user to prioritize keeping patients and a sustainable pricing model over revenue gains.",
+          "reasoning": "We need to produce JSON with values (1-3 short statements), weightAdjustments mapping criterion ids to numbers between 0.5 and 2.0, and rationale sentence.\n\nWe have template criteria: revenue, retention, sustainability, signaling. Default weights: revenue 0.3, retention 0.3, sustainability 0.2, signaling 0.2.\n\nUser intake: currentRateUSD 140, monthsSinceLastIncrease 18, insuranceShare 0, cashShare 100, avgFillRate 55, competitorBenchmarkUSD 130, riskTolerance low.\n\nInterpretation: Solo practitioner charging $140, hasn't increased in 18 months, all cash patients, fill rate 55% (low), competitor benchmark $130 (lower). Low risk tolerance.\n\nThus they likely care about sustainability (operational sustainability) and patient retention (since fill rate low, need to keep patients). Revenue impact maybe less prioritized because low risk tolerance and they already have high price relative to competitors; raising price may risk retention. So they'd maybe consider lowering price to improve fill rate, but low risk tolerance suggests they avoid risky revenue changes. So weight adjustments: sustainability up (maybe 1.5), retention up (1.4), revenue down (0.7), signaling maybe moderate (1.0). Must be between 0.5 and 2.0.\n\nValues: short statements: \"patient retention\", \"operational sustainability\", \"revenue stability\". Up to 3.\n\nLet's craft JSON:\n\n{\n \"values\":[\"patient retention\",\"operational sustainability\",\"revenue stability\"],\n \"weightAdjustments\":{\"revenue\":0.7,\"retention\":1.4,\"sustainability\":1.5,\"signaling\":1.0},\n \"rationale\":\"Low risk tolerance and low fill rate push the user to prioritize keeping patients and a sustainable pricing model over revenue gains.\"\n}\n\nCheck JSON compact, no extra spaces? It's fine.\n\nMake sure weightAdjustments values within range: 0.7,1.4,1.5,1.0 okay.\n\nReturn only JSON."
         }
       },
       {
@@ -79,10 +80,10 @@
         "name": "weights",
         "output": {
           "weights": {
-            "revenue": 0.1842105263157895,
-            "retention": 0.39473684210526316,
-            "sustainability": 0.26315789473684215,
-            "signaling": 0.15789473684210528
+            "revenue": 0.18584070796460175,
+            "retention": 0.3716814159292035,
+            "sustainability": 0.26548672566371684,
+            "signaling": 0.17699115044247787
           },
           "notes": "Weights normalized across 4 criteria."
         }
@@ -109,7 +110,7 @@
             {
               "aId": "raise-modest",
               "bId": "hold-rates",
-              "concordance": 0.605263157894737,
+              "concordance": 0.6283185840707965,
               "discordance": 0.19999999999999996
             },
             {
@@ -121,25 +122,25 @@
             {
               "aId": "raise-modest",
               "bId": "shift-cash-mix",
-              "concordance": 0.39473684210526316,
+              "concordance": 0.3716814159292035,
               "discordance": 0.15000000000000002
             },
             {
               "aId": "hold-rates",
               "bId": "raise-modest",
-              "concordance": 0.39473684210526316,
+              "concordance": 0.3716814159292035,
               "discordance": 0.30000000000000004
             },
             {
               "aId": "hold-rates",
               "bId": "tiered-services",
-              "concordance": 0.39473684210526316,
+              "concordance": 0.3716814159292035,
               "discordance": 0.35
             },
             {
               "aId": "hold-rates",
               "bId": "shift-cash-mix",
-              "concordance": 0.39473684210526316,
+              "concordance": 0.3716814159292035,
               "discordance": 0.4
             },
             {
@@ -151,31 +152,31 @@
             {
               "aId": "tiered-services",
               "bId": "hold-rates",
-              "concordance": 0.605263157894737,
+              "concordance": 0.6283185840707965,
               "discordance": 0.1499999999999999
             },
             {
               "aId": "tiered-services",
               "bId": "shift-cash-mix",
-              "concordance": 0.5526315789473685,
+              "concordance": 0.5486725663716814,
               "discordance": 0.09999999999999998
             },
             {
               "aId": "shift-cash-mix",
               "bId": "raise-modest",
-              "concordance": 0.605263157894737,
+              "concordance": 0.6283185840707965,
               "discordance": 0.19999999999999996
             },
             {
               "aId": "shift-cash-mix",
               "bId": "hold-rates",
-              "concordance": 0.605263157894737,
+              "concordance": 0.6283185840707965,
               "discordance": 0.3999999999999999
             },
             {
               "aId": "shift-cash-mix",
               "bId": "tiered-services",
-              "concordance": 0.605263157894737,
+              "concordance": 0.6283185840707965,
               "discordance": 0.25
             }
           ]
@@ -189,83 +190,210 @@
             {
               "id": "tiered-services",
               "label": "Add a tiered or premium service line",
-              "closeness": 0.6856
+              "closeness": 0.6945
             },
             {
               "id": "hold-rates",
               "label": "Hold current rates",
-              "closeness": 0.5364
+              "closeness": 0.5136
             },
             {
               "id": "shift-cash-mix",
               "label": "Drop one insurance panel, shift toward cash",
-              "closeness": 0.4636
+              "closeness": 0.4864
             }
           ],
-          "confidence": 57,
+          "confidence": 59,
           "robustCandidateId": "tiered-services",
-          "reasoning": "We need to produce JSON with rationale and three workload reducers. The chosen option is \"Add a tiered or premium service line\". Values: patient retention, operational sustainability. Confidence 57 (moderate). Provide rationale: 1-2 sentences explaining why this option ranked first, referencing values. Then three reducers: one prompt, one playbook, one skill. Must be for solo healthcare practitioner. Provide titles <10 words. Description one sentence. Artifact fields accordingly. automationLevel user_executes. coverage: maybe full_task for prompt, partial_task for playbook, task_setup for skill. permission_tier T0 or T1. Provide skillName lowercase hyphenated.\n\nPrompt: maybe \"Generate tiered service description\". Playbook: steps to design tiered pricing. Skill: maybe \"tiered-pricing-calculator\". Ensure each type distinct.\n\nMake sure JSON compact (no whitespace? but can have spaces). Provide exactly three items.\n\nLet's craft.\n\nRationale: \"Adding a premium service line lets you keep the current base rate, preserving patient retention, while generating higher‑margin revenue to support operational sustainability, which aligns with your low risk tolerance.\"\n\nNow reducers:\n\n1. type: prompt\ntitle: \"Create premium service outline\"\ndescription: \"Generate a clear description of the new higher‑priced offering to share with patients.\"\nartifact: promptText: \"I need a concise description for a new premium service line (e.g., extended sessions and on‑call support) for my solo practice, highlighting benefits and pricing.\"\n\ncoverage: full_task (creating description). permission_tier T0.\n\n2. type: playbook\ntitle: \"Implement tiered pricing rollout\"\ndescription: \"Step‑by‑step guide to launch the new tier without disrupting existing patients.\"\nartifact: playbookSteps: [\n\"Define premium service features and price point (e.g., $180 per session).\",\n\"Communicate the new option to existing patients via email and office signage, emphasizing optional nature.\",\n\"Update scheduling and billing software with a separate service code.\",\n\"Monitor enrollment and adjust capacity after 30 days.\"\n]\ncoverage: partial_task (implementation). permission_tier T0.\n\n3. type: skill\ntitle: \"Calculate break‑even for premium tier\"\ndescription: \"Tool to estimate how many premium appointments are needed to cover added costs.\"\nartifact: skillName: \"break-even-tier-calculator\"\ncoverage: task_setup (calculating). permission_tier T0.\n\nCheck schema: each artifact only contains appropriate field. Yes.\n\nNow produce JSON. Ensure no extra fields. Provide array of three objects. Ensure each object includes type, title, description, artifact, automationLevel, coverage, permission_tier.\n\nLet's craft final."
+          "reasoning": "We need to output JSON with rationale and three workloadReducers (different types). Chosen option: Add a tiered or premium service line. Values: patient retention, operational sustainability, revenue stability. Low risk tolerance. Confidence 59 (moderate). Need rationale 1-2 sentences referencing values.\n\nWorkload reducers: need at least one AI-driven workflow to reclaim clinical time spent on non-clinical work. Could be a prompt to draft patient communications about new premium service line, summarizing insurance? Actually no insurance share. Could be a prompt to generate marketing email to patients about new tiered service, saving time. Also a playbook for implementing tiered pricing (task setup). And a skill maybe a revenue snapshot skill.\n\nWe must use three different types: prompt, playbook, skill. All automationLevel user_executes. permission_tier: prompt T0, playbook T0? Playbook also T0 (paste-only). Skill T1.\n\nMake sure artifact fields correct.\n\nPrompt reducer: embed user's intake context: \"I run a ... practice with ... visits/week and lose ~... hours to ...\"? We have avgFillRate 55% maybe indicates lost capacity. Provide context: \"I run a primary care practice with 140 USD base rate, 55% fill, and lose ~X hours to scheduling inefficiencies.\" Need to embed intake context. Provide prompt that drafts patient communication announcing new premium service line, specifying output spec: a ready-to-send email.\n\nPlaybook reducer: steps to set up tiered service line: define service tiers, adjust scheduling, update billing, communicate to staff.\n\nSkill reducer: name like \"revenue-trend-dashboard\". Provide skillName.\n\nNow produce JSON compact.\n\nLet's craft.\n\nRationale: \"Adding a premium tier lets you keep existing patients (retention) while boosting revenue and covering operational costs, aligning with your low risk tolerance and need for stability.\"\n\nNow workloadReducers array.\n\n1. type \"prompt\", title \"Premium service announcement email\", description \"Drafts a patient‑facing email introducing the new tiered offering, saving you writing time.\", artifact: promptText: include context and ask for email. End with \"Output: a concise email ready to copy‑paste.\"\n\n2. type \"playbook\", title \"Implement tiered pricing workflow\", description \"Step‑by‑step guide to launch the new service line without disrupting operations.\", artifact: playbookSteps array of 4-5 imperatives.\n\n3. type \"skill\", title \"Monthly revenue snapshot\", description \"Generates a quick revenue report to monitor the impact of the new tier.\", artifact: skillName: \"monthly-revenue-snapshot\". automationLevel user_executes, coverage partial_task? It generates report, that's a task. coverage \"partial_task\". permission_tier \"T1\".\n\nAll good.\n\nNow produce JSON compact."
+        }
+      },
+      {
+        "stage": 6,
+        "name": "feasibility",
+        "output": {
+          "classifications": [
+            {
+              "title": "Implement tiered pricing workflow",
+              "aiFeasibility": "skill",
+              "feasibilityScore": 100,
+              "impactScore": 40,
+              "combinedScore": 40
+            },
+            {
+              "title": "Monthly revenue snapshot",
+              "aiFeasibility": "skill",
+              "feasibilityScore": 100,
+              "impactScore": 28,
+              "combinedScore": 28
+            },
+            {
+              "title": "Premium service announcement email",
+              "aiFeasibility": "skill",
+              "feasibilityScore": 100,
+              "impactScore": 18,
+              "combinedScore": 18
+            }
+          ],
+          "reasoning": "We need to classify each reducer by aiFeasibility tier: skill, plugin, agent, human.\n\nWe have three reducers:\n\n0: type prompt, title Premium service announcement email, description: Drafts a patient‑facing email introducing new tiered offering, saving writing time. automationLevel user_executes, coverage task_setup. This is a single-turn copy-pasteable email draft. So \"skill\". signals: \"copy-paste\", \"single-turn\". rationale: \"Can be done by pasting a prompt and getting the email draft.\"\n\n1: type playbook, implement tiered pricing workflow, step-by-step guide to launch new service line. This is multi-step but bounded, likely a playbook that user follows. Could be a plugin? It's a guide, not an automated tool. The user executes steps. Could be \"skill\"? But it's multi-step guide, but still user executes. According to rubric, \"skill\" is single-turn copy-pasteable. This is multi-step guide, but not requiring code. Might be \"plugin\"? Plugin is multi-step bounded with small directory layout. This is just a playbook, not code. Could be \"skill\"? The rubric says \"skill\" is single-turn copy-pasteable. This is not single-turn. So maybe \"plugin\"? But plugin expects some code. However classification is about shipping AI workload-reducer. A playbook is a guide, not an AI tool. Could be \"human\"? No, it's not clinical judgment. Probably \"skill\" default ambiguous? The instruction: If ambiguous, prefer \"skill\". But we can consider \"plugin\" if it requires small directory layout. It doesn't. So ambiguous, default to \"skill\". Provide signals: \"guide\", \"multi-step\". Rationale: \"It's a step‑by‑step guide the user follows, no code needed, so treat as low‑friction skill.\"\n\n2: type skill, Monthly revenue snapshot, generates quick revenue report. This is likely a small script or prompt that generates a report. Could be \"skill\" if it's a one-file prompt. It's described as \"Generates a quick revenue report\". Could be a plugin if needs data access. But automationLevel user_executes, coverage partial_task. Likely a skill: user runs a prompt with data. So \"skill\". signals: \"report\", \"single-turn\". rationale: \"User runs a prompt to get a revenue snapshot, no ongoing automation.\"\n\nThus all three skill.\n\nReturn JSON with classifications array in order.\n\nCheck JSON format: {\"classifications\":[{...},{...},{...}]}\n\nEach entry: id, aiFeasibility, signals, rationale.\n\nLet's craft.\n\n"
+        }
+      },
+      {
+        "stage": 7,
+        "name": "scaffold",
+        "output": {
+          "generatedCount": 3,
+          "eligibleReducers": [
+            {
+              "title": "Implement tiered pricing workflow",
+              "fileCount": 2
+            },
+            {
+              "title": "Monthly revenue snapshot",
+              "fileCount": 2
+            },
+            {
+              "title": "Premium service announcement email",
+              "fileCount": 2
+            }
+          ]
         }
       }
     ],
     "workloadReducers": [
       {
-        "type": "prompt",
-        "title": "Create premium service outline",
-        "description": "Generate a clear description of the new higher‑priced offering to share with patients.",
-        "artifact": {
-          "promptText": "I need a concise description for a new premium service line (e.g., extended sessions and on‑call support) for my solo practice, highlighting benefits and pricing."
-        },
-        "automationLevel": "user_executes",
-        "coverage": "full_task",
-        "permission_tier": "T0"
-      },
-      {
         "type": "playbook",
-        "title": "Implement tiered pricing rollout",
-        "description": "Step‑by‑step guide to launch the new tier without disrupting existing patients.",
+        "title": "Implement tiered pricing workflow",
+        "description": "Step‑by‑step guide to launch the new service line without disrupting operations.",
         "artifact": {
           "playbookSteps": [
-            "Define premium service features and price point (e.g., $180 per session).",
-            "Communicate the new option to existing patients via email and office signage, emphasizing optional nature.",
-            "Update scheduling and billing software with a separate service code.",
-            "Monitor enrollment and adjust capacity after 30 days."
+            "Define premium service scope (duration, on‑call hours) and set price point above $140",
+            "Update scheduling software to include new appointment type and allocate slots",
+            "Create billing codes and adjust invoicing templates for the premium tier",
+            "Train staff on eligibility criteria and patient communication script",
+            "Monitor fill rates and revenue weekly, adjusting capacity as needed"
           ]
         },
         "automationLevel": "user_executes",
-        "coverage": "partial_task",
-        "permission_tier": "T0"
+        "coverage": "full_task",
+        "permission_tier": "T0",
+        "aiFeasibility": "skill",
+        "feasibilityRationale": "A step‑by‑step playbook the user follows, no code or ongoing automation needed.",
+        "feasibilityScore": 100,
+        "impactScore": 40,
+        "combinedScore": 40,
+        "scaffold": {
+          "targets": [
+            "claude-code-skill",
+            "codex-skill"
+          ],
+          "files": [
+            {
+              "path": "SKILL.md",
+              "content": "---\nname: implement-tiered-pricing-workflow\ndescription: Step‑by‑step guide to launch the new service line without disrupting operations.\n---\n\n# Implement tiered pricing workflow\n\nRun through these steps in order:\n1. Define premium service scope (duration, on‑call hours) and set price point above $140\n2. Update scheduling software to include new appointment type and allocate slots\n3. Create billing codes and adjust invoicing templates for the premium tier\n4. Train staff on eligibility criteria and patient communication script\n5. Monitor fill rates and revenue weekly, adjusting capacity as needed\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples — use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Decision Doctor on {{ASOF}} from a workload-reducer scoped to \"full_task\" coverage at the T0 permission tier.\n",
+              "language": "markdown"
+            },
+            {
+              "path": "AGENTS.md",
+              "content": "# Implement tiered pricing workflow\n\nRun through these steps in order:\n1. Define premium service scope (duration, on‑call hours) and set price point above $140\n2. Update scheduling software to include new appointment type and allocate slots\n3. Create billing codes and adjust invoicing templates for the premium tier\n4. Train staff on eligibility criteria and patient communication script\n5. Monitor fill rates and revenue weekly, adjusting capacity as needed\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples — use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md — generated from a Decision Doctor workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Decision Doctor on {{ASOF}} for a \"full_task\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
+              "language": "markdown"
+            }
+          ]
+        }
       },
       {
         "type": "skill",
-        "title": "Calculate break‑even for premium tier",
-        "description": "Tool to estimate how many premium appointments are needed to cover added costs.",
+        "title": "Monthly revenue snapshot",
+        "description": "Generates a quick revenue report to monitor the impact of the new tier.",
         "artifact": {
-          "skillName": "break-even-tier-calculator"
+          "skillName": "monthly-revenue-snapshot"
+        },
+        "automationLevel": "user_executes",
+        "coverage": "partial_task",
+        "permission_tier": "T1",
+        "aiFeasibility": "skill",
+        "feasibilityRationale": "User runs a prompt to generate a revenue snapshot without sustained automation.",
+        "feasibilityScore": 100,
+        "impactScore": 28,
+        "combinedScore": 28,
+        "scaffold": {
+          "targets": [
+            "claude-code-skill",
+            "codex-skill"
+          ],
+          "files": [
+            {
+              "path": "SKILL.md",
+              "content": "---\nname: monthly-revenue-snapshot\ndescription: Generates a quick revenue report to monitor the impact of the new tier.\n---\n\n# Monthly revenue snapshot\n\nGenerates a quick revenue report to monitor the impact of the new tier.\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples — use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Decision Doctor on {{ASOF}} from a workload-reducer scoped to \"partial_task\" coverage at the T1 permission tier.\n",
+              "language": "markdown"
+            },
+            {
+              "path": "AGENTS.md",
+              "content": "# Monthly revenue snapshot\n\nGenerates a quick revenue report to monitor the impact of the new tier.\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples — use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md — generated from a Decision Doctor workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Decision Doctor on {{ASOF}} for a \"partial_task\" coverage\n  workload-reducer at the T1 permission tier.\n-->\n",
+              "language": "markdown"
+            }
+          ]
+        }
+      },
+      {
+        "type": "prompt",
+        "title": "Premium service announcement email",
+        "description": "Drafts a patient‑facing email introducing the new tiered offering, saving you writing time.",
+        "artifact": {
+          "promptText": "I run a solo practice charging $140 per visit, with a 55% fill rate and I lose several hours each week to administrative tasks. I want to add a higher‑priced premium service (longer sessions, on‑call availability) while keeping my base rate unchanged. Write a concise, friendly email to my patients announcing this new premium option, explaining the benefits, pricing, and how they can sign up. Output: a ready‑to‑copy‑paste email."
         },
         "automationLevel": "user_executes",
         "coverage": "task_setup",
-        "permission_tier": "T0"
+        "permission_tier": "T0",
+        "aiFeasibility": "skill",
+        "feasibilityRationale": "User can paste a prompt and get the announcement email in one step.",
+        "feasibilityScore": 100,
+        "impactScore": 18,
+        "combinedScore": 18,
+        "scaffold": {
+          "targets": [
+            "claude-code-skill",
+            "codex-skill"
+          ],
+          "files": [
+            {
+              "path": "SKILL.md",
+              "content": "---\nname: premium-service-announcement-email\ndescription: Drafts a patient‑facing email introducing the new tiered offering, saving you writing time.\n---\n\n# Premium service announcement email\n\nI run a solo practice charging $140 per visit, with a 55% fill rate and I lose several hours each week to administrative tasks. I want to add a higher‑priced premium service (longer sessions, on‑call availability) while keeping my base rate unchanged. Write a concise, friendly email to my patients announcing this new premium option, explaining the benefits, pricing, and how they can sign up. Output: a ready‑to‑copy‑paste email.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples — use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Decision Doctor on {{ASOF}} from a workload-reducer scoped to \"task_setup\" coverage at the T0 permission tier.\n",
+              "language": "markdown"
+            },
+            {
+              "path": "AGENTS.md",
+              "content": "# Premium service announcement email\n\nI run a solo practice charging $140 per visit, with a 55% fill rate and I lose several hours each week to administrative tasks. I want to add a higher‑priced premium service (longer sessions, on‑call availability) while keeping my base rate unchanged. Write a concise, friendly email to my patients announcing this new premium option, explaining the benefits, pricing, and how they can sign up. Output: a ready‑to‑copy‑paste email.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples — use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md — generated from a Decision Doctor workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Decision Doctor on {{ASOF}} for a \"task_setup\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
+              "language": "markdown"
+            }
+          ]
+        }
       }
     ],
     "destinations": [
       {
         "type": "user_ui",
         "delivered": true,
-        "deliveredAt": "2026-05-10T09:53:09.558Z"
+        "deliveredAt": "2026-05-12T00:43:23.636Z"
       }
-    ]
+    ],
+    "weightSource": "llm"
   },
   "llmCalls": [
     {
       "stage": 1,
       "tokensIn": 530,
-      "tokensOut": 492
+      "tokensOut": 510
     },
     {
       "stage": 5,
-      "tokensIn": 644,
-      "tokensOut": 870
+      "tokensIn": 923,
+      "tokensOut": 965
+    },
+    {
+      "stage": 6,
+      "tokensIn": 810,
+      "tokensOut": 676
     }
   ]
 }

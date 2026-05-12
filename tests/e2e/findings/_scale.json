@@ -1,29 +1,31 @@
 {
-  "generatedAt": "2026-05-10T09:52:56.989Z",
+  "generatedAt": "2026-05-12T00:16:00.564Z",
   "wave10": {
     "n": 10,
-    "wallMs": 3708,
+    "wallMs": 7630,
     "successCount": 10,
     "errorCount": 0,
     "errorRate": 0,
-    "p50ms": 3105,
-    "p95ms": 3708,
-    "p99ms": 3708,
-    "minMs": 2850,
-    "maxMs": 3708,
+    "p50ms": 5676,
+    "p95ms": 7630,
+    "p99ms": 7630,
+    "minMs": 4848,
+    "maxMs": 7630,
     "sampleErrors": []
   },
   "wave25": {
     "n": 25,
-    "wallMs": 4281,
-    "successCount": 25,
-    "errorCount": 0,
-    "errorRate": 0,
-    "p50ms": 3187,
-    "p95ms": 3479,
-    "p99ms": 4281,
-    "minMs": 2718,
-    "maxMs": 4281,
-    "sampleErrors": []
+    "wallMs": 6086,
+    "successCount": 24,
+    "errorCount": 1,
+    "errorRate": 0.04,
+    "p50ms": 5530,
+    "p95ms": 6066,
+    "p99ms": 6086,
+    "minMs": 4482,
+    "maxMs": 6086,
+    "sampleErrors": [
+      "400 {\"error\":{\"message\":\"Failed to generate JSON. Please adjust your prompt. See 'failed_generation' for more details.\",\"type\":\"invalid_request_error\",\"code\":\"json_validate_failed\",\"failed_generation\":\"{\\\"rationale\\\":\\\"Adding 4–8 weekly clinical hours directly boosts revenue and lets you shape a schedule that matches your energized, flexible practice style, aligning with your top values while managing the modest waitlist.\\\",\\\"workloadReducers\\\":[{\\\"type\\\":\\\"prompt\\\",\\\"title\\\":\\\"Draft patient slot‑opening email\\\",\\\"description\\\":\\\"Creates a ready‑to‑send email announcing new appointment slots so you avoid repetitive writing.\\\",\\\"artifact\\\":{\\\"promptText\\\":\\\"I run a growing primary‑care practice with 30 weekly clinical hours, 19 patients per week, and a waitlist of 2. I am adding 4–8 clinical hours each week and need to notify patients about the new openings. Draft a concise, friendly email (max 150 words) that (1) explains the added slots, (2) invites waitlist patients to book, (3) includes a placeholder for the booking link, and (4) maintains a professional tone. Output only the email body.\\\"}},\\\"automationLevel\\\":\\\"user_executes\\\",\\\"coverage\\\":\\\"full_task\\\",\\\"permission_tier\\\":\\\"T0\\\"},{\\\"type\\\":\\\"playbook\\\",\\\"title\\\":\\\"AI‑assisted scheduling workflow\\\",\\\"description\\\":\\\"Step‑by‑step guide to route new appointment requests to an AI triage bot before human confirmation.\\\",\\\"artifact\\\":{\\\"playbookSteps\\\":[\\\"Create a dedicated scheduling inbox or form for new requests\\\",\\\"Configure an AI assistant (e.g., Claude) with a prompt to suggest available slots based on your updated 4–8‑hour weekly capacity\\\",\\\"Review the AI‑generated slot suggestions, adjust if needed, and confirm with the patient\\\",\\\"Update your calendar and send the confirmation email using the drafted template\\\"]}},\\\"automationLevel\\\":\\\"user_executes\\\",\\\"coverage\\\":\\\"partial_task\\\",\\\"permission_tier\\\":\\\"T0\\\"},{\\\"type\\\":\\\"skill\\\",\\\"title\\\":\\\"No‑show pattern detector\\\",\\\"description\\\":\\\"Installs a lightweight script that flags patients with repeated no‑shows to help you fine‑tune overbooking.\\\",\\\"artifact\\\":{\\\"skillName\\\":\\\"no-show-pattern-detector\\\"}},\\\"automationLevel\\\":\\\"user_executes\\\",\\\"coverage\\\":\\\"task_setup\\\",\\\"permission_tier\\\":\\\"T1\\\"}]}\"}}"
+    ]
   }
 }
