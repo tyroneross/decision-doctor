@@ -9,13 +9,13 @@
     "recommendation": "shift mix (accept insurance) OR restructure pricing (sliding scale / packages); cutting cash rate alone unlikely to fix demand",
     "confidenceRange": "55-75"
   },
-  "latencyMs": 4901,
+  "latencyMs": 4783,
   "error": null,
   "output": {
     "recommendation": {
       "option": "Add a tiered or premium service line",
-      "confidence": 59,
-      "rationale": "Recommended: Add a tiered or premium service line. Best-balanced trade-off across your weighted criteria at 59% confidence."
+      "confidence": 58,
+      "rationale": "A tiered service line lets you keep the $140 base rate for most patients (supporting retention) while offering a higher‑priced option for those who want extra time, matching your low risk tolerance and boosting sustainable revenue."
     },
     "alternatives": [
       {
@@ -39,18 +39,18 @@
         "name": "values",
         "output": {
           "values": [
-            "operational sustainability",
             "patient retention",
-            "low risk"
+            "operational sustainability",
+            "revenue stability"
           ],
           "adjustedWeights": {
-            "revenue": 0.1981132075471698,
-            "retention": 0.36792452830188677,
-            "sustainability": 0.28301886792452835,
-            "signaling": 0.15094339622641512
+            "revenue": 0.19266055045871558,
+            "retention": 0.38532110091743116,
+            "sustainability": 0.27522935779816515,
+            "signaling": 0.14678899082568808
           },
-          "rationale": "Low risk tolerance and low fill rate push the user to prioritize sustainability and retention over revenue gains.",
-          "reasoning": "We need to produce JSON with values (1-3 short statements), weightAdjustments mapping criterion ids to numbers between 0.5 and 2.0, and rationale sentence.\n\nWe have template with criteria: revenue, retention, sustainability, signaling. Default weights: revenue 0.3, retention 0.3, sustainability 0.2, signaling 0.2.\n\nUser intake: currentRateUSD 140, monthsSinceLastIncrease 18, insuranceShare 0, cashShare 100, avgFillRate 55, competitorBenchmarkUSD 130, riskTolerance low.\n\nInterpretation: Solo practitioner charging $140, hasn't increased in 18 months, all cash patients, fill rate 55% (low), competitor benchmark $130 (lower). Low risk tolerance suggests they want stable, low risk changes.\n\nThus likely prioritize sustainability (operational sustainability) and retention (patient retention) over revenue increase. Also signaling maybe less important. Revenue impact maybe less weight because low risk tolerance and already higher than competitor; raising price may risk retention.\n\nThus weight adjustments: increase sustainability weight (e.g., 1.5), increase retention (1.3), decrease revenue (0.7), maybe decrease signaling (0.8). Must be within 0.5-2.0.\n\nValues: short statements: \"operational sustainability\", \"patient retention\", \"low risk\". Up to 3.\n\nReturn JSON.\n\nCheck JSON format: compact.\n\nLet's craft:\n\n{\n \"values\":[\"operational sustainability\",\"patient retention\",\"low risk\"],\n \"weightAdjustments\":{\"sustainability\":1.5,\"retention\":1.3,\"revenue\":0.7,\"signaling\":0.8},\n \"rationale\":\"Low risk tolerance and low fill rate push the user to prioritize sustainability and retention over revenue gains.\"\n}\n\nMake sure numbers are within range. Yes.\n\nReturn only JSON."
+          "rationale": "Low risk tolerance and low fill rate make keeping patients and a sustainable model more important than chasing higher revenue or market signaling.",
+          "reasoning": "We need to produce JSON with values (1-3 short statements), weightAdjustments mapping criterion ids to numbers between 0.5 and 2.0, and rationale sentence.\n\nWe have template with criteria: revenue, retention, sustainability, signaling. Default weights: revenue 0.3, retention 0.3, sustainability 0.2, signaling 0.2.\n\nUser intake: currentRateUSD 140, monthsSinceLastIncrease 18, insuranceShare 0, cashShare 100, avgFillRate 55, competitorBenchmarkUSD 130, riskTolerance low.\n\nInterpretation: Practitioner charges $140, hasn't increased in 18 months, all cash, no insurance. Fill rate 55% (low). Competitor benchmark $130 (lower). Low risk tolerance.\n\nThus they likely care about sustainability (operational) and retention (patient retention) maybe more than revenue increase, because they have low fill rate and low risk tolerance; raising price may reduce patients. They might want to stay competitive (signaling) but also maintain revenue. However low risk tolerance suggests they want to avoid revenue volatility; maybe they want to keep price stable, maybe adjust modestly.\n\nGiven competitor benchmark lower, raising price may risk losing patients; they may prioritize retention and sustainability over revenue. Signaling maybe moderate.\n\nThus weight adjustments: increase sustainability weight (e.g., 1.5), increase retention (1.4), decrease revenue (0.7), maybe decrease signaling (0.8) because they care less about market signaling.\n\nWe need 1-3 short value statements: \"patient retention\", \"operational sustainability\", maybe \"revenue stability\". Use ≤6 words each.\n\nLet's produce values: [\"patient retention\",\"operational sustainability\",\"revenue stability\"] (each ≤3 words). Good.\n\nWeightAdjustments: {\"revenue\":0.7,\"retention\":1.4,\"sustainability\":1.5,\"signaling\":0.8}\n\nRationale: \"Low risk tolerance and low fill rate make keeping patients and a sustainable model more important than chasing higher revenue or market signaling.\"\n\nMake sure JSON compact."
         }
       },
       {
@@ -80,10 +80,10 @@
         "name": "weights",
         "output": {
           "weights": {
-            "revenue": 0.1981132075471698,
-            "retention": 0.36792452830188677,
-            "sustainability": 0.28301886792452835,
-            "signaling": 0.15094339622641512
+            "revenue": 0.19266055045871558,
+            "retention": 0.38532110091743116,
+            "sustainability": 0.27522935779816515,
+            "signaling": 0.14678899082568808
           },
           "notes": "Weights normalized across 4 criteria."
         }
@@ -110,7 +110,7 @@
             {
               "aId": "raise-modest",
               "bId": "hold-rates",
-              "concordance": 0.6320754716981132,
+              "concordance": 0.6146788990825688,
               "discordance": 0.19999999999999996
             },
             {
@@ -122,25 +122,25 @@
             {
               "aId": "raise-modest",
               "bId": "shift-cash-mix",
-              "concordance": 0.36792452830188677,
+              "concordance": 0.38532110091743116,
               "discordance": 0.15000000000000002
             },
             {
               "aId": "hold-rates",
               "bId": "raise-modest",
-              "concordance": 0.36792452830188677,
+              "concordance": 0.38532110091743116,
               "discordance": 0.30000000000000004
             },
             {
               "aId": "hold-rates",
               "bId": "tiered-services",
-              "concordance": 0.36792452830188677,
+              "concordance": 0.38532110091743116,
               "discordance": 0.35
             },
             {
               "aId": "hold-rates",
               "bId": "shift-cash-mix",
-              "concordance": 0.36792452830188677,
+              "concordance": 0.38532110091743116,
               "discordance": 0.4
             },
             {
@@ -152,31 +152,31 @@
             {
               "aId": "tiered-services",
               "bId": "hold-rates",
-              "concordance": 0.6320754716981132,
+              "concordance": 0.6146788990825688,
               "discordance": 0.1499999999999999
             },
             {
               "aId": "tiered-services",
               "bId": "shift-cash-mix",
-              "concordance": 0.5188679245283019,
+              "concordance": 0.5321100917431192,
               "discordance": 0.09999999999999998
             },
             {
               "aId": "shift-cash-mix",
               "bId": "raise-modest",
-              "concordance": 0.6320754716981132,
+              "concordance": 0.6146788990825688,
               "discordance": 0.19999999999999996
             },
             {
               "aId": "shift-cash-mix",
               "bId": "hold-rates",
-              "concordance": 0.6320754716981132,
+              "concordance": 0.6146788990825688,
               "discordance": 0.3999999999999999
             },
             {
               "aId": "shift-cash-mix",
               "bId": "tiered-services",
-              "concordance": 0.6320754716981132,
+              "concordance": 0.6146788990825688,
               "discordance": 0.25
             }
           ]
@@ -190,22 +190,22 @@
             {
               "id": "tiered-services",
               "label": "Add a tiered or premium service line",
-              "closeness": 0.6912
+              "closeness": 0.6863
             },
             {
               "id": "hold-rates",
               "label": "Hold current rates",
-              "closeness": 0.5059
+              "closeness": 0.5244
             },
             {
               "id": "shift-cash-mix",
               "label": "Drop one insurance panel, shift toward cash",
-              "closeness": 0.4941
+              "closeness": 0.4756
             }
           ],
-          "confidence": 59,
+          "confidence": 58,
           "robustCandidateId": "tiered-services",
-          "reasoning": "We need to produce JSON with rationale and 3 workloadReducers. The chosen option is \"Add a tiered or premium service line\". Values: operational sustainability, patient retention, low risk. Confidence 59 (moderate). Need rationale 1-2 sentences referencing values.\n\nWorkload reducers: need 3 different types: prompt, playbook, skill. Must include at least one AI-driven workflow to reclaim clinical time spent on non-clinical work. Likely a prompt to draft patient communication about new premium service line. Also a playbook for setting up tiered pricing and billing. And a skill maybe a revenue snapshot skill (T1) that automates monthly revenue analysis.\n\nAll automationLevel \"user_executes\". permission_tier: prompt is T0, playbook maybe T0 (since just steps), skill is T1.\n\nMake sure artifact fields correct.\n\nPrompt reducer: embed user's intake context: \"I run a ... practice with ... visits/week and lose ~... hours to ...\"? We have no visits/week or hours. We can infer: currentRateUSD 140, avgFillRate 55% maybe. Could say \"I run a solo primary care practice with a $140 base rate, 55% fill rate, and haven't raised rates in 18 months.\" Also mention low risk. End with output spec: produce a concise patient announcement email explaining new premium service line, with bullet points and call to action.\n\nPlaybook reducer: steps to implement tiered pricing: 1) Define premium service specs, 2) Update scheduling and billing software, 3) Communicate to patients, 4) Monitor uptake.\n\nSkill reducer: name like \"monthly-revenue-snapshot\". Provide skillName.\n\nNow produce JSON compact.\n\nCheck schema: each workloadReducer has fields: type, title, description, artifact (with appropriate field), automationLevel, coverage, permission_tier.\n\nCoverage: choose appropriate: prompt maybe \"task_setup\" (drafting communication). Playbook maybe \"full_task\". Skill maybe \"partial_task\" (revenue snapshot). Ensure coverage values are allowed.\n\nNow craft.\n\nRationale: \"Adding a premium tier lets you boost revenue for sustainability while keeping the $140 base rate to protect patient retention, aligning with your low‑risk preference.\"\n\nNow produce JSON.\n\n"
+          "reasoning": "We need to output JSON with rationale and 3 workloadReducers (different types). Chosen option: Add a tiered or premium service line. Values: patient retention, operational sustainability, revenue stability. Risk tolerance low, current rate 140, competitor 130, months since last increase 18, avg fill rate 55% (low). So tiered service can increase revenue without losing patients (retain base rate). Provide rationale: because low risk tolerance, tiered line lets keep base rate for most patients (retention) while adding premium for those who want more, supporting sustainability and stable revenue.\n\nNow need 3 reducers: one must be AI-driven workflow to reclaim clinical time on non-clinical work. Could be a prompt that drafts patient communication about new tiered service line (explain options). That is AI-driven. Type=prompt, T0.\n\nSecond reducer could be playbook for implementing tiered pricing: steps to design service tiers, update website, train staff. Type=playbook, T1? Actually playbook is T0? Permission tier can be T0 or T1. Since playbook is just steps, T0 is fine. Use T0.\n\nThird reducer could be skill: maybe a skill to generate monthly revenue projection for tiered pricing. Type=skill, permission_tier T1. Provide skillName.\n\nAll automationLevel user_executes.\n\nCoverage: first prompt is task_setup? It drafts communications, that's partial_task? It creates a communication, that's full_task (drafting). Use full_task.\n\nSecond playbook: task_setup (planning). Third skill: partial_task (generates projection). Ensure each coverage appropriate.\n\nNow construct JSON compact.\n\nRationale: 1-2 sentences.\n\nNow create reducers.\n\nReducer1 (prompt):\ntitle: \"Draft tiered service announcement\"\ndescription: \"Generate patient‑facing email explaining new premium options so you don’t write each from scratch.\"\nartifact.promptText: include user intake context: \"I run a solo primary care practice with 55% average fill rate, current cash‑only rate $140, and I’ve not raised prices in 18 months. I want to add a higher‑priced service line (longer sessions, on‑call) while keeping the base rate. Draft a concise email to patients introducing the tiered offering, highlighting benefits, pricing, and how to opt‑in. Output a ready‑to‑send email.\"\n\nAutomationLevel user_executes, coverage full_task, permission_tier T0.\n\nReducer2 (playbook):\ntitle: \"Implement tiered pricing workflow\"\ndescription: \"Step‑by‑step guide to launch the new service tier without disrupting existing patients.\"\nartifact.playbookSteps: list 4 steps: 1) Define premium service specs and price (e.g., 30‑min extended session $180). 2) Update scheduling software with new appointment type. 3) Communicate changes to staff and create FAQ. 4) Launch announcement to patients and monitor uptake. Could be 5 steps but 3-5 allowed. Use 4.\n\nAutomationLevel user_executes, coverage task_setup, permission_tier T0.\n\nReducer3 (skill):\ntitle: \"Revenue projection calculator\"\ndescription: \"Tool to estimate monthly revenue impact of adding the premium tier.\"\nartifact.skillName: \"tiered-revenue-projection\"\nAutomationLevel user_executes, coverage partial_task, permission_tier T1.\n\nNow produce JSON compact. Ensure no extra spaces? It's okay.\n\nLet's craft final JSON."
         }
       },
       {
@@ -214,28 +214,28 @@
         "output": {
           "classifications": [
             {
-              "title": "60-day rollout playbook",
+              "title": "Draft tiered service announcement",
               "aiFeasibility": "skill",
               "feasibilityScore": 100,
               "impactScore": 40,
               "combinedScore": 40
             },
             {
-              "title": "Draft the message announcing this change",
+              "title": "Revenue projection calculator",
               "aiFeasibility": "skill",
               "feasibilityScore": 100,
               "impactScore": 28,
               "combinedScore": 28
             },
             {
-              "title": "Re-run with updated assumptions",
-              "aiFeasibility": "skill",
-              "feasibilityScore": 100,
+              "title": "Implement tiered pricing workflow",
+              "aiFeasibility": "plugin",
+              "feasibilityScore": 80,
               "impactScore": 18,
-              "combinedScore": 18
+              "combinedScore": 14
             }
           ],
-          "reasoning": "We need to classify each reducer by aiFeasibility tier: skill, plugin, agent, human.\n\nWe have three reducers:\n\n0: type \"prompt\", title \"Draft the message announcing this change\", description says paste into ChatGPT/Claude to draft patient-facing note. This is a single-turn copy-pasteable prompt. So tier \"skill\". signals: \"copy-paste\", \"single-turn\". rationale: \"User just pastes prompt to generate note; no extra code needed.\"\n\n1: type \"playbook\", title \"60-day rollout playbook\", description: concrete steps to implement over next 60 days. This is a multi-step bounded process, likely a playbook that user follows. Could be a \"skill\"? It's a playbook, but it's a set of steps, not requiring code. According to rubric, \"skill\" is single-turn copy-pasteable. This is multi-step but bounded, could be a \"plugin\"? However plugin requires small directory layout, commands, maybe server. This is just a textual playbook; maybe still \"skill\" because it's just a document. But rubric: \"plugin\" is multi-step but bounded, needs small directory layout. This doesn't need code. So maybe still \"skill\" because it's just a guide. The rubric says \"skill\" is single-turn copy-pasteable. This is not a single-turn prompt; it's a playbook. Could be \"plugin\"? But no code. The rubric's categories are about shipping AI workload reducers. For a playbook, the user will execute steps manually; it's not an AI component. So maybe \"human\"? But \"human\" is for decisions that cannot be AI-owned. This is just a plan; AI can generate it but user executes. Could be \"skill\" as the lowest friction default. The instruction: if ambiguous, prefer \"skill\". So choose \"skill\". signals: \"playbook\", \"stepwise\". rationale: \"Provides a static step list; user follows manually, no automation needed.\"\n\n2: type \"skill\", title \"Re-run with updated assumptions\", description: open Aida again in 60 days with same template and updated numbers to confirm recommendation. This is a repeatable prompt; user runs again. That's a \"skill\". signals: \"repeatable\", \"template\". rationale: \"User re-executes same prompt with new data; no persistent system needed.\"\n\nThus all three \"skill\". Provide JSON.\n\nMake sure format: {\"classifications\":[ {...}, {...}, {...} ]}\n\nEach entry includes id, aiFeasibility, signals, rationale.\n\nLet's craft.\n\nEntry 0: id 0, aiFeasibility \"skill\", signals [\"copy-paste\",\"single-turn\"], rationale \"User just pastes the prompt into a LLM to get the announcement; no extra setup.\"\n\nEntry 1: id 1, aiFeasibility \"skill\", signals [\"playbook\",\"stepwise\"], rationale \"A static 60‑day plan that the user follows manually; no code or ongoing AI needed.\"\n\nEntry 2: id 2, aiFeasibility \"skill\", signals [\"repeatable\",\"template\"], rationale \"User runs the same prompt later with new numbers; simple repeatable task.\"\n\nCheck length <=200 chars. Good.\n\nNow output JSON compact."
+          "reasoning": "We need to classify each reducer by aiFeasibility tier: skill, plugin, agent, human.\n\nWe have three reducers:\n\n0: type prompt, title Draft tiered service announcement, description: generate patient-facing email explaining new premium options so you don’t write each from scratch. automationLevel user_executes, coverage full_task. This is a single-turn copy-pasteable prompt to generate email. So \"skill\". signals: \"copy-paste\", \"single-turn\". rationale: single prompt can produce email.\n\n1: type playbook, implement tiered pricing workflow, step-by-step guide to launch new service tier without disrupting existing patients. This is multi-step guide, maybe needs directory layout? It's a playbook, user executes steps. Could be \"plugin\"? It's multi-step but bounded, no sustained autonomy. So \"plugin\". signals: \"multi-step\", \"bounded\". rationale: step-by-step workflow that user runs.\n\n2: type skill, revenue projection calculator, tool to estimate monthly revenue impact. This is a calculator maybe a small script? Could be a skill (single-turn). It's a tool, maybe a small code snippet. Likely \"skill\". signals: \"single-turn\", \"calc\". rationale: simple calculation via prompt.\n\nThus output JSON with classifications array in same order.\n\nMake sure JSON compact, no markdown.\n\n"
         }
       },
       {
@@ -245,16 +245,16 @@
           "generatedCount": 3,
           "eligibleReducers": [
             {
-              "title": "60-day rollout playbook",
+              "title": "Draft tiered service announcement",
               "fileCount": 2
             },
             {
-              "title": "Draft the message announcing this change",
+              "title": "Revenue projection calculator",
               "fileCount": 2
             },
             {
-              "title": "Re-run with updated assumptions",
-              "fileCount": 2
+              "title": "Implement tiered pricing workflow",
+              "fileCount": 3
             }
           ]
         }
@@ -262,22 +262,17 @@
     ],
     "workloadReducers": [
       {
-        "type": "playbook",
-        "title": "60-day rollout playbook",
-        "description": "Concrete steps to implement \"Add a tiered or premium service line\" over the next 60 days.",
+        "type": "prompt",
+        "title": "Draft tiered service announcement",
+        "description": "Generate a patient‑facing email explaining the new premium options so you don’t write each from scratch.",
         "artifact": {
-          "playbookSteps": [
-            "Week 1: tell your top-5 referral sources what's changing.",
-            "Week 2: update your intake forms / scheduler to reflect the new posture.",
-            "Week 3-4: monitor fill-rate, waitlist, or revenue — whichever criterion this decision hinges on.",
-            "Week 8: re-run this decision with the new data and confirm the recommendation still holds."
-          ]
+          "promptText": "I run a solo primary‑care practice with a 55% average fill rate, a cash‑only base rate of $140, and I haven’t raised prices in 18 months. I want to add a higher‑priced service line (e.g., longer sessions, on‑call) while keeping the base rate unchanged. Draft a concise email to patients introducing the tiered offering, highlighting benefits, pricing, and how to opt‑in. Output a ready‑to‑send email."
         },
         "automationLevel": "user_executes",
         "coverage": "full_task",
         "permission_tier": "T0",
         "aiFeasibility": "skill",
-        "feasibilityRationale": "A static 60‑day plan that the user follows manually; no code or ongoing AI needed.",
+        "feasibilityRationale": "A one‑off prompt that drafts the email, ready to paste and send.",
         "feasibilityScore": 100,
         "impactScore": 40,
         "combinedScore": 40,
@@ -289,29 +284,29 @@
           "files": [
             {
               "path": "SKILL.md",
-              "content": "---\nname: 60-day-rollout-playbook\ndescription: Concrete steps to implement \"Add a tiered or premium service line\" over the next 60 days.\n---\n\n# 60-day rollout playbook\n\nRun through these steps in order:\n1. Week 1: tell your top-5 referral sources what's changing.\n2. Week 2: update your intake forms / scheduler to reflect the new posture.\n3. Week 3-4: monitor fill-rate, waitlist, or revenue — whichever criterion this decision hinges on.\n4. Week 8: re-run this decision with the new data and confirm the recommendation still holds.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"full_task\" coverage at the T0 permission tier.\n",
+              "content": "---\nname: draft-tiered-service-announcement\ndescription: Generate a patient‑facing email explaining the new premium options so you don’t write each from scratch.\n---\n\n# Draft tiered service announcement\n\nI run a solo primary‑care practice with a 55% average fill rate, a cash‑only base rate of $140, and I haven’t raised prices in 18 months. I want to add a higher‑priced service line (e.g., longer sessions, on‑call) while keeping the base rate unchanged. Draft a concise email to patients introducing the tiered offering, highlighting benefits, pricing, and how to opt‑in. Output a ready‑to‑send email.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"full_task\" coverage at the T0 permission tier.\n",
               "language": "markdown"
             },
             {
               "path": "AGENTS.md",
-              "content": "# 60-day rollout playbook\n\nRun through these steps in order:\n1. Week 1: tell your top-5 referral sources what's changing.\n2. Week 2: update your intake forms / scheduler to reflect the new posture.\n3. Week 3-4: monitor fill-rate, waitlist, or revenue — whichever criterion this decision hinges on.\n4. Week 8: re-run this decision with the new data and confirm the recommendation still holds.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"full_task\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
+              "content": "# Draft tiered service announcement\n\nI run a solo primary‑care practice with a 55% average fill rate, a cash‑only base rate of $140, and I haven’t raised prices in 18 months. I want to add a higher‑priced service line (e.g., longer sessions, on‑call) while keeping the base rate unchanged. Draft a concise email to patients introducing the tiered offering, highlighting benefits, pricing, and how to opt‑in. Output a ready‑to‑send email.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"full_task\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
               "language": "markdown"
             }
           ]
         }
       },
       {
-        "type": "prompt",
-        "title": "Draft the message announcing this change",
-        "description": "Paste this into ChatGPT/Claude to draft the patient-facing note for \"Add a tiered or premium service line\".",
+        "type": "skill",
+        "title": "Revenue projection calculator",
+        "description": "Tool to estimate monthly revenue impact of adding the premium tier.",
         "artifact": {
-          "promptText": "Help me draft a short, calm patient-facing note announcing the following decision: \"Add a tiered or premium service line\". Keep it under 120 words, professional, and avoid jargon. Audience: established patients in a solo healthcare practice."
+          "skillName": "tiered-revenue-projection"
         },
         "automationLevel": "user_executes",
         "coverage": "partial_task",
-        "permission_tier": "T0",
+        "permission_tier": "T1",
         "aiFeasibility": "skill",
-        "feasibilityRationale": "User just pastes the prompt into a LLM to get the announcement; no extra setup.",
+        "feasibilityRationale": "A quick prompt or one‑file script that computes revenue impact in one go.",
         "feasibilityScore": 100,
         "impactScore": 28,
         "combinedScore": 28,
@@ -323,47 +318,57 @@
           "files": [
             {
               "path": "SKILL.md",
-              "content": "---\nname: draft-the-message-announcing-this-change\ndescription: Paste this into ChatGPT/Claude to draft the patient-facing note for \"Add a tiered or premium service line\".\n---\n\n# Draft the message announcing this change\n\nHelp me draft a short, calm patient-facing note announcing the following decision: \"Add a tiered or premium service line\". Keep it under 120 words, professional, and avoid jargon. Audience: established patients in a solo healthcare practice.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"partial_task\" coverage at the T0 permission tier.\n",
+              "content": "---\nname: tiered-revenue-projection\ndescription: Tool to estimate monthly revenue impact of adding the premium tier.\n---\n\n# Revenue projection calculator\n\nTool to estimate monthly revenue impact of adding the premium tier.\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"partial_task\" coverage at the T1 permission tier.\n",
               "language": "markdown"
             },
             {
               "path": "AGENTS.md",
-              "content": "# Draft the message announcing this change\n\nHelp me draft a short, calm patient-facing note announcing the following decision: \"Add a tiered or premium service line\". Keep it under 120 words, professional, and avoid jargon. Audience: established patients in a solo healthcare practice.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"partial_task\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
+              "content": "# Revenue projection calculator\n\nTool to estimate monthly revenue impact of adding the premium tier.\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"partial_task\" coverage\n  workload-reducer at the T1 permission tier.\n-->\n",
               "language": "markdown"
             }
           ]
         }
       },
       {
-        "type": "skill",
-        "title": "Re-run with updated assumptions",
-        "description": "Open Aida again in 60 days with the same template and updated numbers to confirm the recommendation still holds.",
+        "type": "playbook",
+        "title": "Implement tiered pricing workflow",
+        "description": "Step‑by‑step guide to launch the new service tier without disrupting existing patients.",
         "artifact": {
-          "skillName": "aida-revisit"
+          "playbookSteps": [
+            "Define premium service specifications and set its price (e.g., 30‑minute extended session $180).",
+            "Update your scheduling system to include the new appointment type and pricing.",
+            "Create staff briefing and a patient FAQ covering the tiered options and billing.",
+            "Send the drafted announcement to patients and monitor enrollment and feedback."
+          ]
         },
         "automationLevel": "user_executes",
         "coverage": "task_setup",
         "permission_tier": "T0",
-        "aiFeasibility": "skill",
-        "feasibilityRationale": "User runs the same prompt later with new numbers; simple repeatable task.",
-        "feasibilityScore": 100,
+        "aiFeasibility": "plugin",
+        "feasibilityRationale": "A step‑by‑step workflow that the user runs, requiring a small set of scripts or commands.",
+        "feasibilityScore": 80,
         "impactScore": 18,
-        "combinedScore": 18,
+        "combinedScore": 14,
         "scaffold": {
           "targets": [
-            "claude-code-skill",
-            "codex-skill"
+            "claude-code-plugin",
+            "codex-plugin"
           ],
           "files": [
             {
               "path": "SKILL.md",
-              "content": "---\nname: aida-revisit\ndescription: Open Aida again in 60 days with the same template and updated numbers to confirm the recommendation still holds.\n---\n\n# Re-run with updated assumptions\n\nOpen Aida again in 60 days with the same template and updated numbers to confirm the recommendation still holds.\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"task_setup\" coverage at the T0 permission tier.\n",
+              "content": "---\nname: implement-tiered-pricing-workflow\ndescription: Step‑by‑step guide to launch the new service tier without disrupting existing patients.\n---\n\n# Implement tiered pricing workflow\n\nRun through these steps in order:\n1. Define premium service specifications and set its price (e.g., 30‑minute extended session $180).\n2. Update your scheduling system to include the new appointment type and pricing.\n3. Create staff briefing and a patient FAQ covering the tiered options and billing.\n4. Send the drafted announcement to patients and monitor enrollment and feedback.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"task_setup\" coverage at the T0 permission tier.\n",
               "language": "markdown"
             },
             {
               "path": "AGENTS.md",
-              "content": "# Re-run with updated assumptions\n\nOpen Aida again in 60 days with the same template and updated numbers to confirm the recommendation still holds.\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"task_setup\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
+              "content": "# Implement tiered pricing workflow\n\nRun through these steps in order:\n1. Define premium service specifications and set its price (e.g., 30‑minute extended session $180).\n2. Update your scheduling system to include the new appointment type and pricing.\n3. Create staff briefing and a patient FAQ covering the tiered options and billing.\n4. Send the drafted announcement to patients and monitor enrollment and feedback.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"task_setup\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
               "language": "markdown"
+            },
+            {
+              "path": "plugin.json",
+              "content": "{\n  \"name\": \"implement-tiered-pricing-workflow\",\n  \"version\": \"0.1.0\",\n  \"description\": \"Step‑by‑step guide to launch the new service tier without disrupting existing patients.\",\n  \"author\": \"Aida\",\n  \"homepage\": \"https://decision-doctor-xi.vercel.app\",\n  \"commands\": [\n    {\n      \"name\": \"implement-tiered-pricing-workflow\",\n      \"description\": \"Implement tiered pricing workflow\",\n      \"argument-hint\": \"<your inputs here>\"\n    }\n  ]\n}\n",
+              "language": "json"
             }
           ]
         }
@@ -373,7 +378,7 @@
       {
         "type": "user_ui",
         "delivered": true,
-        "deliveredAt": "2026-05-12T03:35:51.994Z"
+        "deliveredAt": "2026-05-12T04:38:33.808Z"
       }
     ],
     "weightSource": "llm"
@@ -382,17 +387,17 @@
     {
       "stage": 1,
       "tokensIn": 530,
-      "tokensOut": 463
+      "tokensOut": 520
     },
     {
       "stage": 5,
-      "tokensIn": 922,
-      "tokensOut": 880
+      "tokensIn": 923,
+      "tokensOut": 1115
     },
     {
       "stage": 6,
-      "tokensIn": 831,
-      "tokensOut": 811
+      "tokensIn": 810,
+      "tokensOut": 410
     }
   ]
 }
