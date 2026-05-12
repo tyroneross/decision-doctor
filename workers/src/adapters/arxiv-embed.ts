@@ -46,15 +46,20 @@ export async function handleArxivEmbed(
   const client = await pool.connect();
 
   try {
-    // 1. Load the row.
+    // 1. Load the row. Title is loaded so it can be prepended to every chunk
+    //    (F-31 FIX-3): stub-body docs (placeholder bodies <200 chars on the
+    //    openai-news + perplexity-research sources) are only retrievable via
+    //    their titles. Prepending title to chunk_text makes the vector leg
+    //    fire on title-only matches without re-crawling.
     const docQ = await client.query<{
       id: string;
       scope: string;
+      title: string;
       body: string;
       content_hash: string;
       metadata: Record<string, unknown>;
     }>(
-      `SELECT id, scope, body, content_hash, metadata
+      `SELECT id, scope, title, body, content_hash, metadata
          FROM corpus_documents
         WHERE id = $1
         LIMIT 1`,
@@ -96,8 +101,8 @@ export async function handleArxivEmbed(
     // 2. Skip if chunks already exist whose content_hash matches the document's
     //    overall content_hash AND the chunk count matches the chunker's output.
     //    We check chunk count by re-chunking — cheap, deterministic.
-    const chunks = chunkBody(doc.body);
-    if (chunks.length === 0) {
+    const rawChunks = chunkBody(doc.body);
+    if (rawChunks.length === 0) {
       return {
         documentId: payload.documentId,
         status: "embedded",
@@ -107,6 +112,23 @@ export async function handleArxivEmbed(
         latency_ms: Date.now() - t0,
       };
     }
+
+    // F-31 FIX-3: prepend the doc's title to every chunk's text before
+    // hashing + embedding. Effect:
+    //   - Stub-body docs (placeholder bodies) become retrievable by title.
+    //   - chunk_text in DB now starts with "<title>\n\n<body slice>".
+    //   - content_hash changes for every existing chunk on next run, so the
+    //     cache-aware UPSERT naturally re-embeds when the worker reprocesses
+    //     a doc. This is the intended migration shape — no separate
+    //     re-embed pass needed; the queue drain handles it.
+    // We trim title to avoid leading/trailing whitespace that wastes tokens,
+    // and skip prepend when title is empty (defensive, though schema says
+    // NOT NULL).
+    const titlePrefix = doc.title.trim().length > 0 ? `${doc.title.trim()}\n\n` : "";
+    const chunks = rawChunks.map((c) => ({
+      ...c,
+      text: titlePrefix + c.text,
+    }));
 
     // 3. Compute per-chunk content hashes (drives cache + ON CONFLICT path).
     const chunkHashes = chunks.map((c) => sha256(c.text));

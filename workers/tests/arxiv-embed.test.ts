@@ -120,6 +120,22 @@ describeIfDb("handleArxivEmbed", () => {
     expect(Number(q.rows[0]!.first_dims)).toBe(768);
   });
 
+  it("prepends the doc title to chunk_text (F-31 FIX-3)", async () => {
+    // Title for the fixture is "fixture" (see beforeAll). Every chunk's
+    // chunk_text should start with the title + "\n\n".
+    const q = await pool!.query<{ chunk_text: string }>(
+      `SELECT chunk_text
+         FROM corpus_embeddings
+        WHERE document_id = $1
+        ORDER BY chunk_index`,
+      [fixtureDocId],
+    );
+    expect(q.rows.length).toBeGreaterThanOrEqual(1);
+    for (const row of q.rows) {
+      expect(row.chunk_text.startsWith("fixture\n\n")).toBe(true);
+    }
+  });
+
   it("re-running on the same doc hits cache (zero OpenAI calls)", async () => {
     mockCreate.mockClear();
     const r = await handleArxivEmbed({ documentId: fixtureDocId });
