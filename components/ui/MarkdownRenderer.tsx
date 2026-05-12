@@ -145,12 +145,12 @@ export function MarkdownRenderer({
         </th>
       ),
 
-      // Headings — map to project-style sizes. Inside an answer we never
-      // want display tier; even h1 stays modest.
+      // Headings — map to project typography tokens. Inside an answer we
+      // never want display tier; markdown headings nest under the page h1.
       h1: ({ node: _node, children, ...props }) => (
         <h1
           {...props}
-          className="text-[20px] font-semibold leading-snug text-ink mt-4 mb-2 first:mt-0"
+          className="text-h2 sm:text-h2-lg text-ink mt-4 mb-2 first:mt-0"
         >
           {wrap(children)}
         </h1>
@@ -158,7 +158,7 @@ export function MarkdownRenderer({
       h2: ({ node: _node, children, ...props }) => (
         <h2
           {...props}
-          className="text-[17px] font-semibold leading-snug text-ink mt-4 mb-2 first:mt-0"
+          className="text-h3 text-ink mt-4 mb-2 first:mt-0"
         >
           {wrap(children)}
         </h2>
@@ -166,7 +166,7 @@ export function MarkdownRenderer({
       h3: ({ node: _node, children, ...props }) => (
         <h3
           {...props}
-          className="text-[15px] font-semibold leading-snug text-ink mt-3 mb-1.5 first:mt-0"
+          className="text-[14px] font-semibold leading-snug text-ink mt-3 mb-1.5 first:mt-0"
         >
           {wrap(children)}
         </h3>
