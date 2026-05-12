@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -166,9 +167,17 @@ export function DesktopSidebar({
       <div className="px-4 pt-5 pb-4 border-b border-line">
         <Link
           href="/app"
-          className="block text-[20px] font-bold leading-tight text-ink"
+          aria-label="Aida — home"
+          className="block"
         >
-          Aida
+          <Image
+            src="/aida-wordmark.png"
+            alt="Aida"
+            width={980}
+            height={420}
+            priority
+            className="h-9 w-auto"
+          />
         </Link>
         {(totalHrs > 0 || skillCount > 0) && (
           <p className="mt-1 text-[12px] font-medium text-mute leading-snug">

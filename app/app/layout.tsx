@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { auth } from "@/lib/auth";
@@ -186,9 +187,17 @@ export default async function AppLayout({
         <div className="px-4 h-12 flex items-center">
           <Link
             href="/app"
-            className="text-[16px] font-bold text-ink leading-none"
+            aria-label="Aida — home"
+            className="inline-flex items-center"
           >
-            Aida
+            <Image
+              src="/aida-wordmark.png"
+              alt="Aida"
+              width={980}
+              height={420}
+              priority
+              className="h-7 w-auto"
+            />
           </Link>
         </div>
       </header>
