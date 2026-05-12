@@ -2,8 +2,8 @@
 /**
  * scripts/seed-kb.ts — KB seeder for /app/learn.
  *
- * Reads `docs/AI Plugin Architecture  Skills, Scripts, Hooks, MCP Servers &
- * Scaffolding.md` from disk and UPSERTs it as one global-scope kb_articles row.
+ * Reads curated KB markdown files from disk and UPSERTs each one as a
+ * global-scope kb_articles row.
  *
  * Flags:
  *   --dry-run   Validate seed structure + print what would be upserted. No DB writes.
@@ -53,6 +53,32 @@ const ARTICLES: KbSeedArticle[] = [
       "docs/AI Plugin Architecture  Skills, Scripts, Hooks, MCP Servers & Scaffolding.md",
     displayOrder: 10,
     metadata: { topic: "plugin-architecture", source: "in-repo" },
+  },
+  {
+    scope: "global",
+    slug: "prompting-best-practices",
+    title: "Prompting Best Practices for Healthcare AI Workflows",
+    summaryFromExecutiveSummary: true,
+    bodyPath: "docs/Prompting Best Practices for Healthcare AI Workflows.md",
+    displayOrder: 20,
+    metadata: {
+      topic: "prompting",
+      source: "in-repo",
+      relatedUrl: "https://rosslabs.ai/toolkit/prompt-decision-aid",
+    },
+  },
+  {
+    scope: "global",
+    slug: "advanced-prompting-patterns",
+    title: "Advanced Prompting Patterns for Reliable AI Workflows",
+    summaryFromExecutiveSummary: true,
+    bodyPath: "docs/Advanced Prompting Patterns for Reliable AI Workflows.md",
+    displayOrder: 30,
+    metadata: {
+      topic: "advanced-prompting",
+      source: "vault-research-and-in-repo",
+      relatedUrl: "https://rosslabs.ai/toolkit/prompt-decision-aid",
+    },
   },
 ];
 
