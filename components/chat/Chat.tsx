@@ -23,6 +23,12 @@ import { FormFallbackLink } from "@/components/chat/widgets/FormFallbackLink";
 
 // ─── Types (mirror /api/chat response shape) ────────────────────────────
 
+interface OfferHelpAffordance {
+  kind: "offer-decision-help";
+  suggestedPath: "decision" | "recommendation";
+  rationale: string;
+}
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -36,6 +42,14 @@ interface ChatMessage {
   /** Set to true once the user has submitted (or skipped) the clarifier so
    *  the widget UI is no longer interactive on this message. */
   clarifierResolved?: boolean;
+  /** Phase-1 chat-as-decision-front-door — optional offer-help affordance
+   *  emitted when the user's latest message scored as a decision-shaped
+   *  question. Renders below the assistant text as a chip the user can
+   *  accept or dismiss. */
+  offerHelp?: OfferHelpAffordance;
+  /** Set when the user has acted on (or dismissed) the offer so the chip
+   *  doesn't re-render on revisit. */
+  offerHelpResolved?: boolean;
 }
 
 interface DecisionPayload {
@@ -187,6 +201,8 @@ export function Chat({ seed }: { seed?: string } = {}) {
               reply: string;
               // F-11: present when classifier redirects an out-of-scope question.
               reframeChips?: string[];
+              // Phase 1: decision-detector affordance, optional.
+              offerHelp?: OfferHelpAffordance;
             }
           | {
               status: "clarifier";
@@ -211,6 +227,9 @@ export function Chat({ seed }: { seed?: string } = {}) {
                   clarifier: data.widget,
                   inferredTemplateId: data.inferredTemplateId ?? null,
                 }
+              : {}),
+            ...(data.status === "asking" && data.offerHelp
+              ? { offerHelp: data.offerHelp }
               : {}),
           };
           return {
@@ -290,6 +309,45 @@ export function Chat({ seed }: { seed?: string } = {}) {
   const firstClarifierIndex = thread.messages.findIndex(
     (m) => m.role === "assistant" && m.clarifier,
   );
+
+  // Phase-1 chat-as-decision-front-door — accept the offer-help chip:
+  // mark the affordance resolved + send a user message that primes the
+  // existing intake flow. The actual survey generation ships in Phase 2.
+  const acceptOfferHelp = useCallback(
+    (sourceMessageIndex: number) => {
+      // Read the suggested path BEFORE setState (avoid the closure trap).
+      const src = thread.messages[sourceMessageIndex];
+      const suggested: "decision" | "recommendation" =
+        src && src.role === "assistant" && src.offerHelp
+          ? src.offerHelp.suggestedPath
+          : "decision";
+      setThread((t) => {
+        const next = [...t.messages];
+        const at = next[sourceMessageIndex];
+        if (at && at.role === "assistant") {
+          next[sourceMessageIndex] = { ...at, offerHelpResolved: true };
+        }
+        return { ...t, messages: next };
+      });
+      const followUp =
+        suggested === "recommendation"
+          ? "Yes — walk me through getting a recommendation for this."
+          : "Yes — walk me through deciding this.";
+      runQuery(followUp);
+    },
+    [runQuery, thread.messages],
+  );
+
+  const dismissOfferHelp = useCallback((sourceMessageIndex: number) => {
+    setThread((t) => {
+      const next = [...t.messages];
+      const src = next[sourceMessageIndex];
+      if (src && src.role === "assistant") {
+        next[sourceMessageIndex] = { ...src, offerHelpResolved: true };
+      }
+      return { ...t, messages: next };
+    });
+  }, []);
 
   // Seed handling: when arriving via /app/chat?seed=<text>, auto-submit once
   // on the opening assistant message. Ref guard prevents re-fire on remount
@@ -394,6 +452,24 @@ export function Chat({ seed }: { seed?: string } = {}) {
                 />
               </div>
             )}
+
+            {/* Phase-1 chat-as-decision-front-door — inline affordance chip
+                offering to engage the decision flow when the user's latest
+                message classified as a decision-shaped question. Click
+                accepts the offer (engages future-phase intake); × dismisses
+                so the chip doesn't return after refresh. */}
+            {m.role === "assistant" &&
+              m.offerHelp &&
+              !m.offerHelpResolved && (
+                <div className="mt-1.5 max-w-[85%]">
+                  <OfferHelpChip
+                    affordance={m.offerHelp}
+                    disabled={busy}
+                    onAccept={() => acceptOfferHelp(i)}
+                    onDismiss={() => dismissOfferHelp(i)}
+                  />
+                </div>
+              )}
           </li>
         ))}
 
@@ -892,5 +968,70 @@ function CopyButton({ text }: { text: string }) {
         )}
       </span>
     </button>
+  );
+}
+
+// ─── OfferHelpChip ──────────────────────────────────────────────────────
+//
+// Phase-1 chat-as-decision-front-door affordance. Renders an inline,
+// dismissable chip below an assistant message when the user's latest
+// message classified as decision-shaped. Calm Precision: ink-only, no
+// per-pain colors, no shadow stacking.
+function OfferHelpChip({
+  affordance,
+  disabled,
+  onAccept,
+  onDismiss,
+}: {
+  affordance: OfferHelpAffordance;
+  disabled: boolean;
+  onAccept: () => void;
+  onDismiss: () => void;
+}) {
+  const ctaText =
+    affordance.suggestedPath === "recommendation"
+      ? "Want a quick recommendation? →"
+      : "Want help deciding this? →";
+  return (
+    <div
+      role="group"
+      aria-label="Offer to help with this decision"
+      className="dd-fade-up inline-flex items-center gap-1 rounded-full border border-line bg-paper px-1 py-0.5"
+    >
+      <button
+        type="button"
+        onClick={onAccept}
+        disabled={disabled}
+        className={
+          "inline-flex items-center rounded-full px-3 py-1 text-[12.5px] font-semibold transition-colors " +
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 " +
+          (disabled
+            ? "text-mute cursor-not-allowed"
+            : "text-ink hover:bg-line/30")
+        }
+      >
+        {ctaText}
+      </button>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss offer"
+        title="Dismiss"
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-mute hover:bg-line/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="h-3 w-3"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          aria-hidden
+        >
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
   );
 }
