@@ -112,15 +112,29 @@ export async function runStage6Feasibility(
     })),
   });
 
-  const result = await callStage({
-    systemPrompt: SYSTEM_PROMPT,
-    userPrompt,
-    responseSchema: {}, // any JSON object — we Zod-validate the shape ourselves
-    temperature: 0, // T-11 determinism contract
-  });
+  let reasoning: string | null = null;
+  let tokensIn = 0;
+  let tokensOut = 0;
+  let safeParsed: ReturnType<typeof ClassificationsSchema.safeParse> = {
+    success: false,
+    error: new z.ZodError([]),
+  };
 
-  const parsed = parseJsonObject(result.answer);
-  const safeParsed = ClassificationsSchema.safeParse(parsed);
+  try {
+    const result = await callStage({
+      systemPrompt: SYSTEM_PROMPT,
+      userPrompt,
+      responseSchema: {}, // any JSON object — we Zod-validate the shape ourselves
+      temperature: 0, // T-11 determinism contract
+    });
+    reasoning = result.reasoning;
+    tokensIn = result.tokensIn;
+    tokensOut = result.tokensOut;
+    const parsed = parseJsonObject(result.answer);
+    safeParsed = ClassificationsSchema.safeParse(parsed);
+  } catch {
+    // Continue with deterministic defaultFeasibilityFor() below.
+  }
 
   // Fallback if the LLM produces unparseable output: every reducer gets the
   // lowest-friction default ("skill") with a transparent rationale. Tests
@@ -158,9 +172,9 @@ export async function runStage6Feasibility(
 
   return {
     reducers: enriched,
-    reasoning: result.reasoning,
-    tokensIn: result.tokensIn,
-    tokensOut: result.tokensOut,
+    reasoning,
+    tokensIn,
+    tokensOut,
   };
 }
 

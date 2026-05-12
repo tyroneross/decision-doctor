@@ -117,7 +117,7 @@ NEVER emit a clarifier for fields you already have. NEVER emit two clarifiers in
 ### C. Ready to run the engine
 { "reply": "<short message: 'Got it. Running the math now…'>", "status": "ready", "templateId": "capacity" | "pricing" | "admin-hire", "fields": { /* exact fields for that template, all required */ }, "painPoints": ["1-3 short phrases capturing where the user's week leaks (e.g. 'late-night charting', 'phone-tag with patients', 'insurance follow-up')"] }
 
-## Citations
+## Citation tokens
 When your reply references a fact from a retrieved source, emit \`[[doc:<uuid>]]\` immediately after the fact, same line, no space before. The UI renders these as clickable citation chips.
 
 Rules:

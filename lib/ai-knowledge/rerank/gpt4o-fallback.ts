@@ -26,6 +26,26 @@ function client(): OpenAI {
 // Cap snippet length so the prompt stays bounded.
 const SNIPPET_CHARS = 400;
 const MAX_DOCS = 30; // gpt-4o-mini context budget is fine well past this; cap for latency.
+const FUSION_WEIGHT = 0.8;
+const MODEL_WEIGHT = 0.2;
+
+function blendWithFusionOrder(
+  inputOrder: string[],
+  modelOrder: string[],
+): string[] {
+  const modelRank = new Map(modelOrder.map((id, i) => [id, i]));
+  return inputOrder
+    .slice()
+    .sort((a, b) => {
+      const aInputRank = inputOrder.indexOf(a);
+      const bInputRank = inputOrder.indexOf(b);
+      const aModelRank = modelRank.get(a) ?? inputOrder.length;
+      const bModelRank = modelRank.get(b) ?? inputOrder.length;
+      const aScore = FUSION_WEIGHT * aInputRank + MODEL_WEIGHT * aModelRank;
+      const bScore = FUSION_WEIGHT * bInputRank + MODEL_WEIGHT * bModelRank;
+      return aScore - bScore;
+    });
+}
 
 export async function gpt4oRerank(
   input: RerankInput,
@@ -74,8 +94,12 @@ export async function gpt4oRerank(
     for (const d of docs) {
       if (!ordered.includes(d.id)) ordered.push(d.id);
     }
+    const blended = blendWithFusionOrder(
+      docs.map((d) => d.id),
+      ordered,
+    );
     return {
-      doc_ids: ordered,
+      doc_ids: blended,
       degraded: false,
       degraded_reason: null,
       rerank_ms: Date.now() - start,

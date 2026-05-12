@@ -274,12 +274,25 @@ async function generateRecommendationCopy(
     confidence: args.confidence,
   });
 
-  const result = await callStage({
-    systemPrompt: RATIONALE_SYSTEM_PROMPT,
-    userPrompt,
-    responseSchema: {},
-    temperature: 0.4, // a touch more variety for the prose
-  });
+  let result: Awaited<ReturnType<typeof callStage>>;
+  try {
+    result = await callStage({
+      systemPrompt: RATIONALE_SYSTEM_PROMPT,
+      userPrompt,
+      responseSchema: {},
+      temperature: 0.4, // a touch more variety for the prose
+    });
+  } catch {
+    return {
+      rationale: `Recommended: ${args.topCandidate.label}. Best-balanced trade-off across your weighted criteria at ${args.confidence}% confidence.`,
+      workloadReducers: [0, 1, 2].map((idx) =>
+        fallbackReducer(args.topCandidate, idx),
+      ) as DecisionOutput["workloadReducers"],
+      reasoning: null,
+      tokensIn: 0,
+      tokensOut: 0,
+    };
+  }
 
   const parsed = parseJsonObject(result.answer);
   const rationale =

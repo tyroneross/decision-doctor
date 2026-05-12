@@ -24,6 +24,10 @@ vi.mock("@/lib/auth-session", () => ({
   getSessionActor: vi.fn(),
 }));
 
+vi.mock("@/lib/auth-guest", () => ({
+  isGuestRequest: vi.fn(),
+}));
+
 vi.mock("@/lib/library", () => ({
   promoteToSkill: vi.fn(),
   promoteToPlugin: vi.fn(),
@@ -56,6 +60,7 @@ vi.mock("@/lib/db/schema", () => ({
 }));
 
 import { getSessionActor } from "@/lib/auth-session";
+import { isGuestRequest } from "@/lib/auth-guest";
 import { promoteToSkill, promoteToPlugin } from "@/lib/library";
 import { generateSkill } from "@/lib/builders/skill-bridge";
 import { generatePlugin } from "@/lib/builders/agent-bridge";
@@ -64,6 +69,7 @@ import { validateArtifact } from "@/lib/builders/quality-gate";
 import { POST } from "@/app/api/library/promote/route";
 
 const mockGetSessionActor = getSessionActor as ReturnType<typeof vi.fn>;
+const mockIsGuestRequest = isGuestRequest as ReturnType<typeof vi.fn>;
 const mockPromoteToSkill = promoteToSkill as ReturnType<typeof vi.fn>;
 const mockPromoteToPlugin = promoteToPlugin as ReturnType<typeof vi.fn>;
 const mockGenerateSkill = generateSkill as ReturnType<typeof vi.fn>;
@@ -94,6 +100,7 @@ function makeRequest(body: unknown): Request {
 describe("POST /api/library/promote", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsGuestRequest.mockResolvedValue(false);
   });
 
   it("returns 401 when not authenticated", async () => {

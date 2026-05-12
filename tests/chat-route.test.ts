@@ -20,6 +20,10 @@ vi.mock("@/lib/auth-session", () => ({
   getSessionActor: vi.fn(),
 }));
 
+vi.mock("@/lib/auth-guest", () => ({
+  isGuestRequest: vi.fn(),
+}));
+
 vi.mock("@/lib/groq", () => ({
   groq: {
     chat: {
@@ -29,6 +33,12 @@ vi.mock("@/lib/groq", () => ({
     },
   },
   GROQ_MODEL: "test-model",
+  callStage: vi.fn(async () => ({
+    answer: JSON.stringify({}),
+    reasoning: null,
+    tokensIn: 0,
+    tokensOut: 0,
+  })),
 }));
 
 vi.mock("@/lib/db/actor", () => ({
@@ -96,6 +106,7 @@ vi.mock("@/lib/engine/orchestrator", () => ({
 // Importing AFTER vi.mock so the mocks bind first.
 import { POST } from "@/app/api/chat/route";
 import { getSessionActor } from "@/lib/auth-session";
+import { isGuestRequest } from "@/lib/auth-guest";
 import { groq } from "@/lib/groq";
 import { __resetInMemoryForTests } from "@/lib/ratelimit";
 
@@ -115,6 +126,7 @@ function reqWith(body: unknown): Request {
 
 beforeEach(() => {
   vi.mocked(getSessionActor).mockResolvedValue(TEST_ACTOR);
+  vi.mocked(isGuestRequest).mockResolvedValue(false);
   __resetInMemoryForTests();
 });
 
