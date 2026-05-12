@@ -1,31 +1,29 @@
 {
-  "generatedAt": "2026-05-12T06:33:55.218Z",
+  "generatedAt": "2026-05-12T06:36:30.470Z",
   "wave10": {
     "n": 10,
-    "wallMs": 6953,
-    "successCount": 9,
-    "errorCount": 1,
-    "errorRate": 0.1,
-    "p50ms": 5815,
-    "p95ms": 6953,
-    "p99ms": 6953,
-    "minMs": 4859,
-    "maxMs": 6953,
-    "sampleErrors": [
-      "400 {\"error\":{\"message\":\"Failed to generate JSON. Please adjust your prompt. See 'failed_generation' for more details.\",\"type\":\"invalid_request_error\",\"code\":\"json_validate_failed\",\"failed_generation\":\"{\\\"rationale\\\":\\\"Building a structured waitlist with tiered intake aligns with your goals of revenue growth and energy sustainability, because it improves patient flow and communication without adding extra clinical hours.\\\",\\\"workloadReducers\\\":[{\\\"type\\\":\\\"prompt\\\",\\\"title\\\":\\\"Waitlist tier email draft\\\",\\\"description\\\":\\\"Create a ready‑to‑send email for patients placed in a specific waitlist tier, saving you writing time.\\\",\\\"artifact\\\":{\\\"promptText\\\":\\\"I run a growing practice with 34 clinical hours per week, see 18 patients weekly, and have a waitlist of 1 patient. I spend several hours each week drafting waitlist communications. Draft a concise, friendly email for a patient assigned to Tier 2 of the waitlist, explaining their expected timeline, next steps to move up, and how they can expedite the process. Return only the email body in plain text.\\\"}},\\\"automationLevel\\\":\\\"user_executes\\\",\\\"coverage\\\":\\\"partial_task\\\",\\\"permission_tier\\\":\\\"T0\\\"},{\\\"type\\\":\\\"playbook\\\",\\\"title\\\":\\\"Implement tiered intake workflow\\\",\\\"description\\\":\\\"Step‑by‑step guide to set up the structured waitlist and intake tiers.\\\",\\\"artifact\\\":{\\\"playbookSteps\\\":[\\\"Define tier criteria (e.g., urgency, insurance, referral source).\\\",\\\"Create a simple spreadsheet or Google Sheet with columns: patient name, tier, expected date, notes.\\\",\\\"Build a template email for each tier (use the prompt above).\\\",\\\"Assign a 15‑minute weekly slot to update the sheet and send batch emails.\\\",\\\"Monitor waitlist length and adjust tier thresholds quarterly.\\\"]}},\\\"automationLevel\\\":\\\"user_executes\\\",\\\"coverage\\\":\\\"full_task\\\",\\\"permission_tier\\\":\\\"T0\\\"},{\\\"type\\\":\\\"skill\\\",\\\"title\\\":\\\"Weekly waitlist snapshot skill\\\",\\\"description\\\":\\\"Generate a one‑page summary of waitlist status and projected revenue impact each week.\\\",\\\"artifact\\\":{\\\"skillName\\\":\\\"waitlist-snapshot\\\"},\\\"automationLevel\\\":\\\"user_executes\\\",\\\"coverage\\\":\\\"partial_task\\\",\\\"permission_tier\\\":\\\"T1\\\"}]}\"}}"
-    ]
+    "wallMs": 5436,
+    "successCount": 10,
+    "errorCount": 0,
+    "errorRate": 0,
+    "p50ms": 5039,
+    "p95ms": 5435,
+    "p99ms": 5435,
+    "minMs": 4657,
+    "maxMs": 5435,
+    "sampleErrors": []
   },
   "wave25": {
     "n": 25,
-    "wallMs": 6305,
+    "wallMs": 7629,
     "successCount": 25,
     "errorCount": 0,
     "errorRate": 0,
-    "p50ms": 5262,
-    "p95ms": 6184,
-    "p99ms": 6304,
-    "minMs": 4054,
-    "maxMs": 6304,
+    "p50ms": 5409,
+    "p95ms": 6728,
+    "p99ms": 7629,
+    "minMs": 4336,
+    "maxMs": 7629,
     "sampleErrors": []
   }
 }

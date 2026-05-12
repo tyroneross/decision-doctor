@@ -115,10 +115,7 @@ export async function runStage6Feasibility(
   let reasoning: string | null = null;
   let tokensIn = 0;
   let tokensOut = 0;
-  let safeParsed: ReturnType<typeof ClassificationsSchema.safeParse> = {
-    success: false,
-    error: new z.ZodError([]),
-  };
+  let classifications: z.infer<typeof ClassificationsSchema> | null = null;
 
   try {
     const result = await callStage({
@@ -131,7 +128,8 @@ export async function runStage6Feasibility(
     tokensIn = result.tokensIn;
     tokensOut = result.tokensOut;
     const parsed = parseJsonObject(result.answer);
-    safeParsed = ClassificationsSchema.safeParse(parsed);
+    const safeParsed = ClassificationsSchema.safeParse(parsed);
+    if (safeParsed.success) classifications = safeParsed.data;
   } catch {
     // Continue with deterministic defaultFeasibilityFor() below.
   }
@@ -140,8 +138,8 @@ export async function runStage6Feasibility(
   // lowest-friction default ("skill") with a transparent rationale. Tests
   // assert presence, not LLM-quality.
   const lookup = new Map<number, z.infer<typeof ClassificationItemSchema>>();
-  if (safeParsed.success) {
-    for (const c of safeParsed.data.classifications) {
+  if (classifications) {
+    for (const c of classifications.classifications) {
       if (c.id >= 0 && c.id < reducers.length) lookup.set(c.id, c);
     }
   }
