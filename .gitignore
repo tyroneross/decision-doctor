@@ -79,3 +79,4 @@ public/workbox-*.js.map
 
 # Integration status — regenerated each check, not tracked
 docs/handover/integration-status.md
+.dd-cache/
