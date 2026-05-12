@@ -46,7 +46,7 @@ export default function GuestRecommendationPreviewPage() {
     return (
       <main className="mx-auto max-w-2xl px-5 py-12">
         <h1
-          className="text-[22px] font-semibold"
+          className="text-h1 sm:text-h1-lg"
           style={{ color: "var(--ink)" }}
         >
           No preview to show

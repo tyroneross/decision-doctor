@@ -309,15 +309,15 @@ export function Chat({ seed }: { seed?: string } = {}) {
           <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-mute">
             Tell me what's eating your time
           </p>
-          <h1 className="mt-2 text-[22px] font-semibold leading-[1.2] tracking-tight text-text sm:text-[24px]">
+          <h1 className="mt-2 text-display sm:text-display-lg tracking-tight text-text">
             I'll rank what AI can take off your plate, and build the skill to do it.
           </h1>
-          <p className="mt-3 max-w-xl text-[14px] leading-[1.5] text-mute sm:text-[16px]">
+          <p className="mt-3 max-w-xl text-[15px] leading-snug text-mute sm:text-[16px]">
             Five-minute conversation. You get a ranked list of capacity drains, an
             AI-feasibility score for each, and a paste-ready skill or playbook for
             the top one, so the time comes back this week, not "someday."
           </p>
-          <p className="mt-3 text-[12px] text-mute">
+          <p className="mt-3 text-[12.5px] text-mute">
             Already know the shape of it?{" "}
             <Link
               href="/app/history/new"
@@ -356,7 +356,7 @@ export function Chat({ seed }: { seed?: string } = {}) {
 
       {/* MESSAGE LIST */}
       <ul
-        className="flex-1 space-y-4 overflow-y-auto pb-4"
+        className="flex-1 space-y-4 overflow-y-auto pb-44"
         aria-live="polite"
       >
         {thread.messages.map((m, i) => (
@@ -630,11 +630,11 @@ function DecisionCard({
           What we built · primary outcome
         </p>
         {hoursBack > 0 ? (
-          <p className="mt-2 text-[40px] font-semibold leading-[.95] tracking-tight text-ink sm:text-[48px]">
+          <p className="mt-2 text-display sm:text-display-lg tracking-tight text-ink">
             🕐 {formatHrs(hoursBack)}/wk back
           </p>
         ) : (
-          <p className="mt-2 text-[28px] font-semibold leading-tight tracking-tight text-ink sm:text-[34px]">
+          <p className="mt-2 text-display sm:text-display-lg tracking-tight text-ink">
             {decision.recommendation.option}
           </p>
         )}
@@ -667,7 +667,7 @@ function DecisionCard({
               ~1 min to ship
             </span>
           </div>
-          <h2 className="mt-3 text-xl font-semibold leading-snug text-ink">
+          <h2 className="mt-3 text-h2 sm:text-h2-lg text-ink">
             {topReducer.title}
           </h2>
           <p className="mt-1.5 text-[14px] leading-relaxed text-ink">

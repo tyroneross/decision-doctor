@@ -28,6 +28,11 @@ const KIND_LABELS: Record<LibraryKind, string> = {
   plugin: "plugin",
   corpus: "corpus",
   kb_article: "learn",
+  // saved_* kinds have dedicated renderers (SavedResponseCard,
+  // saved-search apply-card in LibraryPageClient). UseCaseCard is never
+  // expected to render them, but the union requires exhaustive entries.
+  saved_search: "saved search",
+  saved_response: "saved response",
 };
 
 // Map PainPath IDs to human-readable short labels for the card meta row.

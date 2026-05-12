@@ -9,9 +9,9 @@
 // Settle strategy:
 //   1. Page.enable + Page.setLifecycleEventsEnabled
 //   2. Page.navigate
-//   3. Await first 'load' lifecycle event (or 15s timeout) — covers the
+//   3. Await first 'load' lifecycle event (or 30s timeout) — covers the
 //      initial paint after JS hydration kicks off.
-//   4. Fixed 2s settle delay plus short text-stability polling — covers
+//   4. Fixed 4s settle delay plus text-stability polling — covers
 //      post-load async content (React effects, lazy-mounted article body,
 //      hydration finishers).
 //   5. Runtime.evaluate(...) → return structured text candidates and HTML.
@@ -25,10 +25,17 @@ import { CdpConnection } from "./connection.js";
 import { PageDomain } from "./page.js";
 import { RuntimeDomain } from "./runtime.js";
 
-const LIFECYCLE_TIMEOUT_MS = 15_000;
-const SETTLE_DELAY_MS = 2_000;
-const TEXT_STABILITY_TIMEOUT_MS = 4_000;
-const TEXT_STABILITY_INTERVAL_MS = 500;
+function positiveIntEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const LIFECYCLE_TIMEOUT_MS = positiveIntEnv("CDP_LIFECYCLE_TIMEOUT_MS", 30_000);
+const SETTLE_DELAY_MS = positiveIntEnv("CDP_SETTLE_DELAY_MS", 4_000);
+const TEXT_STABILITY_TIMEOUT_MS = positiveIntEnv("CDP_TEXT_STABILITY_TIMEOUT_MS", 8_000);
+const TEXT_STABILITY_INTERVAL_MS = positiveIntEnv("CDP_TEXT_STABILITY_INTERVAL_MS", 500);
 
 interface LifecycleEvent {
   name?: string;
@@ -37,8 +44,10 @@ interface LifecycleEvent {
 export interface ExtractRenderedHtmlOptions {
   /** Headless Chrome (default true). */
   headless?: boolean;
-  /** Settle delay after first 'load' event (default 2s). */
+  /** Settle delay after first 'load' event (default 4s). */
   settleMs?: number;
+  /** How long to poll for stable body text after settle (default 8s). */
+  textStabilityTimeoutMs?: number;
 }
 
 export interface RenderedContentProbe {
@@ -74,8 +83,11 @@ async function getPageWebSocketUrl(cdpUrl: string): Promise<string> {
   return page.webSocketDebuggerUrl;
 }
 
-async function waitForTextStability(runtime: RuntimeDomain): Promise<void> {
-  const deadline = Date.now() + TEXT_STABILITY_TIMEOUT_MS;
+async function waitForTextStability(
+  runtime: RuntimeDomain,
+  timeoutMs = TEXT_STABILITY_TIMEOUT_MS,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
   let lastLen = -1;
   let stableTicks = 0;
   while (Date.now() < deadline) {
@@ -149,7 +161,10 @@ async function withRenderedRuntime<T>(
     await page.navigate(url);
     await loadOrTimeout;
     await new Promise((r) => setTimeout(r, options.settleMs ?? SETTLE_DELAY_MS));
-    await waitForTextStability(runtime);
+    await waitForTextStability(
+      runtime,
+      options.textStabilityTimeoutMs ?? TEXT_STABILITY_TIMEOUT_MS,
+    );
 
     return await fn(runtime);
   } finally {

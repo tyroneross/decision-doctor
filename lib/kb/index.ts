@@ -43,6 +43,10 @@ export interface KbArticleFull extends KbArticleSummary {
   body: string;
 }
 
+function toIso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
 function rowToSummary(r: KbArticle): KbArticleSummary {
   return {
     id: r.id,
@@ -51,8 +55,8 @@ function rowToSummary(r: KbArticle): KbArticleSummary {
     summary: r.summary,
     reading_minutes: r.readingMinutes,
     display_order: r.displayOrder,
-    created_at: (r.createdAt as unknown as Date).toISOString(),
-    updated_at: (r.updatedAt as unknown as Date).toISOString(),
+    created_at: toIso(r.createdAt as unknown as Date | string),
+    updated_at: toIso(r.updatedAt as unknown as Date | string),
   };
 }
 

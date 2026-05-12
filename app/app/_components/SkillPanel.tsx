@@ -62,10 +62,10 @@ export function SkillPanel({ skills }: Props) {
     );
   }, [skillParam, skills]);
 
-  if (collapsed) {
-    return (
-      <CollapsedRail />
-    );
+  // Collapse by default when nothing is selected — an empty 360px rail
+  // is dead chrome. `?panel=expanded` lets the user force-open it.
+  if (collapsed || (!active && panelMode !== "expanded")) {
+    return <CollapsedRail hasActive={Boolean(active)} />;
   }
 
   if (!active) {
@@ -102,7 +102,7 @@ export function SkillPanel({ skills }: Props) {
         <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-mute">
           AI Skill
         </p>
-        <h2 className="mt-1 text-[20px] font-semibold leading-tight text-ink">
+        <h2 className="mt-1 text-h2 sm:text-h2-lg text-ink">
           {active.title}
         </h2>
         <p className="mt-1 text-[12px] text-mute">
@@ -250,14 +250,18 @@ function CollapseLink() {
   );
 }
 
-function CollapsedRail() {
+function CollapsedRail({ hasActive = false }: { hasActive?: boolean } = {}) {
+  // When a skill is selected the rail re-opens via `?panel=`; when nothing
+  // is selected (default) the rail forces `?panel=expanded` so the user can
+  // see the empty state if they really want it.
+  const expandHref = hasActive ? "?panel=" : "?panel=expanded";
   return (
     <aside
       aria-label="Skill panel (collapsed)"
       className="hidden lg:flex sticky top-0 h-screen w-7 shrink-0 flex-col items-center justify-start border-l border-line bg-paper py-6"
     >
       <a
-        href="?panel="
+        href={expandHref}
         aria-label="Expand skill panel"
         title="Expand skill panel"
         className="inline-flex h-8 w-7 items-center justify-center text-mute hover:text-ink"

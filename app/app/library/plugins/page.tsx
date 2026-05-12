@@ -44,7 +44,7 @@ export default async function PluginsLibraryPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <header className="mb-6">
-        <h1 className="text-[22px] font-bold text-text leading-tight mb-1">
+        <h1 className="text-h1 sm:text-h1-lg text-text mb-1">
           Plugin & Skill Library
         </h1>
         <p className="text-[14px] text-mute">

@@ -6,7 +6,7 @@
  *   2. All pain_path values are in the valid enum set.
  *   3. All starting_level values are valid (use-cases only).
  *   4. No PHI present in any seed entry.
- *   5. Upsert call receives the correct aggregate count (25 use-cases, 15 prompts).
+ *   5. Upsert call receives the correct aggregate count (35 use-cases, 20 prompts).
  *
  * No live DB calls — the upsert helpers are mocked.
  */
@@ -33,12 +33,14 @@ import { useCases as ucReferrals } from "@/scripts/library-seed/use-cases-referr
 import { useCases as ucResearch }  from "@/scripts/library-seed/use-cases-research";
 import { useCases as ucCapacity }  from "@/scripts/library-seed/use-cases-capacity_growth";
 import { useCases as ucFollowUp }  from "@/scripts/library-seed/use-cases-follow_up";
+import { useCases as ucPsychiatryRoles } from "@/scripts/library-seed/use-cases-psychiatry_roles";
 
 import { prompts as prAdmin }      from "@/scripts/library-seed/prompts-admin";
 import { prompts as prReferrals }  from "@/scripts/library-seed/prompts-referrals";
 import { prompts as prResearch }   from "@/scripts/library-seed/prompts-research";
 import { prompts as prCapacity }   from "@/scripts/library-seed/prompts-capacity_growth";
 import { prompts as prFollowUp }   from "@/scripts/library-seed/prompts-follow_up";
+import { prompts as prPsychiatryRoles } from "@/scripts/library-seed/prompts-psychiatry_roles";
 
 import { detectPHI } from "@/lib/phi-guard";
 import type { PainPath, StartingLevel } from "@/lib/db/schema";
@@ -74,6 +76,7 @@ const ALL_USE_CASES = [
   ...ucResearch,
   ...ucCapacity,
   ...ucFollowUp,
+  ...ucPsychiatryRoles,
 ];
 
 const ALL_PROMPTS = [
@@ -82,6 +85,7 @@ const ALL_PROMPTS = [
   ...prResearch,
   ...prCapacity,
   ...prFollowUp,
+  ...prPsychiatryRoles,
 ];
 
 // ---------------------------------------------------------------------------
@@ -114,6 +118,11 @@ describe("seed file exports — array lengths", () => {
     expect(ucFollowUp).toHaveLength(5);
   });
 
+  it("use-cases-psychiatry_roles exports 10 entries", () => {
+    expect(Array.isArray(ucPsychiatryRoles)).toBe(true);
+    expect(ucPsychiatryRoles).toHaveLength(10);
+  });
+
   it("prompts-admin exports 3 entries", () => {
     expect(Array.isArray(prAdmin)).toBe(true);
     expect(prAdmin).toHaveLength(3);
@@ -138,6 +147,11 @@ describe("seed file exports — array lengths", () => {
     expect(Array.isArray(prFollowUp)).toBe(true);
     expect(prFollowUp).toHaveLength(3);
   });
+
+  it("prompts-psychiatry_roles exports 5 entries", () => {
+    expect(Array.isArray(prPsychiatryRoles)).toBe(true);
+    expect(prPsychiatryRoles).toHaveLength(5);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -145,12 +159,41 @@ describe("seed file exports — array lengths", () => {
 // ---------------------------------------------------------------------------
 
 describe("aggregate seed counts", () => {
-  it("total use-cases is 25", () => {
-    expect(ALL_USE_CASES).toHaveLength(25);
+  it("total use-cases is 35", () => {
+    expect(ALL_USE_CASES).toHaveLength(35);
   });
 
-  it("total prompts is 15", () => {
-    expect(ALL_PROMPTS).toHaveLength(15);
+  it("total prompts is 20", () => {
+    expect(ALL_PROMPTS).toHaveLength(20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: psychiatry industry pack coverage
+// ---------------------------------------------------------------------------
+
+describe("psychiatry role pack coverage", () => {
+  it("covers psychiatry-specific weak spots from search eval", () => {
+    const haystack = [...ucPsychiatryRoles, ...prPsychiatryRoles]
+      .map((row) => `${row.title} ${row.body}`)
+      .join(" ")
+      .toLowerCase();
+
+    for (const phrase of [
+      "psychiatry",
+      "psychiatrist",
+      "psychotherapy notes",
+      "measurement-based care",
+      "therapy chatbot",
+      "hipaa",
+      "tms",
+      "spravato",
+      "controlled substance",
+      "waitlist",
+      "safety plan",
+    ]) {
+      expect(haystack, `psychiatry pack missing phrase: ${phrase}`).toContain(phrase);
+    }
   });
 });
 
@@ -251,18 +294,18 @@ describe("upsert call count (mocked DB)", () => {
     mockExecute.mockClear();
   });
 
-  it("would call execute 25 times for use-cases", async () => {
+  it("would call execute 35 times for use-cases", async () => {
     // Simulate upsert loop without importing the actual seeder (avoids DB connect)
     for (const _row of ALL_USE_CASES) {
       await mockDb.execute({} as Parameters<typeof mockDb.execute>[0]);
     }
-    expect(mockExecute).toHaveBeenCalledTimes(25);
+    expect(mockExecute).toHaveBeenCalledTimes(35);
   });
 
-  it("would call execute 15 times for prompts", async () => {
+  it("would call execute 20 times for prompts", async () => {
     for (const _row of ALL_PROMPTS) {
       await mockDb.execute({} as Parameters<typeof mockDb.execute>[0]);
     }
-    expect(mockExecute).toHaveBeenCalledTimes(15);
+    expect(mockExecute).toHaveBeenCalledTimes(20);
   });
 });

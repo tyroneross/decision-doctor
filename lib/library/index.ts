@@ -18,17 +18,21 @@ import {
   libraryPrompts,
   librarySkills,
   libraryPlugins,
+  librarySavedSearches,
+  librarySavedResponses,
   type PainPath,
   type StartingLevel,
   type LibraryUseCase,
   type LibraryPrompt,
   type LibrarySkill,
   type LibraryPlugin,
+  type LibrarySavedSearch,
+  type LibrarySavedResponse,
   type NewLibraryUseCase,
 } from "@/lib/db/schema";
 import { runWithActor, withActor } from "@/lib/db/actor";
-import { eq, or } from "drizzle-orm";
-import { type BodyKind, normalizeBodyKind, isBlockedBodyKind } from "@/lib/corpus/body-kind";
+import { and, desc, eq, or } from "drizzle-orm";
+import { type BodyKind, normalizeBodyKind } from "@/lib/corpus/body-kind";
 import { GUEST_TENANT_ID, GUEST_USER_ID } from "@/lib/guest-identity";
 
 // ---- Public type exports ----------------------------------------------------
@@ -39,7 +43,35 @@ export type LibraryKind =
   | "skill"
   | "plugin"
   | "corpus"
-  | "kb_article";
+  | "kb_article"
+  | "saved_search"
+  | "saved_response";
+
+/** Captured filter state when a search was pinned. */
+export interface SavedSearchPayload {
+  query: string;
+  kindFilter: string[];
+  pathFilter: string[];
+  onlyMine: boolean;
+  name: string | null;
+  createdAt: string;
+}
+
+/** Citation record matching components/qa/CitationList QACitation. */
+export interface SavedResponseCitation {
+  uuid: string;
+  kind: "use_case" | "prompt" | "skill" | "plugin" | "corpus";
+  title: string;
+}
+
+/** Captured /app/ask answer when a response was pinned. */
+export interface SavedResponsePayload {
+  question: string;
+  answer: string;
+  citations: SavedResponseCitation[];
+  wasGrounded: boolean;
+  createdAt: string;
+}
 
 export interface LibraryHit {
   kind: LibraryKind;
@@ -59,16 +91,27 @@ export interface LibraryHit {
    * V2 trust-tier for corpus hits (kind === 'corpus'). Library kinds and KB
    * articles leave this undefined — they are user-curated and treated as full-text.
    * NULL on a corpus hit = pre-backfill row, treated as `full_text` for
-   * back-compat. `blocked`/`degraded`/`metadata_only` rows are filtered
-   * before hydration so they should never reach the UI.
+   * back-compat. `blocked` / `degraded` rows are filtered before hydration.
+   * `metadata_only` rows may appear as title-only discovery results with a badge.
    */
   body_kind?: BodyKind | null;
+  /** Present only when kind === 'saved_search'. Re-apply payload. */
+  saved_search?: SavedSearchPayload;
+  /** Present only when kind === 'saved_response'. Renderable answer payload. */
+  saved_response?: SavedResponsePayload;
 }
 
 export type { PainPath, StartingLevel };
 
 // Re-export DB row types for callers that only need the retrieval module.
-export type { LibraryUseCase, LibraryPrompt, LibrarySkill, LibraryPlugin };
+export type {
+  LibraryUseCase,
+  LibraryPrompt,
+  LibrarySkill,
+  LibraryPlugin,
+  LibrarySavedSearch,
+  LibrarySavedResponse,
+};
 
 // ---- Insert input types (minimal required fields) ---------------------------
 
@@ -613,11 +656,45 @@ export async function searchLibrary(
     }
   }
 
+  // --- Saved responses fan-out (user-scoped, FTS via search_tsv) ---
+  //     Saved responses are personal artifacts; RLS scopes them to user_id
+  //     automatically. Guests have no rows so the query returns []. The
+  //     LibraryHit carries the full payload for inline rendering.
+  if (activeKinds.includes("saved_response")) {
+    try {
+      const responseHits = await searchSavedResponsesInternal(
+        userId,
+        tenantId,
+        trimmed,
+      );
+      hits.push(...responseHits);
+    } catch (err) {
+      console.warn("[searchLibrary] saved_response fan-out failed:", err);
+    }
+  }
+
+  // --- Saved searches fan-out (user-scoped, no FTS — small N, ILIKE) ---
+  //     Saved searches are surfaced primarily via the pinned strip in the
+  //     UI; we include them here for completeness when the kind filter
+  //     explicitly opts in. ILIKE is fine because per-user counts are tiny.
+  if (activeKinds.includes("saved_search")) {
+    try {
+      const searchHits = await searchSavedSearchesInternal(
+        userId,
+        tenantId,
+        trimmed,
+      );
+      hits.push(...searchHits);
+    } catch (err) {
+      console.warn("[searchLibrary] saved_search fan-out failed:", err);
+    }
+  }
+
   // --- Corpus fan-out (outside the library RLS transaction) ---
   if (includeCorpus) {
     try {
       // Import corpus search inline to avoid circular dependency at module level.
-      // The bm25Search + /api/search corpus pipeline is the authoritative path.
+      // The bm25Search + titleSearch corpus pipeline is the authoritative path.
       // We call the corpus search logic directly — not via HTTP — to keep this
       // importable in tests with mocked DB.
       const corpusHits = await fetchCorpusHits(query, userId, tenantId);
@@ -628,9 +705,17 @@ export async function searchLibrary(
     }
   }
 
-  // Sort by score descending, cap at 50.
-  hits.sort((a, b) => b.score - a.score);
+  // Sort by score descending, cap at 50. Curated library rows get a modest
+  // boost so role/use-case packs are not buried by broad corpus articles on
+  // the Library surface.
+  hits.sort((a, b) => librarySortScore(b) - librarySortScore(a));
   return hits.slice(0, 50);
+}
+
+function librarySortScore(hit: LibraryHit): number {
+  if (hit.kind === "corpus") return hit.score;
+  if (hit.kind === "kb_article") return hit.score + 0.15;
+  return hit.score + 0.35;
 }
 
 /**
@@ -644,11 +729,22 @@ async function fetchCorpusHits(
   tenantId: string,
 ): Promise<LibraryHit[]> {
   const { bm25Search } = await import("@/lib/ai-knowledge/search/bm25-leg");
+  const { titleSearch } = await import("@/lib/ai-knowledge/search/title-leg");
 
   return runWithActor({ userId, tenantId }, async () =>
     withActor(async (tx) => {
-      // Strict pass first.
+      // Strict pass first. Title search keeps metadata-only articles discoverable
+      // without treating their bodies as grounded answer material.
       let corpusRows = await bm25Search(tx, query, 20);
+      const titleRows = await titleSearch(tx, query, 20);
+      const seenTitle = new Set(corpusRows.map((r) => r.doc_id));
+      for (const row of titleRows) {
+        if (!seenTitle.has(row.doc_id)) {
+          corpusRows.push(row);
+          seenTitle.add(row.doc_id);
+        }
+      }
+      corpusRows.sort((a, b) => b.rank - a.rank);
 
       // OR-quorum fallback if too few results.
       if (corpusRows.length < QUORUM_MIN_HITS) {
@@ -689,8 +785,8 @@ async function fetchCorpusHits(
 
       // Hydrate title + snippet + body_kind from corpus_documents. C10:
       // body_kind comes from metadata->'content_extract' (not yet a column).
-      // Defense in depth: skip any row whose body_kind is blocked / degraded /
-      // metadata_only even though bm25Search already filters them.
+      // Defense in depth: skip hard-bad rows but keep metadata-only rows
+      // discoverable as clearly badged corpus results.
       const ids = corpusRows.slice(0, 20).map((r) => r.doc_id);
       const docResult = await tx.execute(sql`
         SELECT id, title, body,
@@ -708,7 +804,7 @@ async function fetchCorpusHits(
         body: string;
         body_kind: string | null;
       }>) {
-        if (isBlockedBodyKind(r.body_kind)) continue;
+        if (r.body_kind === "blocked" || r.body_kind === "degraded") continue;
         docMap.set(r.id, r);
       }
 
@@ -726,6 +822,394 @@ async function fetchCorpusHits(
             body_kind: normalizeBodyKind(doc.body_kind),
           },
         ];
+      });
+    }),
+  );
+}
+
+// ---- Saved searches CRUD ----------------------------------------------------
+
+export interface NewSavedSearch {
+  query: string;
+  kindFilter: string[];
+  pathFilter: string[];
+  onlyMine: boolean;
+  name?: string | null;
+}
+
+/** List the current user's saved searches, newest first. */
+export async function listSavedSearches(
+  userId: string,
+  tenantId: string,
+): Promise<LibrarySavedSearch[]> {
+  return runWithActor({ userId, tenantId }, async () =>
+    withActor(async (tx) => {
+      return tx
+        .select()
+        .from(librarySavedSearches)
+        .where(eq(librarySavedSearches.scope, userId))
+        .orderBy(desc(librarySavedSearches.createdAt));
+    }),
+  );
+}
+
+/** Insert a new saved search row scoped to the current user. */
+export async function createSavedSearch(
+  userId: string,
+  tenantId: string,
+  input: NewSavedSearch,
+): Promise<LibrarySavedSearch> {
+  return runWithActor({ userId, tenantId }, async () =>
+    withActor(async (tx) => {
+      const [row] = await tx
+        .insert(librarySavedSearches)
+        .values({
+          scope: userId,
+          name: input.name ?? null,
+          query: input.query,
+          kindFilter: input.kindFilter as typeof librarySavedSearches.$inferInsert["kindFilter"],
+          pathFilter: input.pathFilter as typeof librarySavedSearches.$inferInsert["pathFilter"],
+          onlyMine: input.onlyMine,
+        })
+        .returning();
+      return row!;
+    }),
+  );
+}
+
+/** Rename a saved search the current user owns. Returns null if not found. */
+export async function renameSavedSearch(
+  userId: string,
+  tenantId: string,
+  id: string,
+  name: string | null,
+): Promise<LibrarySavedSearch | null> {
+  return runWithActor({ userId, tenantId }, async () =>
+    withActor(async (tx) => {
+      const rows = await tx
+        .update(librarySavedSearches)
+        .set({ name, updatedAt: new Date() })
+        .where(
+          and(
+            eq(librarySavedSearches.id, id),
+            eq(librarySavedSearches.scope, userId),
+          ),
+        )
+        .returning();
+      return rows[0] ?? null;
+    }),
+  );
+}
+
+/** Delete a saved search the current user owns. Returns true if a row was removed. */
+export async function deleteSavedSearch(
+  userId: string,
+  tenantId: string,
+  id: string,
+): Promise<boolean> {
+  return runWithActor({ userId, tenantId }, async () =>
+    withActor(async (tx) => {
+      const rows = await tx
+        .delete(librarySavedSearches)
+        .where(
+          and(
+            eq(librarySavedSearches.id, id),
+            eq(librarySavedSearches.scope, userId),
+          ),
+        )
+        .returning({ id: librarySavedSearches.id });
+      return rows.length > 0;
+    }),
+  );
+}
+
+// ---- Saved responses CRUD ---------------------------------------------------
+
+export interface NewSavedResponse {
+  question: string;
+  answer: string;
+  citations: SavedResponseCitation[];
+  wasGrounded?: boolean;
+}
+
+/** List the current user's saved responses, newest first. */
+export async function listSavedResponses(
+  userId: string,
+  tenantId: string,
+): Promise<LibrarySavedResponse[]> {
+  return runWithActor({ userId, tenantId }, async () =>
+    withActor(async (tx) => {
+      return tx
+        .select()
+        .from(librarySavedResponses)
+        .where(eq(librarySavedResponses.scope, userId))
+        .orderBy(desc(librarySavedResponses.createdAt));
+    }),
+  );
+}
+
+/** Insert a new saved response row scoped to the current user. */
+export async function createSavedResponse(
+  userId: string,
+  tenantId: string,
+  input: NewSavedResponse,
+): Promise<LibrarySavedResponse> {
+  return runWithActor({ userId, tenantId }, async () =>
+    withActor(async (tx) => {
+      const [row] = await tx
+        .insert(librarySavedResponses)
+        .values({
+          scope: userId,
+          question: input.question,
+          answer: input.answer,
+          citations:
+            input.citations as typeof librarySavedResponses.$inferInsert["citations"],
+          wasGrounded: input.wasGrounded ?? true,
+        })
+        .returning();
+      return row!;
+    }),
+  );
+}
+
+/** Delete a saved response the current user owns. Returns true if a row was removed. */
+export async function deleteSavedResponse(
+  userId: string,
+  tenantId: string,
+  id: string,
+): Promise<boolean> {
+  return runWithActor({ userId, tenantId }, async () =>
+    withActor(async (tx) => {
+      const rows = await tx
+        .delete(librarySavedResponses)
+        .where(
+          and(
+            eq(librarySavedResponses.id, id),
+            eq(librarySavedResponses.scope, userId),
+          ),
+        )
+        .returning({ id: librarySavedResponses.id });
+      return rows.length > 0;
+    }),
+  );
+}
+
+// ---- Internal helpers used by searchLibrary fan-out -------------------------
+
+/**
+ * FTS search across the current user's saved responses. Returns LibraryHit[]
+ * with the full saved_response payload inlined for rendering.
+ *
+ * Mirrors searchTable() for library_use_cases etc., with strict
+ * websearch_to_tsquery then OR-quorum fallback.
+ */
+async function searchSavedResponsesInternal(
+  userId: string,
+  tenantId: string,
+  query: string,
+): Promise<LibraryHit[]> {
+  return runWithActor({ userId, tenantId }, async () =>
+    withActor(async (tx) => {
+      // If query is empty (single-space sentinel), list newest-first instead
+      // of running FTS — same UX as the library page's "no query, filters
+      // active" path.
+      const isEmpty = !query || query === " ";
+
+      const rows = isEmpty
+        ? (
+            await tx
+              .select()
+              .from(librarySavedResponses)
+              .where(eq(librarySavedResponses.scope, userId))
+              .orderBy(desc(librarySavedResponses.createdAt))
+              .limit(20)
+          ).map((r) => ({
+            id: r.id,
+            question: r.question,
+            answer: r.answer,
+            citations: r.citations as unknown as SavedResponseCitation[],
+            was_grounded: r.wasGrounded,
+            created_at:
+              r.createdAt instanceof Date
+                ? r.createdAt.toISOString()
+                : String(r.createdAt),
+            rank: 0,
+          }))
+        : await searchSavedResponsesFts(tx, query);
+
+      return rows.map((r) => ({
+        kind: "saved_response" as const,
+        id: r.id,
+        title: r.question,
+        snippet: (r.answer || "").slice(0, 300).replace(/\s+/g, " "),
+        score: Number(r.rank),
+        library_id: r.id,
+        saved_response: {
+          question: r.question,
+          answer: r.answer,
+          citations: Array.isArray(r.citations) ? r.citations : [],
+          wasGrounded: r.was_grounded,
+          createdAt: r.created_at,
+        },
+      }));
+    }),
+  );
+}
+
+/** FTS over library_saved_responses.search_tsv with OR-quorum fallback. */
+async function searchSavedResponsesFts(
+  tx: Parameters<Parameters<typeof withActor>[0]>[0],
+  query: string,
+): Promise<
+  Array<{
+    id: string;
+    question: string;
+    answer: string;
+    citations: SavedResponseCitation[];
+    was_grounded: boolean;
+    created_at: string;
+    rank: number;
+  }>
+> {
+  // Strict pass.
+  const strict = await tx.execute(sql`
+    SELECT id, question, answer, citations, was_grounded,
+           created_at::text AS created_at,
+           ts_rank_cd(search_tsv, websearch_to_tsquery('english', ${query}), 32) AS rank
+      FROM library_saved_responses
+     WHERE search_tsv @@ websearch_to_tsquery('english', ${query})
+     ORDER BY rank DESC
+     LIMIT 20
+  `);
+  const strictRows = strict.rows as Array<{
+    id: string;
+    question: string;
+    answer: string;
+    citations: unknown;
+    was_grounded: boolean;
+    created_at: string;
+    rank: number | string;
+  }>;
+  let hits = strictRows.map((r) => ({
+    id: r.id,
+    question: r.question,
+    answer: r.answer,
+    citations: Array.isArray(r.citations)
+      ? (r.citations as SavedResponseCitation[])
+      : [],
+    was_grounded: r.was_grounded,
+    created_at: r.created_at,
+    rank: Number(r.rank),
+  }));
+
+  if (hits.length >= QUORUM_MIN_HITS) return hits;
+
+  // OR-quorum fallback.
+  const orQuery = buildOrQuery(query);
+  if (!orQuery) return hits;
+  const fallback = await tx.execute(sql`
+    SELECT id, question, answer, citations, was_grounded,
+           created_at::text AS created_at,
+           ts_rank_cd(search_tsv, to_tsquery('english', ${orQuery}), 32) AS rank
+      FROM library_saved_responses
+     WHERE search_tsv @@ to_tsquery('english', ${orQuery})
+     ORDER BY rank DESC
+     LIMIT 20
+  `);
+  const fallbackRows = fallback.rows as Array<{
+    id: string;
+    question: string;
+    answer: string;
+    citations: unknown;
+    was_grounded: boolean;
+    created_at: string;
+    rank: number | string;
+  }>;
+  // Dedup by id, keep highest rank.
+  const map = new Map<string, (typeof hits)[number]>();
+  for (const r of hits) map.set(r.id, r);
+  for (const r of fallbackRows) {
+    const next = {
+      id: r.id,
+      question: r.question,
+      answer: r.answer,
+      citations: Array.isArray(r.citations)
+        ? (r.citations as SavedResponseCitation[])
+        : [],
+      was_grounded: r.was_grounded,
+      created_at: r.created_at,
+      rank: Number(r.rank),
+    };
+    const existing = map.get(r.id);
+    if (!existing || next.rank > existing.rank) map.set(r.id, next);
+  }
+  return Array.from(map.values()).sort((a, b) => b.rank - a.rank);
+}
+
+/**
+ * ILIKE search across the current user's saved searches. Small N, so ILIKE
+ * over name + query is sufficient. Returns LibraryHit[] with saved_search
+ * payload for re-apply.
+ */
+async function searchSavedSearchesInternal(
+  userId: string,
+  tenantId: string,
+  query: string,
+): Promise<LibraryHit[]> {
+  return runWithActor({ userId, tenantId }, async () =>
+    withActor(async (tx) => {
+      const isEmpty = !query || query === " ";
+      const pattern = `%${query.replace(/[%_]/g, "")}%`;
+      const filter = isEmpty
+        ? sql`scope = ${userId}`
+        : sql`scope = ${userId} AND (
+            coalesce(name, '') ILIKE ${pattern} OR query ILIKE ${pattern}
+          )`;
+
+      const result = await tx.execute(sql`
+        SELECT id, name, query, kind_filter, path_filter, only_mine,
+               created_at::text AS created_at
+          FROM library_saved_searches
+         WHERE ${filter}
+         ORDER BY created_at DESC
+         LIMIT 20
+      `);
+
+      const rows = result.rows as Array<{
+        id: string;
+        name: string | null;
+        query: string;
+        kind_filter: unknown;
+        path_filter: unknown;
+        only_mine: boolean;
+        created_at: string;
+      }>;
+
+      return rows.map<LibraryHit>((r) => {
+        const kindFilter = Array.isArray(r.kind_filter)
+          ? (r.kind_filter as string[])
+          : [];
+        const pathFilter = Array.isArray(r.path_filter)
+          ? (r.path_filter as string[])
+          : [];
+        const titleSource = r.name?.trim() || r.query || "(saved search)";
+        const truncatedQuery = (r.query || "").slice(0, 300);
+        return {
+          kind: "saved_search" as const,
+          id: r.id,
+          title: titleSource,
+          snippet: truncatedQuery,
+          score: 0,
+          library_id: r.id,
+          saved_search: {
+            query: r.query,
+            kindFilter,
+            pathFilter,
+            onlyMine: r.only_mine,
+            name: r.name,
+            createdAt: r.created_at,
+          },
+        };
       });
     }),
   );

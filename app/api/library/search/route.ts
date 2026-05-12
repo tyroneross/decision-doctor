@@ -21,7 +21,16 @@ import type { LibraryKind, PainPath } from "@/lib/library";
 // Hardening item 7.
 export const runtime = "nodejs";
 
-const VALID_KINDS = ["use_case", "prompt", "skill", "plugin", "corpus", "kb_article"] as const;
+const VALID_KINDS = [
+  "use_case",
+  "prompt",
+  "skill",
+  "plugin",
+  "corpus",
+  "kb_article",
+  "saved_search",
+  "saved_response",
+] as const;
 const VALID_PATHS = [
   "referrals",
   "research",

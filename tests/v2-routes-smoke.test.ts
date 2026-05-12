@@ -65,6 +65,7 @@ const V2_ROUTES: { label: string; file: string }[] = [
   { label: "/api/recommendations",              file: "app/api/recommendations/route.ts" },
   { label: "/api/recommendations/[id]",         file: "app/api/recommendations/[id]/route.ts" },
   { label: "/api/ai-adoption-qa",               file: "app/api/ai-adoption-qa/route.ts" },
+  { label: "/api/search/suggest",               file: "app/api/search/suggest/route.ts" },
   // Library API routes (7)
   { label: "/api/library/use-cases",            file: "app/api/library/use-cases/route.ts" },
   { label: "/api/library/prompts",              file: "app/api/library/prompts/route.ts" },
@@ -240,17 +241,17 @@ describe("NoPhiNotice promotion to components/ui/", () => {
 // ── 6. Search entry-point wiring ───────────────────────────────────────────
 
 describe("AI-adoption search entry points", () => {
-  it("home composer routes submitted text to adaptive recommendation intake", () => {
+  it("home composer routes submitted text to /app/ask", () => {
     expect(
-      fileContains("app/app/_components/HomeComposer.tsx", "/app/recommendations/new?challenge="),
-      "Home search must open the primary adaptive recommendation intake"
+      fileContains("app/app/_components/HomeComposer.tsx", "/app/ask?q="),
+      "Home search must open the AI-adoption Q&A surface"
     ).toBe(true);
   });
 
-  it("home keeps explicit access to the AI-adoption Q&A surface", () => {
+  it("home composer uses predictive suggestions", () => {
     expect(
-      fileContains("app/app/page.tsx", 'href="/app/ask"'),
-      "Q&A must remain available as a secondary entry point"
+      fileContains("app/app/_components/HomeComposer.tsx", "usePredictiveSuggestions"),
+      "Home search must show predictive suggestions"
     ).toBe(true);
   });
 
@@ -265,6 +266,17 @@ describe("AI-adoption search entry points", () => {
     expect(
       fileContains("app/app/_components/DesktopSidebar.tsx", 'href: "/app/library"'),
       "Desktop Library nav must not skip straight to the plugin subpage"
+    ).toBe(true);
+  });
+
+  it("predictive search includes metadata-only corpus titles but excludes hard-bad bodies", () => {
+    expect(
+      fileContains("app/api/search/suggest/route.ts", "metadata_only"),
+      "Predictive search should keep metadata-only article titles discoverable"
+    ).toBe(true);
+    expect(
+      fileContains("app/api/search/suggest/route.ts", "NOT IN ('blocked', 'degraded')"),
+      "Predictive search must still suppress blocked/degraded source bodies"
     ).toBe(true);
   });
 });

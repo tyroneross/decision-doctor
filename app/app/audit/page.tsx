@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 export default function AuditPage() {
   return (
     <main className="px-5 py-8 lg:px-8 lg:py-10 max-w-2xl mx-auto">
-      <h1 className="text-[20px] font-bold text-text mb-4">Audit</h1>
+      <h1 className="text-h1 sm:text-h1-lg text-text mb-4">Audit</h1>
       <Card className="text-center py-10 px-6">
         <p className="text-[16px] font-medium text-text mb-2">
           Periodic decision audits will live here.

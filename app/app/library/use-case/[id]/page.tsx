@@ -93,7 +93,7 @@ export default async function UseCaseDetailPage({ params }: Props) {
           ← Library
         </Link>
         <h1
-          className="text-[26px] font-bold leading-tight"
+          className="text-h1 sm:text-h1-lg"
           style={{ color: "var(--ink)" }}
         >
           {useCase.title}

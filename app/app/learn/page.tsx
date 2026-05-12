@@ -43,7 +43,7 @@ export default async function LearnPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-[22px] font-bold text-ink leading-tight mb-1">
+        <h1 className="text-h1 sm:text-h1-lg text-ink mb-1">
           Learn
         </h1>
         <p className="text-[14px] text-mute">

@@ -284,18 +284,13 @@ export default async function SkillsPage() {
   return (
     <main className="mx-auto max-w-2xl px-5 py-8 lg:px-8 lg:py-10">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between gap-3">
+      <div className="mb-6">
         <h1
-          className="text-[20px] font-bold"
+          className="text-h1 sm:text-h1-lg"
           style={{ color: "var(--ink)" }}
         >
           Your skills &amp; plugins
         </h1>
-        <Link href="/app/recommendations/new">
-          <Button variant="secondary" className="text-[13px]">
-            New recommendation
-          </Button>
-        </Link>
       </div>
 
       {!hasContent ? (

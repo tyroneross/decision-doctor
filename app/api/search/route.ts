@@ -4,7 +4,7 @@
 //
 // Pipeline (sequential by call dependency, parallel where possible):
 //   1. embedQuery(q)           → 768-dim vector (network call, ~120ms)
-//   2. legs run in parallel    → bm25, vector, kg (one tx each, RLS scoped)
+//   2. legs run in parallel    → bm25, vector, kg, title, library
 //   3. rrfFuse(legs)           → fused top-K (in-memory)
 //   4. rerank(top-K)           → bge → gpt4o-mini fallback
 //   5. write ai_search_queries → observability row (100ms timeout, non-fatal)
@@ -23,6 +23,7 @@ import { bm25Search } from "@/lib/ai-knowledge/search/bm25-leg";
 import { vectorSearch } from "@/lib/ai-knowledge/search/vector-leg";
 import { kgSearch } from "@/lib/ai-knowledge/search/kg-leg";
 import { librarySearch } from "@/lib/ai-knowledge/search/library-leg";
+import { titleSearch } from "@/lib/ai-knowledge/search/title-leg";
 import { rrfFuse, type LegHit } from "@/lib/ai-knowledge/search/rrf-fusion";
 import { rerank } from "@/lib/ai-knowledge/rerank/bge-client";
 import { gpt4oRerank } from "@/lib/ai-knowledge/rerank/gpt4o-fallback";
@@ -36,7 +37,6 @@ import type { RerankResult } from "@/lib/ai-knowledge/rerank/types";
 import {
   type BodyKind,
   normalizeBodyKind,
-  isBlockedBodyKind,
 } from "@/lib/corpus/body-kind";
 
 export const runtime = "nodejs";
@@ -47,7 +47,7 @@ const QuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional().default(10),
 });
 
-type LegName = "bm25" | "vector" | "kg" | "library";
+type LegName = "bm25" | "vector" | "kg" | "title" | "library";
 
 interface SearchResult {
   doc_id: string;
@@ -59,12 +59,19 @@ interface SearchResult {
   kind?: string; // 'corpus' for existing legs; 'library:<table>' for library hits
   /**
    * V2 trust-tier for corpus hits. Null/omitted for library hits and for
-   * pre-backfill corpus rows (callers treat null as `full_text`). The BM25 /
-   * vector / kg legs already filter `blocked` / `degraded` / `metadata_only`
-   * upstream; if such a row leaks through (defense in depth) the route drops
-   * the hit before responding so the UI never surfaces it as a citation.
+   * pre-backfill corpus rows (callers treat null as `full_text`). Blocked /
+   * degraded rows are dropped. Metadata-only rows may surface as title-only
+   * discovery results, but /api/ai-adoption-qa filters them before grounding.
    */
   body_kind?: BodyKind | null;
+}
+
+function boostCuratedLibraryHits(hits: LegHit[]): LegHit[] {
+  // Curated use cases/prompts are high-intent answers for role/workflow
+  // queries, but they only appear in one retrieval leg. Repeat the strongest
+  // library hits before RRF so an exact healthcare-pack match can compete with
+  // broad corpus documents that appear in multiple corpus legs.
+  return hits.flatMap((hit, index) => (index < 10 ? [hit, hit, hit] : [hit]));
 }
 
 export async function GET(req: Request) {
@@ -130,10 +137,16 @@ export async function GET(req: Request) {
     );
   }
 
-  // Phase 2 — four legs in parallel. Each corpus leg runs in its own tx so
+  // Phase 2 — five legs in parallel. Each corpus leg runs in its own tx so
   // RLS GUCs scope correctly. Library leg uses runWithActor internally.
   // We time each leg independently for the observability row.
-  const legTiming: Record<LegName, number> = { bm25: 0, vector: 0, kg: 0, library: 0 };
+  const legTiming: Record<LegName, number> = {
+    bm25: 0,
+    vector: 0,
+    kg: 0,
+    title: 0,
+    library: 0,
+  };
   const runLeg = <T>(
     name: LegName,
     fn: (tx: Parameters<Parameters<typeof withActor>[0]>[0]) => Promise<T>,
@@ -150,10 +163,11 @@ export async function GET(req: Request) {
 
   // S1: Library leg — runs its own runWithActor internally.
   const libStart = Date.now();
-  const [bm25Hits, vectorHits, kgHits, libraryHits] = await Promise.all([
+  const [bm25Hits, vectorHits, kgHits, titleHits, libraryHits] = await Promise.all([
     runLeg("bm25", (tx) => bm25Search(tx, q, 20)).catch(() => []),
     runLeg("vector", (tx) => vectorSearch(tx, embedding, 20)).catch(() => []),
     runLeg("kg", (tx) => kgSearch(tx, q, 20)).catch(() => []),
+    runLeg("title", (tx) => titleSearch(tx, q, 20)).catch(() => []),
     librarySearch(q, { actor: { userId, tenantId } })
       .then((hits) => {
         legTiming.library = Date.now() - libStart;
@@ -167,13 +181,15 @@ export async function GET(req: Request) {
   const libraryLegHits: LegHit[] = (libraryHits as Array<{ doc_id: string; rank: number }>).map(
     (h) => ({ doc_id: h.doc_id, rank: h.rank }),
   );
+  const boostedLibraryLegHits = boostCuratedLibraryHits(libraryLegHits);
 
-  // Phase 3 — RRF fusion across all 4 legs.
+  // Phase 3 — RRF fusion across all 5 legs.
   const fused = rrfFuse({
     bm25: bm25Hits as LegHit[],
     vector: vectorHits as LegHit[],
     kg: kgHits as LegHit[],
-    library: libraryLegHits,
+    title: titleHits as LegHit[],
+    library: boostedLibraryLegHits,
   });
 
   if (fused.length === 0) {
@@ -201,6 +217,7 @@ export async function GET(req: Request) {
           bm25: (bm25Hits as LegHit[]).length,
           vector: (vectorHits as LegHit[]).length,
           kg: (kgHits as LegHit[]).length,
+          title: (titleHits as LegHit[]).length,
           library: (libraryHits as Array<unknown>).length,
         },
         latency_ms: total,
@@ -269,10 +286,10 @@ export async function GET(req: Request) {
       body: string;
       body_kind: string | null;
     }>) {
-      // Defense in depth: skip any row whose body_kind is explicitly
-      // blocked / degraded / metadata_only. Null and unknown values are
-      // treated as full_text per back-compat policy.
-      if (isBlockedBodyKind(r.body_kind)) continue;
+      // Defense in depth: skip hard-bad rows. Metadata-only rows stay
+      // discoverable as title-only results and are filtered out before QA
+      // grounding by /api/ai-adoption-qa.
+      if (r.body_kind === "blocked" || r.body_kind === "degraded") continue;
       hydrated.set(r.id, {
         id: r.id,
         title: r.title,
@@ -373,6 +390,7 @@ export async function GET(req: Request) {
     bm25: (bm25Hits as LegHit[]).length,
     vector: (vectorHits as LegHit[]).length,
     kg: (kgHits as LegHit[]).length,
+    title: (titleHits as LegHit[]).length,
     library: (libraryHits as Array<unknown>).length,
   };
 

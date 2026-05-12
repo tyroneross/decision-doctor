@@ -20,11 +20,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { AiTaskRecommendation } from "@/lib/engine/types";
-import type { AdoptionPathwayRung } from "@/lib/engine/types";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
 import { Pill } from "@/components/ui/Pill";
-import { AdoptionPathwayPicker } from "@/components/promotion/AdoptionPathwayPicker";
+import { PromoteFlow } from "@/components/promotion/PromoteFlow";
 import { CandidateTasksList } from "@/components/recommendations/CandidateTasksList";
 import { BaselineCapture } from "@/components/recommendations/BaselineCapture";
 import { splitTaskHeadline } from "@/lib/recommendations/split-headline";
@@ -108,8 +107,6 @@ export interface RecommendationViewProps {
   mode: "authed" | "guest";
   /** Optional recommendation ID — needed for BaselineCapture localStorage key. */
   recommendationId?: string;
-  /** Called when a promotion rung is clicked (authed mode only). */
-  onPromote?: (rung: AdoptionPathwayRung) => void;
   /** Called when baseline is saved. */
   onBaselineSubmit?: () => void;
 }
@@ -122,7 +119,6 @@ export function RecommendationView({
   recommendation,
   mode,
   recommendationId = "draft",
-  onPromote,
   onBaselineSubmit,
 }: RecommendationViewProps) {
   const {
@@ -140,10 +136,6 @@ export function RecommendationView({
     methodTrace,
   } = recommendation;
 
-  function handlePromote(rung: AdoptionPathwayRung) {
-    onPromote?.(rung);
-  }
-
   return (
     <article className="space-y-8">
 
@@ -160,7 +152,7 @@ export function RecommendationView({
           return (
             <>
               <h1
-                className="mt-2 text-[28px] sm:text-[32px] font-bold leading-tight tracking-tight"
+                className="mt-2 text-display sm:text-display-lg tracking-tight"
                 style={{ color: "var(--ink)" }}
               >
                 {parsed.headline || recommendedTask}
@@ -346,10 +338,10 @@ export function RecommendationView({
       {/* ── ADOPTION PATHWAY PICKER (U4) ─────────────────────────────── */}
       {mode === "authed" && (
         <section aria-label="Adoption pathway">
-          <AdoptionPathwayPicker
+          <PromoteFlow
             adoptionPathway={adoptionPathway}
             recommendationId={recommendationId}
-            onPromote={handlePromote}
+            painPath={selectedPainPath}
           />
         </section>
       )}

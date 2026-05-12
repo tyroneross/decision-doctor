@@ -19,7 +19,7 @@ export function EmptyState() {
         <Pill tone="mute" className="uppercase tracking-[.14em]">
           Your decisions · empty for now
         </Pill>
-        <h1 className="mt-3 text-[28px] font-semibold leading-[1.1] tracking-tight text-ink sm:text-[34px]">
+        <h1 className="mt-3 text-display sm:text-display-lg tracking-tight text-ink">
           No decisions yet. Tell me where your hours go.
         </h1>
         <p className="mt-3 max-w-xl text-[15px] leading-snug text-mute sm:text-[16px]">

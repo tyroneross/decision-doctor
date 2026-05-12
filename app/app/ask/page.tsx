@@ -19,7 +19,9 @@ import { AskComposer } from "@/components/qa/AskComposer";
 import { AnswerStream } from "@/components/qa/AnswerStream";
 import { CitationList, type QACitation } from "@/components/qa/CitationList";
 import { EmptyGrounding } from "@/components/qa/EmptyGrounding";
+import { SaveResponseButton } from "@/components/qa/SaveResponseButton";
 import type { Citation } from "@/components/chat/CitationChip";
+import { useSession } from "@/lib/auth-client";
 
 interface QAEntry {
   id: string;
@@ -73,6 +75,11 @@ export default function AskPage() {
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const abortRef = React.useRef<AbortController | null>(null);
   const autoSubmittedRef = React.useRef<string | null>(null);
+
+  // Auth-aware Save button. better-auth's useSession resolves async; treat
+  // pending state as not-authed (button shows sign-in hint) until it settles.
+  const session = useSession();
+  const isAuthed = !!session.data?.user;
 
   const handleSubmit = React.useCallback(async (question: string) => {
     // Abort any in-flight stream.
@@ -291,7 +298,7 @@ export default function AskPage() {
         <div className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-8">
           {/* Previous Q&As */}
           {history.map((entry) => (
-            <HistoryEntry key={entry.id} entry={entry} />
+            <HistoryEntry key={entry.id} entry={entry} isAuthed={isAuthed} />
           ))}
 
           {/* Active stream */}
@@ -366,6 +373,24 @@ export default function AskPage() {
               {!stream.isStreaming && stream.citationsMeta.length > 0 && (
                 <CitationList citations={stream.citationsMeta} />
               )}
+
+              {/* Save to library — only after the stream completes and we
+                  have something substantive to save. Suppressed for blocked /
+                  errored / empty-grounding turns since there's no useful
+                  artifact in those cases. */}
+              {!stream.isStreaming &&
+                !stream.phiBlocked &&
+                !stream.error &&
+                !stream.emptyGrounding &&
+                stream.tokens.trim().length > 0 && (
+                  <SaveResponseButton
+                    question={stream.question}
+                    answer={stream.tokens}
+                    citations={stream.citationsMeta}
+                    wasGrounded={stream.wasGrounded}
+                    isAuthed={isAuthed}
+                  />
+                )}
             </div>
           )}
 
@@ -395,7 +420,13 @@ export default function AskPage() {
 
 // --- History entry ---
 
-function HistoryEntry({ entry }: { entry: QAEntry }) {
+function HistoryEntry({
+  entry,
+  isAuthed,
+}: {
+  entry: QAEntry;
+  isAuthed: boolean;
+}) {
   return (
     <div className="flex flex-col gap-3">
       {/* Question */}
@@ -422,6 +453,15 @@ function HistoryEntry({ entry }: { entry: QAEntry }) {
           />
           {entry.citations.length > 0 && (
             <CitationList citations={entry.citations} />
+          )}
+          {entry.answer.trim().length > 0 && (
+            <SaveResponseButton
+              question={entry.question}
+              answer={entry.answer}
+              citations={entry.citations}
+              wasGrounded={entry.wasGrounded}
+              isAuthed={isAuthed}
+            />
           )}
         </>
       ) : (

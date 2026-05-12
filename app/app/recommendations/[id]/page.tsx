@@ -82,7 +82,7 @@ export default async function RecommendationDetailPage({ params }: Props) {
           <span>Recommendation</span>
         </nav>
         <h1
-          className="text-[22px] font-semibold"
+          className="text-h1 sm:text-h1-lg"
           style={{ color: "var(--ink)" }}
         >
           Recommendation not available

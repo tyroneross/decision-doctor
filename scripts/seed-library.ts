@@ -2,7 +2,7 @@
 /**
  * scripts/seed-library.ts — L3-seeder (V2 P0: pain-to-AI-recommendation)
  *
- * Aggregates 25 use-case entries + 15 prompt entries from scripts/library-seed/
+ * Aggregates 35 use-case entries + 20 prompt entries from scripts/library-seed/
  * and UPSERTs them into library_use_cases and library_prompts.
  *
  * Flags:
@@ -38,12 +38,14 @@ import { useCases as ucReferrals }     from "./library-seed/use-cases-referrals.
 import { useCases as ucResearch }      from "./library-seed/use-cases-research.js";
 import { useCases as ucCapacity }      from "./library-seed/use-cases-capacity_growth.js";
 import { useCases as ucFollowUp }      from "./library-seed/use-cases-follow_up.js";
+import { useCases as ucPsychiatryRoles } from "./library-seed/use-cases-psychiatry_roles.js";
 
 import { prompts as prAdmin }          from "./library-seed/prompts-admin.js";
 import { prompts as prReferrals }      from "./library-seed/prompts-referrals.js";
 import { prompts as prResearch }       from "./library-seed/prompts-research.js";
 import { prompts as prCapacity }       from "./library-seed/prompts-capacity_growth.js";
 import { prompts as prFollowUp }       from "./library-seed/prompts-follow_up.js";
+import { prompts as prPsychiatryRoles } from "./library-seed/prompts-psychiatry_roles.js";
 
 import type { NewLibraryUseCase, NewLibraryPrompt, PainPath, StartingLevel } from "@/lib/db/schema";
 
@@ -82,6 +84,7 @@ const ALL_USE_CASES: NewLibraryUseCase[] = [
   ...ucResearch,
   ...ucCapacity,
   ...ucFollowUp,
+  ...ucPsychiatryRoles,
 ];
 
 const ALL_PROMPTS: NewLibraryPrompt[] = [
@@ -90,6 +93,7 @@ const ALL_PROMPTS: NewLibraryPrompt[] = [
   ...prResearch,
   ...prCapacity,
   ...prFollowUp,
+  ...prPsychiatryRoles,
 ];
 
 // =============================================================================

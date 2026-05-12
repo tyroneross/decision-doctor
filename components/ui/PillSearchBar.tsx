@@ -224,6 +224,7 @@ export function PillSearchBar({
                   key={`${suggestion.kind}:${suggestion.id}`}
                   type="button"
                   role="option"
+                  aria-selected={false}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => onSuggestionSelect?.(suggestion)}
                   className={

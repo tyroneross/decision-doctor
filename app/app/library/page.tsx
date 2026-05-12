@@ -71,9 +71,7 @@ export default async function LibraryPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-[22px] font-bold text-ink leading-tight mb-1">
-          Library
-        </h1>
+        <h1 className="text-h1 lg:text-h1-lg text-ink mb-1">Library</h1>
         <p className="text-[14px] text-mute">
           Curated AI use cases and prompts for solo healthcare practitioners
         </p>

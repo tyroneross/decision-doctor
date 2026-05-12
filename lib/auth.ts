@@ -22,13 +22,29 @@ import { env } from "@/lib/env";
 const TRUSTED_ORIGINS = [
   env.BETTER_AUTH_URL,
   // Vercel preview URLs — accepted because BETTER_AUTH_URL only knows about prod.
-  // Dev: BETTER_AUTH_URL pins one localhost port (default :3001), but `next dev`
-  // will fall back to :3000 / :3002 when the preferred port is busy. List the
-  // common dev ports so a port shuffle doesn't 403 every auth POST.
+  // Dev standard is localhost:3006. Keep common alternates trusted so a manual
+  // one-off port override does not 403 every auth POST.
   ...(process.env.NODE_ENV !== "production"
-    ? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
+    ? [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3006",
+      ]
     : []),
 ];
+
+const googleSocialProvider =
+  env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+    ? {
+        google: {
+          clientId: env.GOOGLE_CLIENT_ID,
+          clientSecret: env.GOOGLE_CLIENT_SECRET,
+          accessType: "offline" as const,
+          prompt: "select_account consent" as const,
+        },
+      }
+    : {};
 
 export const auth = betterAuth({
   database: drizzleAdapter(authDb, {
@@ -50,6 +66,7 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   trustedOrigins: TRUSTED_ORIGINS,
+  socialProviders: googleSocialProvider,
 
   // Postgres `verifications.id`, `users.id`, `sessions.id`, `accounts.id` are
   // `uuid` columns (matches the live DB). Better Auth's default ID generator

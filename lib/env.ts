@@ -27,6 +27,8 @@ const envSchema = z.object({
   // Better Auth
   BETTER_AUTH_SECRET: z.string().min(32, "Generate with: openssl rand -base64 32"),
   BETTER_AUTH_URL: z.string().url(),
+  GOOGLE_CLIENT_ID: optionalString,
+  GOOGLE_CLIENT_SECRET: optionalString,
 
   // Email (Resend)
   RESEND_API_KEY: z.string().min(10),
@@ -45,6 +47,19 @@ const envSchema = z.object({
   // Rate limiter (optional in dev)
   UPSTASH_REDIS_REST_URL: optionalUrl,
   UPSTASH_REDIS_REST_TOKEN: optionalString,
+}).superRefine((env, ctx) => {
+  if (Boolean(env.GOOGLE_CLIENT_ID) !== Boolean(env.GOOGLE_CLIENT_SECRET)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["GOOGLE_CLIENT_ID"],
+      message: "Set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither.",
+    });
+    ctx.addIssue({
+      code: "custom",
+      path: ["GOOGLE_CLIENT_SECRET"],
+      message: "Set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither.",
+    });
+  }
 });
 
 const parsed = envSchema.safeParse(process.env);

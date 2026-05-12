@@ -617,7 +617,7 @@ DATABASE_URL=                # Required — postgresql://... — get from consol
 
 # Better Auth
 BETTER_AUTH_SECRET=          # Required — openssl rand -base64 32
-BETTER_AUTH_URL=             # Required — http://localhost:3000 (dev) / https://decisiondoctor.app (prod)
+BETTER_AUTH_URL=             # Required — http://localhost:3006 (dev) / https://decisiondoctor.app (prod)
 
 # Email (Resend) — for magic links + email verification
 RESEND_API_KEY=              # Required — https://resend.com/api-keys
@@ -783,7 +783,7 @@ Before Claude Code / Codex starts:
 - [ ] If ⏳ on `GROQ_API_KEY` → https://console.groq.com/keys
 - [ ] If ⏳ on `DATABASE_URL` → https://console.neon.tech (create project, free tier)
 - [ ] Generate `BETTER_AUTH_SECRET` via `openssl rand -base64 32`
-- [ ] Set `BETTER_AUTH_URL` (dev: `http://localhost:3000`)
+- [ ] Set `BETTER_AUTH_URL` (dev: `http://localhost:3006`)
 - [ ] If ⏳ on `RESEND_API_KEY` → https://resend.com (verify domain `decisiondoctor.app` if deploying to prod; localhost works without verification for dev)
 - [ ] Set `AUTH_FROM_EMAIL` (e.g. `Decision Doctor <auth@decisiondoctor.app>`)
 - [ ] Buy domain `decisiondoctor.app` (or pick a temporary Vercel preview URL until production domain is ready)
@@ -1040,7 +1040,7 @@ git init && git add . && git commit -m "chore: bootstrap Next.js 16 + Tailwind +
 ```json
 {
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3006",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -1156,7 +1156,7 @@ DATABASE_URL=postgresql://user:pass@ep-xxx.aws.neon.tech/db?sslmode=require
 
 # Better Auth
 BETTER_AUTH_SECRET=replace-with-openssl-rand-base64-32
-BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_URL=http://localhost:3006
 
 # Email (Resend)
 RESEND_API_KEY=re_xxx

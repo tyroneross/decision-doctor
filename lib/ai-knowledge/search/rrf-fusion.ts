@@ -28,7 +28,7 @@ export function rrfFuse(
     hits.forEach((h, i) => {
       const cur = acc.get(h.doc_id) ?? { score: 0, legs: [] };
       cur.score += 1 / (k + i + 1);
-      cur.legs.push(legName);
+      if (!cur.legs.includes(legName)) cur.legs.push(legName);
       acc.set(h.doc_id, cur);
     });
   }

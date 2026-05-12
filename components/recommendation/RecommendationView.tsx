@@ -113,7 +113,7 @@ export function RecommendationView({ row }: { row: RecommendationDecisionRow }) 
   if (!rec) {
     return (
       <section className="space-y-2">
-        <h1 className="text-xl font-semibold text-text">Decision incomplete</h1>
+        <h1 className="text-h1 sm:text-h1-lg text-text">Decision incomplete</h1>
         <p className="text-sm text-mute">
           The engine did not return a recommendation. Status: {row.status}.
         </p>
@@ -158,7 +158,7 @@ export function RecommendationView({ row }: { row: RecommendationDecisionRow }) 
           · {confidenceLabel(conf)}
           <span className="text-mute"> ({band.icon} {band.label})</span>
         </p>
-        <h1 className="mt-2 text-[28px] font-semibold leading-tight tracking-tight text-text sm:text-[32px]">
+        <h1 className="mt-2 text-display sm:text-display-lg tracking-tight text-text">
           {rec.option}
         </h1>
         <p className="mt-2 text-[15px] text-mute">{methodLabel(row.templateId)}</p>

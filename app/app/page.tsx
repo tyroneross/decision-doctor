@@ -68,7 +68,7 @@ export default async function HomePage() {
     <div className="max-w-2xl mx-auto px-5 py-10 space-y-8">
       {/* Brand + tagline */}
       <header className="space-y-1">
-        <h1 className="text-[32px] font-bold leading-none text-ink">
+        <h1 className="text-display sm:text-display-lg text-ink">
           Aida
         </h1>
         <p className="text-[14px] font-normal text-mute">

@@ -592,3 +592,77 @@ export type AssetFile = typeof assetFiles.$inferSelect;
 export type NewAssetFile = typeof assetFiles.$inferInsert;
 export type UserDismissal = typeof userDismissals.$inferSelect;
 export type NewUserDismissal = typeof userDismissals.$inferInsert;
+
+// --- Library saved searches (0013) ---
+// User-scoped personal artifact. No 'global' rows — saved searches are
+// inherently per-user. Mirrors the scope-based RLS pattern of 0007_library
+// (scope = user_id::text). Drizzle has no FTS — query/name search uses ILIKE.
+//
+// `query` is the search text. `kindFilter` / `pathFilter` are TEXT[] of the
+// active kind/path values when the search was saved; empty array means "all".
+// `onlyMine` is the toggle state. `name` is the optional user-supplied label
+// (defaults to a truncated query echo when null at render-time).
+export const librarySavedSearches = pgTable(
+  "library_saved_searches",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    scope: text("scope").notNull(), // user_id::text (no 'global' in practice)
+    name: text("name"), // optional user-supplied label
+    query: text("query").notNull().default(""),
+    kindFilter: jsonb("kind_filter").notNull().default(sql`'[]'::jsonb`), // string[]
+    pathFilter: jsonb("path_filter").notNull().default(sql`'[]'::jsonb`), // string[]
+    onlyMine: boolean("only_mine").notNull().default(false),
+    metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    scopeIdx: index("library_saved_searches_scope_idx").on(t.scope),
+    scopeCreatedIdx: index("library_saved_searches_scope_created_idx").on(
+      t.scope,
+      t.createdAt,
+    ),
+  }),
+);
+
+// --- Library saved responses (0013) ---
+// User-scoped saved /app/ask answers. Captures question + answer + cited sources
+// at save time so the row remains useful even if the originating corpus rows
+// rotate. `answer` is markdown. `citations` is a jsonb array of QACitation
+// records ({uuid, kind, title}). FTS is over question + answer (search_tsv is
+// added in the SQL migration as a GENERATED column).
+export const librarySavedResponses = pgTable(
+  "library_saved_responses",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    scope: text("scope").notNull(), // user_id::text
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    citations: jsonb("citations").notNull().default(sql`'[]'::jsonb`), // QACitation[]
+    wasGrounded: boolean("was_grounded").notNull().default(true),
+    metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    scopeIdx: index("library_saved_responses_scope_idx").on(t.scope),
+    scopeCreatedIdx: index("library_saved_responses_scope_created_idx").on(
+      t.scope,
+      t.createdAt,
+    ),
+  }),
+);
+
+export type LibrarySavedSearch = typeof librarySavedSearches.$inferSelect;
+export type NewLibrarySavedSearch = typeof librarySavedSearches.$inferInsert;
+export type LibrarySavedResponse = typeof librarySavedResponses.$inferSelect;
+export type NewLibrarySavedResponse =
+  typeof librarySavedResponses.$inferInsert;

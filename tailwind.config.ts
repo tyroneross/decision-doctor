@@ -36,6 +36,27 @@ const config: Config = {
         // No other shadow utilities; UI Guidelines v0.1 ships exactly one.
         card: "0 1px 2px rgba(31, 20, 16, 0.04), 0 1px 1px rgba(31, 20, 16, 0.02)",
       },
+      fontSize: {
+        // ============================================================
+        // Heading type scale — UI Guidelines v0.1
+        // 4-tier ladder: display / h1 / h2 / h3.
+        // Tuple form carries lineHeight + fontWeight in one class.
+        // Mobile size lives in the base token; `-lg` variant is the
+        // desktop bump, applied via `sm:text-{token}-lg` at call sites.
+        // h3 has no responsive bump (16px on both).
+        // body / secondary / meta unchanged — keep Tailwind defaults
+        // (text-base / text-sm / text-xs). Display ceiling is 28px;
+        // anything above reads as marketing, not product tool.
+        // Citations: ~/dev/research/topics/design/design.type-scale.product-app-mobile-first.md
+        // ============================================================
+        display: ["22px", { lineHeight: "1.15", fontWeight: "600" }],
+        "display-lg": ["24px", { lineHeight: "1.15", fontWeight: "600" }],
+        h1: ["22px", { lineHeight: "1.2", fontWeight: "600" }],
+        "h1-lg": ["24px", { lineHeight: "1.2", fontWeight: "600" }],
+        h2: ["18px", { lineHeight: "1.3", fontWeight: "600" }],
+        "h2-lg": ["20px", { lineHeight: "1.3", fontWeight: "600" }],
+        h3: ["16px", { lineHeight: "1.4", fontWeight: "600" }],
+      },
       fontFamily: {
         sans: [
           "var(--font-inter)",

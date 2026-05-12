@@ -31,7 +31,7 @@ export default async function IntakePage({ params }: Props) {
   return (
     <section className="space-y-6 px-5 py-8 lg:px-8 lg:py-10 max-w-2xl mx-auto">
       <header className="space-y-1">
-        <h1 className="text-[22px] font-semibold leading-tight text-ink">
+        <h1 className="text-h1 sm:text-h1-lg text-ink">
           {template.label}
         </h1>
         <p className="text-[14px] text-mute leading-relaxed">

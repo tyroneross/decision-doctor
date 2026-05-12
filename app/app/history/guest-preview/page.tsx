@@ -72,7 +72,7 @@ export default function GuestPreviewPage() {
   if (notFound) {
     return (
       <main className="mx-auto max-w-2xl px-5 py-12">
-        <h1 className="text-[22px] font-semibold text-ink">
+        <h1 className="text-h1 sm:text-h1-lg text-ink">
           No preview to show
         </h1>
         <p className="mt-2 text-[14px] text-mute">

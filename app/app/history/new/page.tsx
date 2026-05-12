@@ -17,7 +17,7 @@ export default function NewDecisionPage() {
         <p className="text-[12px] font-semibold uppercase tracking-[.14em] text-mute">
           Skip the conversation
         </p>
-        <h1 className="text-[26px] font-semibold leading-tight tracking-tight text-ink sm:text-[30px]">
+        <h1 className="text-h1 sm:text-h1-lg tracking-tight text-ink">
           Pick a decision template
         </h1>
         <p className="max-w-xl text-[14.5px] leading-snug text-mute">

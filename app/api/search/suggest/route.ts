@@ -1,8 +1,9 @@
 // GET /api/search/suggest?q=<partial>&limit=<n>
 //
 // Predictive search for visible search boxes. This is intentionally title-first:
-// it helps users discover corpus, library, and KB items while they type without
-// treating low-trust article bodies as answer-grounding material.
+// it helps users discover corpus, library, and KB items while they type. It
+// includes metadata_only corpus titles but does not treat low-trust article
+// bodies as answer-grounding material.
 
 import "server-only";
 import { NextResponse } from "next/server";

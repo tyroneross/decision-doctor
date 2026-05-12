@@ -1,22 +1,28 @@
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 import { ThemePicker } from "@/components/settings/ThemePicker";
+import { PasswordCard } from "@/components/account/PasswordCard";
 import { Card } from "@/components/ui/Card";
 
 /**
- * /app/account — minimal account / settings page (C12 scope).
+ * /app/account — account / settings.
  *
- * Only ships the theme picker for now. Profile, notifications, data
- * export, etc. are deferred. Reachable from MobileBottomNav's Account
- * tab and (after C12 ships) from the desktop sidebar user footer.
+ * Sections:
+ *   - Theme (always available)
+ *   - Password (signed-in non-guest only — guests sign in to get one)
  *
- * Per the UI Guidelines v0.1 status doc: a full Settings/Account page
- * is later work; this stub mounts the theme picker so the user has a
- * place to actually use it.
+ * Server-renders the auth state and conditionally mounts <PasswordCard />.
+ * We don't useSession() client-side — every other authenticated page in this
+ * app reads the session on the server, and that pattern stays consistent here.
  */
-export default function AccountPage() {
+export default async function AccountPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const signedIn = Boolean(session?.user);
+
   return (
     <main className="px-5 py-8 lg:px-8 lg:py-10 max-w-2xl mx-auto space-y-6">
       <header className="space-y-1">
-        <h1 className="text-[22px] font-semibold leading-tight text-ink">
+        <h1 className="text-h1 sm:text-h1-lg text-ink">
           Account
         </h1>
         <p className="text-[14px] text-mute leading-relaxed">
@@ -32,6 +38,16 @@ export default function AccountPage() {
         Theme F is the default. A and B preserve the layout. Only the
         accent color and surface tones change.
       </p>
+
+      {signedIn ? (
+        <PasswordCard />
+      ) : (
+        <Card>
+          <p className="text-[13px] text-mute leading-relaxed">
+            Sign in to set or rotate a password on this account.
+          </p>
+        </Card>
+      )}
     </main>
   );
 }
