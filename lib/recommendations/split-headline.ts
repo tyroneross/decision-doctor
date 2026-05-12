@@ -46,24 +46,65 @@ export interface ParsedTask {
 const AUTO_TITLE_PATTERN = /^deploy this stack/i;
 const MAX_HEADLINE = 80;
 
-const CATEGORY_PHRASES: Record<string, string> = {
-  capacity: "Reclaim hours each week",
-  pricing: "Tighten pricing without losing clients",
-  admin: "Cut admin overhead",
-  skill: "Streamline this workflow",
-  other: "Streamline this workflow",
+// Use-case groups inferred from the stack tools. The id is stable for
+// grouping; the label is the human-readable group header.
+//
+// Order matters: higher-specificity patterns first so e.g. a scribe-+-billing
+// row lands in "Automate session notes" (the dominant capability) instead of
+// the broader billing bucket.
+const USE_CASE_GROUPS: Array<{
+  id: string;
+  label: string;
+  pattern: RegExp;
+}> = [
+  {
+    id: "session-notes",
+    label: "Automate session notes",
+    pattern: /scribe|note|otter|granola/i,
+  },
+  {
+    id: "intake-triage",
+    label: "Streamline intake & triage",
+    pattern: /intake|form|triage|screening/i,
+  },
+  {
+    id: "messaging",
+    label: "Asynchronous client messaging",
+    pattern: /spruce|ohmd|messag|secure reply/i,
+  },
+  {
+    id: "billing",
+    label: "Smarter billing handoff",
+    pattern: /billing|claim|alma|simplepractice|headway|stripe/i,
+  },
+  {
+    id: "scheduling",
+    label: "Scheduling & calendars",
+    pattern: /acuity|cal\.com|calendly|scheduling/i,
+  },
+];
+
+export interface UseCaseGroup {
+  id: string;
+  label: string;
+}
+
+const FALLBACK_GROUP: UseCaseGroup = {
+  id: "other",
+  label: "Other workflows",
 };
 
-// Domain hints derived from tool names in the stack.
-const DOMAIN_HINTS: Array<{ pattern: RegExp; hint: string }> = [
-  { pattern: /scribe|note|otter|granola/i, hint: "automate session notes" },
-  {
-    pattern: /billing|claim|alma|simplepractice|headway/i,
-    hint: "smarter billing handoff",
-  },
-  { pattern: /spruce|ohmd|messag/i, hint: "async client messaging" },
-  { pattern: /intake|form/i, hint: "faster intake" },
-];
+/** Bucket a row by its stack of tools into a single use-case group. */
+export function deriveUseCaseGroup(stack: string[]): UseCaseGroup {
+  if (stack.length === 0) return FALLBACK_GROUP;
+  const stackStr = stack.join(" ");
+  for (const g of USE_CASE_GROUPS) {
+    if (g.pattern.test(stackStr)) {
+      return { id: g.id, label: g.label };
+    }
+  }
+  return FALLBACK_GROUP;
+}
 
 export interface WorkflowHeadlineInput {
   title: string | null;
@@ -73,32 +114,35 @@ export interface WorkflowHeadlineInput {
 }
 
 /**
- * Derive a benefit-led headline for a decision list row.
- * Returns a plain string, no JSX, no em-dashes.
+ * Derive a row-distinguishing headline for a decision list row.
+ *
+ * Strategy:
+ *   1. If row.title is user-set and NOT the auto-generated "Deploy this
+ *      stack" pattern, return it verbatim — the user knows best.
+ *   2. Otherwise build the headline from the actual stack of tools so each
+ *      row is distinguishable from its siblings. The use-case category is
+ *      surfaced via the group header above the row, not in the row title.
+ *   3. Last-resort fallback: the template category label.
+ *
+ * Returns plain text, no JSX, no em-dashes.
  */
 export function deriveWorkflowHeadline(row: WorkflowHeadlineInput): string {
-  // Step 1: trust user-set title if it exists and is not auto-generated.
+  // Step 1: trust user-set title if not auto-generated.
   if (row.title && !AUTO_TITLE_PATTERN.test(row.title.trim())) {
     return clamp(row.title.trim());
   }
 
-  // Step 2: pick benefit phrase from category.
-  const cat = categoryFor(row.templateId);
-  const base: string = CATEGORY_PHRASES[cat.id] ?? "Streamline this workflow";
-
-  // Step 3: derive a domain hint from the stack.
+  // Step 2: build a stack-signature title so rows under the same use-case
+  // group still read differently from each other.
   const stack = splitTaskHeadline(row.recommendationOption ?? "").stack;
-  const stackStr = stack.join(" ");
-  let hint = "";
-  for (const d of DOMAIN_HINTS) {
-    if (d.pattern.test(stackStr)) {
-      hint = d.hint;
-      break;
-    }
+  if (stack.length > 0) {
+    return clamp(stack.join(" + "));
   }
 
-  const full = hint ? `${base} - ${hint}` : base;
-  return clamp(full);
+  // Step 3: last-resort fallback to the template category. Rare path —
+  // means the engine produced no stack at all.
+  const cat = categoryFor(row.templateId);
+  return clamp(cat.label);
 }
 
 function clamp(s: string): string {

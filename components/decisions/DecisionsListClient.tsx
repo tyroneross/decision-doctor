@@ -28,6 +28,8 @@ import { Chip } from "@/components/ui/Chip";
 import {
   splitTaskHeadline,
   deriveWorkflowHeadline,
+  deriveUseCaseGroup,
+  type UseCaseGroup,
 } from "@/lib/recommendations/split-headline";
 
 // Server-side projection of a decisions row.
@@ -94,6 +96,28 @@ export function DecisionsListClient({ rows, summary }: Props) {
     return rows.filter((r) => rowCategory(r.templateId) === filter);
   }, [rows, filter]);
 
+  // Group filtered rows by use-case (derived from the stack of tools) so the
+  // 27-row flat list collapses into a few scannable categories. Order is
+  // by descending group size, with "Other workflows" pinned last.
+  const groupedRows = useMemo(() => {
+    const byGroup = new Map<string, { group: UseCaseGroup; rows: DecisionRow[] }>();
+    for (const r of filtered) {
+      const stack = splitTaskHeadline(r.recommendationOption ?? "").stack;
+      const g = deriveUseCaseGroup(stack);
+      const bucket = byGroup.get(g.id);
+      if (bucket) bucket.rows.push(r);
+      else byGroup.set(g.id, { group: g, rows: [r] });
+    }
+    const sorted = Array.from(byGroup.values()).sort((a, b) => {
+      // Pin "other" last; otherwise sort by group size desc, then label asc.
+      if (a.group.id === "other") return 1;
+      if (b.group.id === "other") return -1;
+      if (a.rows.length !== b.rows.length) return b.rows.length - a.rows.length;
+      return a.group.label.localeCompare(b.group.label);
+    });
+    return sorted;
+  }, [filtered]);
+
   return (
     <section className="space-y-6">
       {/* HERO LEDGER — ink-only on bg-paper, real counts only */}
@@ -152,16 +176,46 @@ export function DecisionsListClient({ rows, summary }: Props) {
           </Link>
         </article>
       ) : (
-        // Single border around the whole list, dividers between rows
-        // (Calm Precision / Gestalt Common Region).
-        <ul
-          className="overflow-hidden rounded-2xl border border-line bg-paper divide-y divide-line"
-          aria-label="Decisions"
-        >
-          {filtered.map((row) => (
-            <DecisionRow key={row.id} row={row} />
+        // Grouped by use-case. Each group is collapsible (open by default
+        // when ≤ 3 rows; closed when larger to cut noise). Single border
+        // per group; dividers between rows within (Gestalt Common Region).
+        <div className="space-y-4" aria-label="Decisions, grouped by use case">
+          {groupedRows.map(({ group, rows: groupRows }) => (
+            <details
+              key={group.id}
+              open={groupRows.length <= 3}
+              className="group overflow-hidden rounded-2xl border border-line bg-paper"
+            >
+              <summary className="flex cursor-pointer items-center justify-between gap-3 px-5 py-3 list-none [&::-webkit-details-marker]:hidden hover:bg-line/20">
+                <div className="flex items-center gap-2 min-w-0">
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                    className="h-3.5 w-3.5 shrink-0 text-mute transition-transform group-open:rotate-90"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                  <h3 className="truncate text-[14px] font-semibold text-ink">
+                    {group.label}
+                  </h3>
+                  <span className="shrink-0 text-[12px] text-mute">
+                    · {groupRows.length} option
+                    {groupRows.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+              </summary>
+              <ul className="border-t border-line divide-y divide-line">
+                {groupRows.map((row) => (
+                  <DecisionRow key={row.id} row={row} />
+                ))}
+              </ul>
+            </details>
           ))}
-        </ul>
+        </div>
       )}
     </section>
   );
@@ -182,9 +236,6 @@ function DecisionRow({ row }: { row: DecisionRow }) {
       : "Recorded";
   const confLabel = confidenceLabel(row.recommendationConfidence);
 
-  // Stack chips derived from the raw engine option string.
-  const { stack } = splitTaskHeadline(row.recommendationOption ?? "");
-
   return (
     <li>
       <Link
@@ -202,27 +253,9 @@ function DecisionRow({ row }: { row: DecisionRow }) {
               : confLabel}{" "}
             · {reducerLabel} · {relativeDay(row.createdAt)}
           </p>
-          {stack.length > 0 && (
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-mute">
-                Recommended tools:
-              </span>
-              {stack.map((tool, i) => (
-                <span key={tool}>
-                  <span
-                    className="inline-flex items-center rounded-full bg-line/40 px-2 py-0.5 text-[11px] font-medium text-text"
-                  >
-                    {tool}
-                  </span>
-                  {i < stack.length - 1 && (
-                    <span className="ml-1.5 text-[11px] text-mute" aria-hidden>
-                      ·
-                    </span>
-                  )}
-                </span>
-              ))}
-            </div>
-          )}
+          {/* Stack chips removed — the row title now IS the stack
+              signature, and the group header carries the use case. The
+              "Recommended tools:" strip was redundant. */}
         </div>
         {row.hoursSaved > 0 && (
           <span
