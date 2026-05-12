@@ -210,10 +210,7 @@ function DecisionRow({ row }: { row: DecisionRow }) {
               {stack.map((tool, i) => (
                 <span key={tool}>
                   <span
-                    className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium
-                      bg-gradient-to-br from-[#fde6d6] to-[#f5cfb0]
-                      text-[#7a3414] ring-1 ring-inset ring-[#f0b78d]/40
-                      shadow-sm shadow-[#c2410c]/5"
+                    className="inline-flex items-center rounded-full bg-line/40 px-2 py-0.5 text-[11px] font-medium text-text"
                   >
                     {tool}
                   </span>
