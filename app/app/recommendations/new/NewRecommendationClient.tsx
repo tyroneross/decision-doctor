@@ -427,29 +427,23 @@ function PathKickoffView({
   );
 
   function toggleArtifact(key: string, line: string) {
-    setSelectedArtifacts((prev) => {
-      const next = new Set(prev);
-      const hadIt = next.has(key);
-      if (hadIt) next.delete(key);
-      else next.add(key);
-      // Mirror into the detail box. Append on add; remove the exact line on remove.
-      if (hadIt) onChange(removeLine(value, line));
-      else onChange(appendLine(value, line));
-      return next;
-    });
+    const hadIt = selectedArtifacts.has(key);
+    const next = new Set(selectedArtifacts);
+    if (hadIt) next.delete(key);
+    else next.add(key);
+    setSelectedArtifacts(next);
+    // Mirror into the detail box. Append on add; remove the exact line on remove.
+    onChange(hadIt ? removeLine(value, line) : appendLine(value, line));
   }
 
   function toggleInfo(item: string) {
-    setSelectedInfo((prev) => {
-      const next = new Set(prev);
-      const line = `- I'll share: ${item}`;
-      const hadIt = next.has(item);
-      if (hadIt) next.delete(item);
-      else next.add(item);
-      if (hadIt) onChange(removeLine(value, line));
-      else onChange(appendLine(value, line));
-      return next;
-    });
+    const line = `- I'll share: ${item}`;
+    const hadIt = selectedInfo.has(item);
+    const next = new Set(selectedInfo);
+    if (hadIt) next.delete(item);
+    else next.add(item);
+    setSelectedInfo(next);
+    onChange(hadIt ? removeLine(value, line) : appendLine(value, line));
   }
 
   const canStart =
