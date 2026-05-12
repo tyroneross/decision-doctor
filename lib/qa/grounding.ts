@@ -5,12 +5,27 @@
 // with its UUID and kind so the LLM can emit [[doc:<uuid>]] tokens per
 // the S1 citation contract.
 
+import type { BodyKind } from "@/lib/corpus/body-kind";
+import { normalizeBodyKind, isPartialTrustBodyKind } from "@/lib/corpus/body-kind";
+
 export interface SourceForGrounding {
   uuid: string;
   kind: "use_case" | "prompt" | "skill" | "plugin" | "corpus";
   title: string;
   body: string;
   score?: number;
+  /**
+   * Trust-tier classification of the body content. Only present (and only
+   * meaningful) for `kind: "corpus"` hits — library kinds (use_case, prompt,
+   * skill, plugin) are user-curated and treated as full-text by default.
+   *
+   * NULL is interpreted as `"full_text"` (pre-backfill back-compat). See
+   * lib/corpus/body-kind.ts for the union. C10 contract: `blocked` /
+   * `degraded` / `metadata_only` are filtered upstream and SHOULD NOT appear
+   * here; if they do (defense in depth), formatSourcesForPrompt still tags
+   * them so the LLM does not treat them as full-text.
+   */
+  body_kind?: BodyKind | null;
 }
 
 // Max body chars per source before truncation. Keeps total context under
@@ -27,8 +42,11 @@ const MAX_BODY_CHARS = 500;
  *   Title: AI Scheduling for Follow-Up
  *   Body: Use an AI scheduling assistant to automate patient follow-up...
  *
- * The LLM is instructed (in the synthesizer prompt) to cite using
- * [[doc:<uuid>]] tokens — the exact UUIDs that appear in these headers.
+ * For partial-trust corpus hits (body_kind == "source_summary") an extra
+ * "Trust:" line is emitted so the LLM knows the body is a curated summary
+ * rather than the original article text. The LLM is instructed (in the
+ * synthesizer prompt) to cite using [[doc:<uuid>]] tokens — the exact UUIDs
+ * that appear in these headers.
  */
 export function formatSourcesForPrompt(sources: SourceForGrounding[]): string {
   if (sources.length === 0) {
@@ -42,11 +60,31 @@ export function formatSourcesForPrompt(sources: SourceForGrounding[]): string {
           ? s.body.slice(0, MAX_BODY_CHARS).trimEnd() + "…"
           : s.body;
 
-      return [
+      const lines = [
         `### Source [${s.uuid}] (kind: ${s.kind})`,
         `Title: ${s.title}`,
-        `Body: ${truncated}`,
-      ].join("\n");
+      ];
+
+      // Trust hint only for corpus hits with a partial-trust body_kind, or
+      // when an unexpected non-trusted kind slips past the upstream filter.
+      if (s.kind === "corpus") {
+        const normalized = normalizeBodyKind(s.body_kind);
+        if (isPartialTrustBodyKind(s.body_kind)) {
+          lines.push(
+            "Trust: source_summary — this is a curated summary, not the full article. Treat as partial evidence.",
+          );
+        } else if (normalized !== "full_text") {
+          // Defense in depth — upstream should never hand us a blocked /
+          // degraded / metadata_only body. If it happens, flag it so the LLM
+          // does not synthesize against unverified content.
+          lines.push(
+            `Trust: ${normalized} — this source did not pass the full-text quality gate. Do not treat as authoritative.`,
+          );
+        }
+      }
+
+      lines.push(`Body: ${truncated}`);
+      return lines.join("\n");
     })
     .join("\n\n");
 }

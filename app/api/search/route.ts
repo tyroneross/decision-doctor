@@ -28,10 +28,16 @@ import { rerank } from "@/lib/ai-knowledge/rerank/bge-client";
 import { gpt4oRerank } from "@/lib/ai-knowledge/rerank/gpt4o-fallback";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
+import { GUEST_TENANT_ID, GUEST_USER_ID } from "@/lib/guest-identity";
 import { runWithActor, withActor, db } from "@/lib/db/actor";
 import { auditEvents } from "@/lib/db/schema";
 import { checkRateLimit } from "@/lib/ratelimit";
 import type { RerankResult } from "@/lib/ai-knowledge/rerank/types";
+import {
+  type BodyKind,
+  normalizeBodyKind,
+  isBlockedBodyKind,
+} from "@/lib/corpus/body-kind";
 
 export const runtime = "nodejs";
 
@@ -51,6 +57,14 @@ interface SearchResult {
   score: number;
   legs: LegName[];
   kind?: string; // 'corpus' for existing legs; 'library:<table>' for library hits
+  /**
+   * V2 trust-tier for corpus hits. Null/omitted for library hits and for
+   * pre-backfill corpus rows (callers treat null as `full_text`). The BM25 /
+   * vector / kg legs already filter `blocked` / `degraded` / `metadata_only`
+   * upstream; if such a row leaks through (defense in depth) the route drops
+   * the hit before responding so the UI never surfaces it as a citation.
+   */
+  body_kind?: BodyKind | null;
 }
 
 export async function GET(req: Request) {
@@ -102,8 +116,8 @@ export async function GET(req: Request) {
   // Synthetic UUIDs for guest's actor context — only used to call
   // runWithActor below; RLS GUC for app.current_user_id stays unset for
   // the global-only path.
-  const userId = actor?.userId ?? "00000000-0000-0000-0000-000000000000";
-  const tenantId = actor?.tenantId ?? "00000000-0000-0000-0000-000000000000";
+  const userId = actor?.userId ?? GUEST_USER_ID;
+  const tenantId = actor?.tenantId ?? GUEST_TENANT_ID;
 
   // Phase 1 — embed the query (network).
   let embedding: number[];
@@ -218,9 +232,18 @@ export async function GET(req: Request) {
 
   // Phase 4 — hydrate corpus candidates for rerank. Cap at 30.
   // Library hits participate in RRF fusion but skip corpus hydration.
+  // V2: also pull body_kind from metadata->'content_extract' so we can
+  // (a) defensively drop any blocked/degraded row that slipped past the
+  // upstream leg filter, and (b) propagate the trust tier to the response.
   const hydrated = new Map<
     string,
-    { id: string; title: string; source_url: string; body: string }
+    {
+      id: string;
+      title: string;
+      source_url: string;
+      body: string;
+      body_kind: BodyKind | null;
+    }
   >();
 
   if (corpusCandidateIds.length > 0) {
@@ -229,7 +252,8 @@ export async function GET(req: Request) {
       async () =>
         withActor(async (tx) =>
           tx.execute(sql`
-            SELECT id, title, source_url, body
+            SELECT id, title, source_url, body,
+                   (metadata->'content_extract'->>'body_kind') AS body_kind
               FROM corpus_documents
              WHERE id IN (${sql.join(
                corpusCandidateIds.map((id) => sql`${id}::uuid`),
@@ -243,8 +267,19 @@ export async function GET(req: Request) {
       title: string;
       source_url: string;
       body: string;
+      body_kind: string | null;
     }>) {
-      hydrated.set(r.id, r);
+      // Defense in depth: skip any row whose body_kind is explicitly
+      // blocked / degraded / metadata_only. Null and unknown values are
+      // treated as full_text per back-compat policy.
+      if (isBlockedBodyKind(r.body_kind)) continue;
+      hydrated.set(r.id, {
+        id: r.id,
+        title: r.title,
+        source_url: r.source_url,
+        body: r.body,
+        body_kind: r.body_kind as BodyKind | null,
+      });
     }
   }
 
@@ -284,7 +319,7 @@ export async function GET(req: Request) {
   // corpus hits surface without kind (treated as 'corpus' implicitly).
   const results: SearchResult[] = rerankResult.doc_ids
     .slice(0, limit)
-    .flatMap((id) => {
+    .flatMap<SearchResult>((id) => {
       const fusedEntry = fused.find((f) => f.doc_id === id);
       if (!fusedEntry) return [];
 
@@ -300,7 +335,7 @@ export async function GET(req: Request) {
             score: fusedEntry.score,
             legs: fusedEntry.legs as LegName[],
             kind: libHit.kind,
-          },
+          } satisfies SearchResult,
         ];
       }
 
@@ -315,7 +350,12 @@ export async function GET(req: Request) {
           snippet: row.body.slice(0, 300).replace(/\s+/g, " "),
           score: fusedEntry.score,
           legs: fusedEntry.legs as LegName[],
-        },
+          // Surface body_kind on every corpus hit so the QA route, Library
+          // page, and command palette can badge partial-trust sources and
+          // never render blocked/degraded bodies. NULL = back-compat
+          // full_text; consumers normalize via lib/corpus/body-kind.ts.
+          body_kind: normalizeBodyKind(row.body_kind),
+        } satisfies SearchResult,
       ];
     });
 
