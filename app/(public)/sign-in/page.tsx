@@ -85,25 +85,44 @@ export default function SignInPage() {
         </p>
       </header>
 
-      <form className="mt-8 space-y-4" onSubmit={submit}>
-        <Input
-          type="email"
-          required
-          autoComplete="email"
-          autoFocus
-          label="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+      <form className="mt-8" onSubmit={submit}>
+        {/* Credentials group — email + password belong together (one
+            "enter your details" intent). Tight 12px gap groups them
+            visually per Gestalt proximity. */}
+        <div className="space-y-3">
+          <Input
+            type="email"
+            required
+            autoComplete="email"
+            autoFocus
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-        <Input
-          type="password"
-          autoComplete="current-password"
-          label="Password (optional)"
-          placeholder="leave blank for magic link"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <Input
+            type="password"
+            autoComplete="current-password"
+            label="Password (optional)"
+            placeholder="leave blank for magic link"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+
+        {/* OR divider — separates the credentials group from the submit
+            so the button doesn't read as "submits the password". */}
+        <div
+          className="my-6 flex items-center gap-3"
+          role="separator"
+          aria-label="or"
+        >
+          <span className="h-px flex-1 bg-line" aria-hidden />
+          <span className="text-[11px] font-medium uppercase tracking-wider text-mute">
+            or
+          </span>
+          <span className="h-px flex-1 bg-line" aria-hidden />
+        </div>
 
         <Button
           type="submit"
@@ -116,12 +135,12 @@ export default function SignInPage() {
         </Button>
 
         {msg && (
-          <p role="status" className="text-[13px] status-ok">
+          <p role="status" className="mt-4 text-[13px] status-ok">
             {msg}
           </p>
         )}
         {err && (
-          <p role="alert" className="text-[13px] status-error">
+          <p role="alert" className="mt-4 text-[13px] status-error">
             {err}
           </p>
         )}

@@ -22,7 +22,12 @@ import { env } from "@/lib/env";
 const TRUSTED_ORIGINS = [
   env.BETTER_AUTH_URL,
   // Vercel preview URLs — accepted because BETTER_AUTH_URL only knows about prod.
-  // Dev only: localhost variants are already covered by the prod URL when set to localhost.
+  // Dev: BETTER_AUTH_URL pins one localhost port (default :3001), but `next dev`
+  // will fall back to :3000 / :3002 when the preferred port is busy. List the
+  // common dev ports so a port shuffle doesn't 403 every auth POST.
+  ...(process.env.NODE_ENV !== "production"
+    ? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
+    : []),
 ];
 
 export const auth = betterAuth({
