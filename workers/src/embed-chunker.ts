@@ -1,7 +1,10 @@
 // Token-aware chunker for the embedding pipeline.
 //
-// Targets 500–1000 tokens per chunk with ~100 token overlap (the standard
+// Targets 500–1024 tokens per chunk with ~100 token overlap (the standard
 // retrieval-augmented-generation window for `text-embedding-3-small`).
+// Cap is 1024 (was 1000) to leave headroom for the title prefix added by
+// FIX-3 (see workers/src/adapters/arxiv-embed.ts). text-embedding-3-small
+// accepts 8192 tokens, so this is a soft engineering cap, not a model limit.
 // Encoding is `cl100k_base` — the tokenizer family used by
 // text-embedding-3-* and gpt-3.5 / gpt-4 family models. (text-embedding-3
 // actually uses o200k_base internally for the largest variants, but the
@@ -18,7 +21,7 @@ import { encoding_for_model, get_encoding, type Tiktoken } from "tiktoken";
 export interface ChunkerOptions {
   /** Target chunk size in tokens. Default 750 (midpoint of 500–1000). */
   targetTokens?: number;
-  /** Maximum tokens before forcing a split. Default 1000. */
+  /** Maximum tokens before forcing a split. Default 1024 (headroom for title prefix). */
   maxTokens?: number;
   /** Overlap between consecutive chunks. Default 100. */
   overlapTokens?: number;
@@ -32,7 +35,7 @@ export interface Chunk {
 
 const DEFAULTS = {
   targetTokens: 750,
-  maxTokens: 1000,
+  maxTokens: 1024,
   overlapTokens: 100,
 } satisfies Required<ChunkerOptions>;
 
