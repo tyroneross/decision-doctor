@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PainPathId } from "@/lib/engine/types";
 import type { ResolvedActor } from "@/lib/auth-session";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { NoPhiNotice } from "@/components/recommendations/NoPhiNotice";
 import { detectPHI } from "@/lib/phi-guard";
+import { PATH_KICKOFFS, type PathKickoff } from "./path-kickoff";
 
 export interface NewRecommendationClientProps {
   initialPath: PainPathId | null;
@@ -63,6 +65,7 @@ export function NewRecommendationClient({
         : { hasPHI: false, reasons: [] },
     [challenge],
   );
+  const selectedKickoff = initialPath ? PATH_KICKOFFS[initialPath] : null;
 
   async function loadNext(
     nextState?: RecommendationIntakeState,
@@ -101,6 +104,16 @@ export function NewRecommendationClient({
   function handleChallengeSubmit(text: string) {
     if (!text.trim() || phi.hasPHI) return;
     const nextChallenge = text.trim();
+    setChallenge(nextChallenge);
+    setState(null);
+    setAction(null);
+    void loadNext(undefined, nextChallenge);
+  }
+
+  function beginSelectedPath() {
+    if (!selectedKickoff || phi.hasPHI) return;
+    if (selectedKickoff.requiresDetail && challenge.trim().length < 8) return;
+    const nextChallenge = challenge.trim() || selectedKickoff.seedChallenge;
     setChallenge(nextChallenge);
     setState(null);
     setAction(null);
@@ -177,13 +190,29 @@ export function NewRecommendationClient({
   }
 
   if (!action) {
+    if (selectedKickoff && !initialChallenge?.trim()) {
+      return (
+        <PathKickoffView
+          kickoff={selectedKickoff}
+          value={challenge}
+          onChange={setChallenge}
+          onSubmit={handleChallengeSubmit}
+          onStart={beginSelectedPath}
+          warning={phi.hasPHI}
+          warningReasons={phi.reasons}
+          busy={busy}
+          error={error}
+        />
+      );
+    }
+
     return (
       <div className="mx-auto max-w-xl space-y-6 px-5 py-10">
         <header className="space-y-1">
           <p className="text-[12px] font-medium uppercase tracking-wider text-mute">
             Adaptive intake
           </p>
-          <h1 className="text-[24px] font-bold leading-snug text-ink">
+          <h1 className="text-h1 sm:text-h1-lg text-ink">
             What do you want AI to help with?
           </h1>
           <p className="text-[14px] text-mute">
@@ -350,6 +379,159 @@ export function NewRecommendationClient({
   );
 }
 
+function PathKickoffView({
+  kickoff,
+  value,
+  onChange,
+  onSubmit,
+  onStart,
+  warning,
+  warningReasons,
+  busy,
+  error,
+}: {
+  kickoff: PathKickoff;
+  value: string;
+  onChange: (next: string) => void;
+  onSubmit: (value: string) => void;
+  onStart: () => void;
+  warning: boolean;
+  warningReasons: string[];
+  busy: boolean;
+  error: string | null;
+}) {
+  const canStart =
+    !busy &&
+    !warning &&
+    (!kickoff.requiresDetail || value.trim().length >= 8);
+  const startLabel = kickoff.requiresDetail
+    ? "Start with this detail"
+    : "Start with this path";
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-6 px-5 py-10">
+      <header className="space-y-2">
+        <p className="text-[12px] font-medium uppercase tracking-wider text-mute">
+          Selected path
+        </p>
+        <h1 className="text-h1 sm:text-h1-lg text-ink">{kickoff.label}</h1>
+        <p className="text-[15px] leading-relaxed text-text">
+          {kickoff.headline}
+        </p>
+        <p className="text-[14px] leading-relaxed text-mute">
+          {kickoff.summary}
+        </p>
+      </header>
+
+      <NoPhiNotice warning={warning} reasons={warningReasons} />
+
+      <section
+        className="rounded-xl border border-line bg-paper p-4"
+        aria-labelledby="path-first-advice"
+      >
+        <h2
+          id="path-first-advice"
+          className="text-[13px] font-semibold uppercase tracking-wider text-mute"
+        >
+          First advice
+        </h2>
+        <ul className="mt-3 space-y-2">
+          {kickoff.firstAdvice.map((item) => (
+            <li
+              key={item}
+              className="flex gap-2 text-[14px] leading-relaxed text-text"
+            >
+              <span
+                aria-hidden
+                className="mt-[0.65em] h-1.5 w-1.5 shrink-0 rounded-full bg-ink"
+              />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-labelledby="path-artifacts">
+        <h2
+          id="path-artifacts"
+          className="text-[13px] font-semibold uppercase tracking-wider text-mute"
+        >
+          Starter assets to consider
+        </h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          {kickoff.artifacts.map((artifact) => (
+            <article
+              key={`${artifact.kind}:${artifact.title}`}
+              className="rounded-xl border border-line bg-paper p-4"
+            >
+              <p className="text-[11px] font-medium uppercase tracking-wider text-mute">
+                {artifact.kind}
+              </p>
+              <h3 className="mt-1 text-[14px] font-semibold leading-snug text-ink">
+                {artifact.title}
+              </h3>
+              <p className="mt-2 text-[12px] leading-relaxed text-mute">
+                {artifact.description}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section
+        className="rounded-xl border border-line bg-paper p-4"
+        aria-labelledby="path-info-needed"
+      >
+        <h2
+          id="path-info-needed"
+          className="text-[13px] font-semibold uppercase tracking-wider text-mute"
+        >
+          What I still need
+        </h2>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {kickoff.infoNeeded.map((item) => (
+            <span
+              key={item}
+              className="rounded-[10px] border border-line px-3 py-1.5 text-[12px] font-medium text-text"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-3" aria-label="Add path detail">
+        <PillSearchBar
+          multiline
+          maxRows={5}
+          value={value}
+          onChange={onChange}
+          onSubmit={onSubmit}
+          placeholder={kickoff.detailPlaceholder}
+          ariaLabel="Add detail for this path"
+          leftIcon={false}
+          minLength={8}
+          disabled={busy}
+        />
+
+        {error && <ErrorText>{error}</ErrorText>}
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href="/app/library"
+            className="text-[13px] font-medium text-mute hover:underline underline-offset-2"
+          >
+            Browse library assets →
+          </Link>
+          <Button variant="primary" onClick={onStart} disabled={!canStart}>
+            {busy ? "Starting..." : startLabel}
+          </Button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function LoadingState({ title }: { title: string }) {
   return (
     <div className="mx-auto max-w-xl space-y-4 px-5 py-16">
@@ -382,7 +564,7 @@ function IntakeHeader({
       <p className="text-[12px] font-medium uppercase tracking-wider text-mute">
         {eyebrow}
       </p>
-      <h1 className="text-[24px] font-bold leading-snug text-ink">{title}</h1>
+      <h1 className="text-h1 sm:text-h1-lg text-ink">{title}</h1>
       {subtitle && <p className="text-[14px] text-mute">{subtitle}</p>}
     </header>
   );

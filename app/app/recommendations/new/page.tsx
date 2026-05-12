@@ -6,8 +6,9 @@
 //   ?path=<PainPathId>    — pre-select a pain path (from pain card click)
 //   ?challenge=<text>     — pre-fill challenge text (from home composer)
 //
-// Both params are optional. If both are null the page renders a
-// "back to home" nudge (no dead-end).
+// Both params are optional. If both are null the page renders a picker inline.
+// If path exists without challenge, the client renders a path-specific advice
+// kickoff before adaptive intake so the card selection is not treated as blank.
 //
 // Auth: guests are allowed — the submit flow routes through the guest
 // branch (POST /api/recommendations returns guestMode:true → client
@@ -77,7 +78,7 @@ export default async function NewRecommendationPage({ searchParams }: Props) {
       <main className="mx-auto max-w-3xl px-5 py-10">
         <header className="mb-6 space-y-1">
           <h1
-            className="text-[24px] font-bold leading-tight"
+            className="text-h1 sm:text-h1-lg"
             style={{ color: "var(--ink)" }}
           >
             Start a recommendation
