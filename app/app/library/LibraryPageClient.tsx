@@ -26,11 +26,17 @@ const KIND_OPTIONS = [
   { value: "corpus", label: "Corpus" },
 ];
 
+// Pain path chip labels are length-bounded visually via Tailwind
+// (max-w-[180px] truncate on the chip — see <FilterChips chipClassName>) so
+// long phrases get a CSS ellipsis instead of a mid-word string slice. The
+// leading verb prefix is still stripped so each chip starts with the
+// distinctive noun phrase ("latest research in my specialty", not "Keep
+// up with…").
 const PATH_OPTIONS = [
   { value: "all", label: "All paths" },
   ...PAIN_PATHS.filter((p) => p.pathId !== "custom").map((p) => ({
     value: p.pathId,
-    label: p.label.replace(/^(Grow or manage|Keep up with|Reduce|Plan|Improve)\s+/i, "").slice(0, 28),
+    label: p.label.replace(/^(Grow or manage|Keep up with|Reduce|Plan|Improve)\s+/i, ""),
   })),
   { value: "custom", label: "Custom" },
 ];
@@ -254,12 +260,16 @@ export function LibraryPageClient({
         ariaLabel="Filter by kind"
       />
 
-      {/* Pain-path filter chips */}
+      {/* Pain-path filter chips. Long labels (e.g. "latest research in my
+          specialty") get a CSS ellipsis at 180px so the chip width stays
+          predictable without slicing mid-word. The full label is still
+          available on hover via the chip's title attribute. */}
       <FilterChips
         options={PATH_OPTIONS}
         selected={pathFilter}
         onChange={handlePathChange}
         ariaLabel="Filter by pain path"
+        chipClassName="max-w-[180px] truncate"
       />
 
       {/* Save error */}
@@ -280,7 +290,7 @@ export function LibraryPageClient({
       {!loading && results.length === 0 && (
         <div className="py-12 text-center">
           <p className="text-[14px] text-mute">
-            No matches in your library or the corpus. Try broader terms, or browse by pain path below.
+            No matches in your library or the corpus. Try broader terms, or use the path filters above.
           </p>
         </div>
       )}

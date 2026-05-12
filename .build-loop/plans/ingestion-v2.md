@@ -2,7 +2,7 @@
 
 **Repo:** `/Users/tyroneross/dev/git-folder/decision-doctor-cc`
 **Branch:** `v2-pain-to-ai-recommendation`
-**Plan version:** 2.0 metadata-first reliability slice, updated 2026-05-11
+**Plan version:** 2.1 metadata-first reliability slice, updated 2026-05-12
 
 ## Bottom Line
 
@@ -39,6 +39,7 @@ Implemented in this build-loop run:
   - quality-gated candidate selection.
   - multi-candidate static extraction from article/main/role-main/article/post/content/header/body.
   - atomic `body + content_hash + metadata.content_extract` write.
+  - OpenAI blocked-page fallback to official RSS description as `source_summary`.
 - `workers/src/queue.ts`
   - downstream gatekeeper dispatch for every extraction; handlers enrich only `full_text` and clean/stamp skips for ineligible bodies.
   - `embed-document` queue added with `arxiv-embed` compatibility alias.
@@ -63,7 +64,7 @@ Implemented in this build-loop run:
 Verified:
 
 - `pnpm --dir workers typecheck`
-- `pnpm --dir workers test` — 8 files, 41 tests
+- `pnpm --dir workers test` — 8 files, 42 tests
 
 ## Policy Direction
 
@@ -141,12 +142,15 @@ Important extraction correction:
 4. Updated corpus validator to report `body_kind`, challenge shells, stale hashes, and enrichment hash freshness.
 5. Ran live read-only corpus validation and wrote `.build-loop/memory/pattern_corpus_quality_2026-05-11_ingestion-v2.md`.
 6. Verified worker typecheck and tests.
+7. Deployed worker `62039f67-0ab3-4cfd-a235-bb93b9effc1f`; Railway drained the `openai-news` and `perplexity-research` priority backfill.
+8. Added OpenAI RSS fallback after validation showed 29 OpenAI pages still rendered as challenge shells.
 
 ## Operational Next
 
-1. Backfill bad rows, starting with `openai-news` and `perplexity-research`.
-2. Review the validator report for any rows still classified as `blocked`, `degraded`, `metadata_only`, stale hash, or challenge shell.
-3. Promote stable metadata fields to DB columns only after backfill proves the metadata contract is enough.
+1. Deploy the OpenAI RSS fallback.
+2. Rerun `openai-news` backfill on Railway.
+3. Review the validator report for any rows still classified as `blocked`, `degraded`, `metadata_only`, stale hash, or challenge shell.
+4. Promote stable metadata fields to DB columns only after backfill proves the metadata contract is enough.
 
 ## Later Architecture Promotion
 

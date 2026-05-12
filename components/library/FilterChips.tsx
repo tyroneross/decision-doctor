@@ -29,6 +29,10 @@ export interface FilterChipsProps {
   onChange: (next: string[]) => void;
   /** Accessible label for the chip group. */
   ariaLabel?: string;
+  /** Per-chip Tailwind classes — e.g. `max-w-[180px] truncate` for long
+   *  pain-path labels. Falls through `Chip`'s twMerge so callers can
+   *  override base styling. */
+  chipClassName?: string;
 }
 
 /**
@@ -43,6 +47,7 @@ export function FilterChips({
   selected,
   onChange,
   ariaLabel,
+  chipClassName,
 }: FilterChipsProps) {
   const selectedSet = new Set(selected);
   const isAllActive =
@@ -82,6 +87,8 @@ export function FilterChips({
             pressed={isSelected}
             onClick={() => handleClick(opt.value)}
             aria-pressed={isSelected}
+            title={opt.label}
+            className={chipClassName}
           >
             {opt.label}
           </Chip>

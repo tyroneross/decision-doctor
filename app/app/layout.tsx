@@ -131,6 +131,7 @@ export default async function AppLayout({
         skillCount={skillCount}
         recentDecisions={recent}
         openCase={null}
+        guest={guest}
       />
 
       {/* Mobile-only top brand header */}
@@ -157,7 +158,7 @@ export default async function AppLayout({
         <SkillPanel skills={skills} />
       </Suspense>
 
-      <MobileBottomNav />
+      <MobileBottomNav guest={guest} />
       <ServiceWorkerRegister />
       {/* ⌘K palette hits /api/search which 401s for guests; hide rather
           than wire a noisy fetch the user can't act on. */}

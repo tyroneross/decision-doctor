@@ -67,8 +67,15 @@ No new DB columns are required for this slice. A later normalization can promote
 - Verified final `pnpm --dir workers typecheck` passes.
 - Added DB coverage that re-running embedding after a body/content-hash change re-embeds changed chunks.
 - Verified final `pnpm --dir workers test` passes: 8 files, 41 tests.
+- Deployed Railway worker deployment `62039f67-0ab3-4cfd-a235-bb93b9effc1f` successfully from a clean worktree.
+- Enqueued Railway-side priority backfill for `openai-news` and `perplexity-research`; pg-boss drained 70 `content-extract`, 70 `ai-summarize`, 70 `kg-extract`, and 70 `embed-document` jobs with queue count returning to 0.
+- Ran post-backfill validator and wrote `.build-loop/memory/pattern_corpus_quality_2026-05-12_after-priority-backfill.md`.
+- Findings after priority backfill: `perplexity-research` repaired to 18 `full_text` rows and 1 `source_summary`; OpenAI stale hashes repaired to 0, but 29 OpenAI pages still returned a challenge/loading shell through static fetch and CDP.
+- Added OpenAI official RSS fallback for blocked rendered pages: if the OpenAI article page is still a challenge shell, match the page URL against `https://openai.com/news/rss.xml` and store the feed description as `source_summary` instead of keeping poisoned page text.
+- Verified follow-up worker tests pass with the RSS fallback: `pnpm --dir workers typecheck` and `pnpm --dir workers test` (8 files, 42 tests).
 
 ## Follow-Up
 
-- Run corpus validation/backfill against live Railway data, starting with `openai-news` and `perplexity-research`.
+- Deploy the RSS fallback and rerun `openai-news` backfill on Railway.
+- Run corpus validation after the fallback deployment and confirm OpenAI challenge shells are no longer stored as document bodies.
 - Consider promoting stable metadata fields (`body_kind`, `quality_score`, `extractor_version`, `next_extract_at`) into columns after the repair run proves the contract.

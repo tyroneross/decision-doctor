@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageSquare, FileText, Sparkles, ShieldCheck } from "lucide-react";
+import { MessageSquare, FileText, Sparkles, ShieldCheck, Lock } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { SignOutButton } from "./sign-out";
 
@@ -35,32 +35,46 @@ export interface DesktopSidebarProps {
   skillCount: number;
   recentDecisions: RecentDecisionLink[];
   openCase?: { id: string; title: string } | null;
+  /** Layout passes guest=true when the request is in guest mode. Locked
+   *  workspace items (Skills) get a muted/lock affordance and route to
+   *  /sign-in with a hint param instead of silently 307'ing. */
+  guest?: boolean;
 }
 
-const WORKSPACE = [
+type WorkspaceItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>;
+  match: (p: string) => boolean;
+  /** True when this surface is user-scoped and unavailable in guest mode. */
+  requiresAuth?: boolean;
+};
+
+const WORKSPACE: WorkspaceItem[] = [
   {
     href: "/app/chat",
     label: "Chat",
     icon: MessageSquare,
-    match: (p: string) => p.startsWith("/app/chat"),
+    match: (p) => p.startsWith("/app/chat"),
   },
   {
     href: "/app/history",
     label: "History",
     icon: FileText,
-    match: (p: string) => p.startsWith("/app/history"),
+    match: (p) => p.startsWith("/app/history"),
   },
   {
     href: "/app/skills",
     label: "Skills",
     icon: Sparkles,
-    match: (p: string) => p.startsWith("/app/skills"),
+    match: (p) => p.startsWith("/app/skills"),
+    requiresAuth: true,
   },
   {
     href: "/app/audit",
     label: "Audit",
     icon: ShieldCheck,
-    match: (p: string) => p.startsWith("/app/audit"),
+    match: (p) => p.startsWith("/app/audit"),
   },
 ];
 
@@ -71,6 +85,7 @@ export function DesktopSidebar({
   skillCount,
   recentDecisions,
   openCase,
+  guest = false,
 }: DesktopSidebarProps) {
   const pathname = usePathname() ?? "";
 
@@ -105,19 +120,28 @@ export function DesktopSidebar({
           Workspace
         </h2>
         <ul className="space-y-0.5">
-          {WORKSPACE.map(({ href, label, icon: Icon, match }) => {
+          {WORKSPACE.map(({ href, label, icon: Icon, match, requiresAuth }) => {
             const active = match(pathname);
+            const locked = guest && !!requiresAuth;
+            const linkHref = locked
+              ? `/sign-in?reason=${encodeURIComponent(label.toLowerCase())}`
+              : href;
             return (
               <li key={href}>
                 <Link
-                  href={href}
+                  href={linkHref}
                   aria-current={active ? "page" : undefined}
+                  title={locked ? `Sign in to use ${label}` : undefined}
+                  aria-label={
+                    locked ? `${label} — sign in required` : undefined
+                  }
                   className={twMerge(
                     "relative flex items-center gap-2 px-3 py-2 rounded-md text-[14px] " +
                       "transition-colors",
                     active
                       ? "text-ink font-medium bg-line/30"
-                      : "text-text hover:bg-line/30"
+                      : "text-text hover:bg-line/30",
+                    locked && "opacity-60"
                   )}
                 >
                   {active && (
@@ -127,7 +151,14 @@ export function DesktopSidebar({
                     />
                   )}
                   <Icon size={16} aria-hidden />
-                  <span>{label}</span>
+                  <span className="flex-1">{label}</span>
+                  {locked && (
+                    <Lock
+                      size={12}
+                      aria-hidden
+                      className="text-mute"
+                    />
+                  )}
                 </Link>
               </li>
             );

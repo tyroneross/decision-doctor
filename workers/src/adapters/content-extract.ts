@@ -22,10 +22,12 @@ import * as cheerio from "cheerio";
 import { getPool } from "../db.js";
 import { extractRenderedContentProbe } from "../cdp/extract-content.js";
 import { sleep } from "../rate-limit.js";
+import { parseRssItems, type RssItem } from "./rss.js";
 import {
   EXTRACTOR_VERSION,
   assessBodyQuality,
   contentExtractMetadata,
+  hasChallengeShell,
   normalizeBodyText,
   sha256,
   type BodyKind,
@@ -37,6 +39,7 @@ const UA =
   "decision-doctor-workers/0.1 (+https://github.com/tyroneross/decision-doctor-cc; contact: tyrone.ross@gmail.com)";
 
 const CHEERIO_FALLBACK_THRESHOLD = 500;
+const OPENAI_RSS_URL = "https://openai.com/news/rss.xml";
 
 export interface ContentExtractPayload {
   documentId: string;
@@ -134,6 +137,49 @@ async function fetchHtml(url: string): Promise<FetchArtifact> {
     finalUrl: resp.url,
     statusCode: resp.status,
   };
+}
+
+let openAiRssCache: Promise<RssItem[]> | null = null;
+
+function normalizeUrlForMatch(url: string): string {
+  try {
+    const u = new URL(url);
+    u.hash = "";
+    u.search = "";
+    return u.toString().replace(/\/$/, "");
+  } catch {
+    return url.trim().replace(/\/$/, "");
+  }
+}
+
+export function findRssSummaryByUrl(
+  items: Array<Pick<RssItem, "link" | "guid" | "description" | "title">>,
+  sourceUrl: string,
+): string | null {
+  const target = normalizeUrlForMatch(sourceUrl);
+  const item = items.find(
+    (it) =>
+      normalizeUrlForMatch(it.link) === target ||
+      normalizeUrlForMatch(it.guid) === target,
+  );
+  const summary = normalizeBodyText(item?.description || item?.title || "");
+  return summary.length > 0 ? summary : null;
+}
+
+async function fetchOpenAiRssSummary(sourceUrl: string): Promise<string | null> {
+  openAiRssCache ??= fetch(OPENAI_RSS_URL, { headers: { "User-Agent": UA } })
+    .then(async (resp) => {
+      if (!resp.ok) {
+        throw new Error(`RSS fetch ${OPENAI_RSS_URL} -> HTTP ${resp.status}`);
+      }
+      return parseRssItems(await resp.text());
+    })
+    .catch((e) => {
+      openAiRssCache = null;
+      throw e;
+    });
+
+  return findRssSummaryByUrl(await openAiRssCache, sourceUrl);
 }
 
 interface ExtractionOutcome {
@@ -427,7 +473,7 @@ async function extractForSource(
       }
 
       const probe = await extractRenderedContentProbe(sourceUrl);
-      return chooseCandidate({
+      const renderedChoice = chooseCandidate({
         sourceType,
         sourceUrl,
         crawlConfig,
@@ -442,6 +488,38 @@ async function extractForSource(
           ...probe.errorSignals.map((s) => `error_signal:${s.slice(0, 80)}`),
         ],
       });
+      const renderedQuality = assessBodyQuality({
+        sourceType,
+        sourceUrl,
+        crawlConfig,
+        method: renderedChoice.method,
+        body: renderedChoice.body,
+      });
+      if (
+        renderedQuality.bodyKind === "blocked" ||
+        hasChallengeShell(renderedChoice.body)
+      ) {
+        try {
+          const rssSummary = await fetchOpenAiRssSummary(sourceUrl);
+          if (rssSummary) {
+            return {
+              method: "source_summary",
+              body: rssSummary,
+              finalUrl: sourceUrl,
+              statusCode: null,
+              degradedReasons: [
+                ...renderedChoice.degradedReasons,
+                "rss_summary_fallback",
+              ],
+            };
+          }
+        } catch (e) {
+          renderedChoice.degradedReasons.push(
+            `rss_summary_failed:${String(e).slice(0, 120)}`,
+          );
+        }
+      }
+      return renderedChoice;
     }
 
     default: {
