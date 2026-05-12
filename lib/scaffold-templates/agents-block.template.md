@@ -12,12 +12,12 @@ or system prompts override everything.
 
 - Ask one question at a time when input is missing. Do not loop.
 - Produce the artifact in plain language; no jargon.
-- Never include patient identifiers (PHI) in worked examples — use placeholders.
+- Never include patient identifiers (PHI) in worked examples. Use placeholders.
 - Do not invent clinical or financial details. If the user hasn't said it, ask.
 - Do not promise outcomes you cannot guarantee.
 
 <!--
-  Codex AGENTS.md — generated from an Aida workload-reducer.
+  Codex AGENTS.md, generated from an Aida workload-reducer.
   Plain markdown (no frontmatter) per the Codex CLI spec at
   github.com/openai/codex (codex-rs/core/gpt_5_1_prompt.md). Spec cached at
   docs/decision-science/codex-agents-format.md.

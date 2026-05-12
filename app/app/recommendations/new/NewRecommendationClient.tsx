@@ -79,17 +79,17 @@ const INTAKE_QUESTIONS = [
     label: "How comfortable are you with AI making mistakes on this?",
     hint: "Higher risk tolerance = faster AI adoption.",
     options: [
-      { value: "0.2", label: "Very cautious — I review everything" },
-      { value: "0.5", label: "Moderate — I spot-check outputs" },
-      { value: "0.75", label: "Comfortable — errors are easy to catch" },
-      { value: "1", label: "Relaxed — low-stakes task" },
+      { value: "0.2", label: "Very cautious. I review everything." },
+      { value: "0.5", label: "Moderate. I spot-check outputs." },
+      { value: "0.75", label: "Comfortable. Errors are easy to catch." },
+      { value: "1", label: "Relaxed. Low-stakes task." },
     ],
     defaultValue: "0.5",
   },
   {
     fieldId: "ai_comfort",
     label: "How familiar are you with AI tools for this type of work?",
-    hint: "Honest — it helps us pick the right starting level.",
+    hint: "Honest. It helps us pick the right starting level.",
     options: [
       { value: "0.2", label: "Never tried AI for this" },
       { value: "0.5", label: "Used it a few times" },

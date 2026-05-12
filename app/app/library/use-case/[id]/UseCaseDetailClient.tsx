@@ -223,7 +223,7 @@ export function UseCaseDetailClient({
           Refine for your situation
         </h2>
         <p className="text-[12px] mb-4" style={{ color: "var(--mute)" }}>
-          Chat to tailor the example. Don&apos;t paste patient identifiers —
+          Chat to tailor the example. Don&apos;t paste patient identifiers.
           we&apos;ll block messages that look like PHI.
         </p>
 

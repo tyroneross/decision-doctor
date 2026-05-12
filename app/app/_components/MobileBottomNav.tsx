@@ -87,7 +87,7 @@ export function MobileBottomNav({ guest = false }: MobileBottomNavProps) {
             href={linkHref}
             title={locked ? `Sign in to use ${label}` : undefined}
             aria-label={
-              locked ? `${label} — sign in required` : undefined
+              locked ? `${label} · sign in required` : undefined
             }
             className={twMerge(
               "relative flex flex-col items-center justify-center gap-0.5 " +

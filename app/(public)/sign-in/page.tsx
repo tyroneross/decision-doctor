@@ -79,7 +79,7 @@ function SignInPageInner() {
           callbackURL: "/app",
         });
         if (res.error) throw new Error(res.error.message);
-        setMsg("Check your email — your sign-in link expires in 60 min.");
+        setMsg("Check your email. Your sign-in link expires in 60 min.");
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));

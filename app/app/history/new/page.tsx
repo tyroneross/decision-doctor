@@ -22,7 +22,7 @@ export default function NewDecisionPage() {
         </h1>
         <p className="max-w-xl text-[14.5px] leading-snug text-mute">
           For when you already know which kind of decision you're making. The
-          chat flow is faster for most folks — but if you've done this before,
+          chat flow is faster for most folks, but if you've done this before,
           here's the direct path.
         </p>
       </header>
@@ -80,7 +80,7 @@ export default function NewDecisionPage() {
           >
             describe it conversationally
           </Link>{" "}
-          — usually faster, and you don't have to know which template fits.
+          (usually faster, and you don't have to know which template fits).
         </p>
       </Card>
 

@@ -13,7 +13,7 @@ export default function AuditPage() {
           Periodic decision audits will live here.
         </p>
         <p className="text-[14px] text-mute leading-relaxed max-w-md mx-auto">
-          Each shipped decision will surface here for a quarterly review —
+          Each shipped decision will surface here for a quarterly review:
           mark <span className="text-ok font-medium">keep</span> or{" "}
           <span className="text-red-700 font-medium">retire</span> based on
           how the call held up. Post-MVP.

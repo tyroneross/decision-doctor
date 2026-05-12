@@ -39,7 +39,6 @@ describe("bm25Search OR-quorum fallback", () => {
   ) {
     const execute = vi.fn();
     for (const r of responses) execute.mockResolvedValueOnce(r);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return { tx: { execute } as any, execute };
   }
 

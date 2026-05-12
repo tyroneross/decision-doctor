@@ -94,7 +94,7 @@ export function BaselineCapture({
           Capture a baseline to track impact
         </p>
         <p className="mt-1 text-[13px]" style={{ color: "var(--mute)" }}>
-          Sign in to record how much time this task currently takes — so you
+          Sign in to record how much time this task currently takes, so you
           can measure the improvement after trying the recommendation.
         </p>
         <a

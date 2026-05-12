@@ -181,7 +181,7 @@ export function DesktopSidebar({
                   aria-current={active ? "page" : undefined}
                   title={locked ? `Sign in to use ${label}` : undefined}
                   aria-label={
-                    locked ? `${label} — sign in required` : undefined
+                    locked ? `${label} · sign in required` : undefined
                   }
                   className={twMerge(
                     "relative flex items-center gap-2 px-3 py-2 rounded-md text-[14px] " +

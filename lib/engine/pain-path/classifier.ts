@@ -52,7 +52,7 @@ function buildClarifierChips(bestGuess?: PainPathId): ClarifierChips {
     kind: "chips",
     fieldId: "pain_path",
     label: "Which challenge best describes your situation?",
-    hint: "Pick the closest match — we'll refine from there.",
+    hint: "Pick the closest match. We'll refine from there.",
     options: PAIN_PATH_CHIP_OPTIONS,
     ...(bestGuess ? { defaultValue: bestGuess } : {}),
   };
@@ -166,22 +166,22 @@ const CLASSIFIER_SYSTEM_PROMPT = `You are the pain-path classifier for Aida, an 
 Given a free-text challenge description, classify it into the most appropriate pain path. Return ONLY JSON.
 
 Pain paths:
-- "referrals"       — Growing or managing a referral network; sourcing new patients; specialist outreach.
-- "research"        — Keeping up with medical research, clinical guidelines, evidence, specialty updates.
-- "admin"           — Reducing administrative overload: inbox, documentation, forms, prior auth, billing, paperwork.
-- "capacity_growth" — Planning capacity, pricing, scheduling, revenue growth, or managing workload demand.
-- "follow_up"       — Improving patient follow-up consistency: reminders, check-ins, recall, unresolved tasks.
-- "custom"          — Does not fit any of the above. Use when the challenge spans multiple paths or is unique.
+- "referrals":       Growing or managing a referral network; sourcing new patients; specialist outreach.
+- "research":        Keeping up with medical research, clinical guidelines, evidence, specialty updates.
+- "admin":           Reducing administrative overload: inbox, documentation, forms, prior auth, billing, paperwork.
+- "capacity_growth": Planning capacity, pricing, scheduling, revenue growth, or managing workload demand.
+- "follow_up":       Improving patient follow-up consistency: reminders, check-ins, recall, unresolved tasks.
+- "custom":          Does not fit any of the above. Use when the challenge spans multiple paths or is unique.
 
 Rules:
 - Pick the SINGLE best path. If two paths tie, pick the one that most directly names the practitioner's frustration.
 - If the text is too vague or spans multiple paths equally, use "custom" and set confidence below 0.65.
 - Never invent a new path.
 
-OUTPUT (JSON only — no prose, no fences):
+OUTPUT (JSON only. No prose, no fences):
 {
   "path": "referrals" | "research" | "admin" | "capacity_growth" | "follow_up" | "custom",
-  "confidence": <0.0-1.0 float — how certain you are>,
+  "confidence": <0.0-1.0 float. How certain you are.>,
   "rationale": "<1 sentence>"
 }`;
 

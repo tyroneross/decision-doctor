@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
 
   const systemPrompt = `You are explaining a reusable AI asset to a solo healthcare practitioner.
 
-You can use ONLY the information in the provided files below. If something isn't covered, say so plainly — do NOT invent steps, libraries, or APIs.
+You can use ONLY the information in the provided files below. If something isn't covered, say so plainly. Do NOT invent steps, libraries, or APIs.
 
 The audience is a clinician with limited engineering background. Keep the tone calm and precise. Avoid jargon. Lead with the concrete user value, then explain when to use it, then walk through one applied example.
 

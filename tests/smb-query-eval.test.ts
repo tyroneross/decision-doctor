@@ -499,7 +499,6 @@ describe("FIX-6 SMB natural-language eval — recall@10 (capability test)", () =
       const expectedGapNames = expectedGapQueries.map((ev) => ev.q);
       const surpriseGaps = unexpectedGaps;
 
-      // eslint-disable-next-line no-console
       console.log(
         "[FIX-6] Expected coverage gaps (" +
           expectedGapNames.length +
@@ -508,7 +507,6 @@ describe("FIX-6 SMB natural-language eval — recall@10 (capability test)", () =
       );
 
       if (surpriseGaps.length > 0) {
-        // eslint-disable-next-line no-console
         console.warn(
           "[FIX-6] Unexpected gaps (" +
             surpriseGaps.length +
@@ -523,7 +521,6 @@ describe("FIX-6 SMB natural-language eval — recall@10 (capability test)", () =
         (ev) => (anchors.get(ev.q)?.length ?? 0) > 0,
       );
       if (gapsNowCovered.length > 0) {
-        // eslint-disable-next-line no-console
         console.log(
           "[FIX-6] Former gaps now covered by corpus (" +
             gapsNowCovered.length +
@@ -542,7 +539,6 @@ describe("FIX-6 SMB natural-language eval — recall@10 (capability test)", () =
     async () => {
       const active = evalQueries();
       if (active.length === 0) {
-        // eslint-disable-next-line no-console
         console.warn("[FIX-6 fusion-only] No queries have corpus coverage — all excluded.");
         expect(true).toBe(true);
         return;
@@ -562,7 +558,6 @@ describe("FIX-6 SMB natural-language eval — recall@10 (capability test)", () =
       }
 
       const overall = computeRecall(perQuery);
-      // eslint-disable-next-line no-console
       console.log(
         "[FIX-6 fusion-only] per-query recall:\n" +
           perQuery
@@ -588,7 +583,6 @@ describe("FIX-6 SMB natural-language eval — recall@10 (capability test)", () =
     async () => {
       const active = evalQueries();
       if (active.length === 0) {
-        // eslint-disable-next-line no-console
         console.warn("[FIX-6] No queries have corpus coverage — skipping recall assertion.");
         // Pass vacuously — corpus may be empty in a cold-start env.
         expect(true).toBe(true);
@@ -618,7 +612,6 @@ describe("FIX-6 SMB natural-language eval — recall@10 (capability test)", () =
         return { cat, recall: catRecall, n: catRows.length };
       });
 
-      // eslint-disable-next-line no-console
       console.log(
         "[FIX-6] per-query recall:\n" +
           perQuery

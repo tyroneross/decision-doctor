@@ -60,7 +60,7 @@ USE CASE: ${args.title}
 DESCRIPTION: ${args.body}
 
 EXAMPLE BASELINE:
-${args.exampleBaseline ?? "(not yet generated — describe what you would change once an example is available, and ask clarifying questions about the practitioner's situation.)"}
+${args.exampleBaseline ?? "(not yet generated. Describe what you would change once an example is available, and ask clarifying questions about the practitioner's situation.)"}
 `.trim();
 }
 

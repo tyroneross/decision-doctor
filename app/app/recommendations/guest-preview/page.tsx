@@ -53,7 +53,7 @@ export default function GuestRecommendationPreviewPage() {
         </h1>
         <p className="mt-2 text-[14px]" style={{ color: "var(--mute)" }}>
           Guest recommendations are kept in this browser tab only. The last
-          preview isn&rsquo;t here — start a new one or sign in to save your
+          preview isn&rsquo;t here. Start a new one, or sign in to save your
           work.
         </p>
         <div className="mt-6 flex gap-3">

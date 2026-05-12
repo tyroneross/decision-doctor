@@ -47,7 +47,7 @@ export default async function LearnPage() {
           Learn
         </h1>
         <p className="text-[14px] text-mute">
-          Concepts to understand before browsing the library — skills,
+          Concepts to understand before browsing the library: skills,
           commands, hooks, MCP, scaffolding, and more.
         </p>
       </div>

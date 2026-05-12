@@ -47,7 +47,7 @@ export const PAIN_PATHS: PainPathEntry[] = [
   {
     pathId: "custom",
     label: "Add my own challenge",
-    oneLineHook: "Describe a pain point — we'll classify and find the best fit",
+    oneLineHook: "Describe a pain point. We'll classify and find the best fit.",
   },
 ];
 

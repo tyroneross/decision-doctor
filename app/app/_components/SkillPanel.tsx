@@ -95,7 +95,7 @@ export function SkillPanel({ skills }: Props) {
 
   return (
     <aside
-      aria-label={`Skill detail — ${active.title}`}
+      aria-label={`Skill detail: ${active.title}`}
       className="hidden lg:flex sticky top-0 h-screen w-[360px] shrink-0 flex-col gap-5 overflow-y-auto border-l border-line bg-paper px-6 py-8"
     >
       <div>
@@ -165,7 +165,7 @@ export function SkillPanel({ skills }: Props) {
         <ul className="mt-2 space-y-1 text-[12.5px] text-ink">
           <li>✓ Tested on real workloads</li>
           <li>✓ Local PHI · no third-party calls</li>
-          <li>✓ Editable — adapt to your team</li>
+          <li>✓ Editable. Adapt to your team.</li>
         </ul>
       </section>
 

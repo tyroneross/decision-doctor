@@ -245,7 +245,7 @@ export function RecommendationView({ row }: { row: RecommendationDecisionRow }) 
           </p>
           {!robustness.hasReal && (
             <p className="mt-3 text-[12px] text-mute">
-              (the engine couldn't surface a strong fallback — re-run with
+              (the engine couldn't surface a strong fallback. Re-run with
               revised priorities if conditions change)
             </p>
           )}
@@ -450,7 +450,7 @@ function ShowTheMath({
             </>
           ) : (
             <>
-              This is a values-dominant question — the math surfaces the
+              This is a values-dominant question. The math surfaces the
               tradeoffs without picking a single &ldquo;best&rdquo; option.
             </>
           )}
@@ -477,7 +477,7 @@ function ShowTheMath({
               <ul className="mt-2 space-y-2 text-[13.5px]">
                 {alternatives.map((a, i) => (
                   <li key={i} className="text-mute">
-                    <span className="font-medium text-text">{a.option}</span> —{" "}
+                    <span className="font-medium text-text">{a.option}</span>:{" "}
                     {a.reason}
                     {a.eliminatedAtStage && (
                       <span> (stage {a.eliminatedAtStage})</span>

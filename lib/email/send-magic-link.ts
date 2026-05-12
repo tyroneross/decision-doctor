@@ -25,7 +25,7 @@ export async function sendMagicLinkEmail({
     }
     // Dev: print the link so the developer can click it directly.
     console.log("\n" + "━".repeat(56));
-    console.log("  📧 MAGIC LINK (dev mode — Resend not configured)");
+    console.log("  📧 MAGIC LINK (dev mode, Resend not configured)");
     console.log(`  To:   ${email}`);
     console.log(`  Link: ${url}`);
     console.log("━".repeat(56) + "\n");

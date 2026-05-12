@@ -16,7 +16,7 @@ description: {{description}}
 
 1. If any required input is missing, ask once. Do not loop.
 2. Produce the artifact in the format the user expects, plain language, no jargon.
-3. Never include patient identifiers (PHI) in worked examples — use placeholders.
+3. Never include patient identifiers (PHI) in worked examples. Use placeholders.
 
 ## What not to do
 

@@ -236,7 +236,6 @@ describe("F-31 hybrid search — recall@10", () => {
       }
       const overall =
         perQuery.reduce((s, r) => s + r.recall, 0) / perQuery.length;
-      // eslint-disable-next-line no-console
       console.log(
         "[F-12 fusion-only] per-query recall:\n" +
           perQuery
@@ -275,7 +274,6 @@ describe("F-31 hybrid search — recall@10", () => {
         perQueryRecall.reduce((s, r) => s + r.recall, 0) /
         perQueryRecall.length;
       // Log perf so reviewers see which queries struggle.
-      // eslint-disable-next-line no-console
       console.log(
         "[F-12] per-query recall:\n" +
           perQueryRecall

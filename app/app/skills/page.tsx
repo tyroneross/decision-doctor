@@ -28,7 +28,7 @@ function formatDate(d: Date | string): string {
       year: "numeric",
     });
   } catch {
-    return "—";
+    return "·";
   }
 }
 

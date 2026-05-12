@@ -165,7 +165,7 @@ export function ThemePicker() {
         })}
       </div>
       <p className="mt-3 text-[12px] text-mute">
-        Your choice is saved on this device. Themes don&apos;t change layout —
+        Your choice is saved on this device. Themes don&apos;t change layout.
         just the accent color and surface tones.
       </p>
     </fieldset>

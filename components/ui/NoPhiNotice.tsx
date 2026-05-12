@@ -36,7 +36,7 @@ export function NoPhiNotice({ warning = false, reasons = [] }: NoPhiNoticeProps)
       >
         <p className="text-[13px] leading-relaxed" style={{ color: "var(--ink)" }}>
           It looks like your description may include patient-identifiable information.
-          Please rephrase using general terms — no patient names, MRNs, dates of birth,
+          Please rephrase using general terms. No patient names, MRNs, dates of birth,
           or specific clinical details.
         </p>
         {reasons.length > 0 && (

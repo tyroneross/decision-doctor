@@ -20,7 +20,7 @@ export function EmptyState() {
           Your decisions · empty for now
         </Pill>
         <h1 className="mt-3 text-[28px] font-semibold leading-[1.1] tracking-tight text-ink sm:text-[34px]">
-          No decisions yet — tell me where your hours go.
+          No decisions yet. Tell me where your hours go.
         </h1>
         <p className="mt-3 max-w-xl text-[15px] leading-snug text-mute sm:text-[16px]">
           Five-minute conversation. You get a ranked list of capacity drains,
