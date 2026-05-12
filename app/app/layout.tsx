@@ -12,6 +12,7 @@ import { ServiceWorkerRegister } from "./_components/sw-register";
 import { MobileBottomNav } from "./_components/MobileBottomNav";
 import { DesktopSidebar } from "./_components/DesktopSidebar";
 import { SkillPanel, type SkillSummary } from "./_components/SkillPanel";
+import { BackToParent } from "./_components/BackToParent";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { GuestBanner } from "@/components/GuestBanner";
 import { desc } from "drizzle-orm";
@@ -147,8 +148,13 @@ export default async function AppLayout({
       </header>
 
       {/* Main column. Padding-bottom on mobile reserves space for the
-          fixed 52px bottom nav. Desktop expands to fill the grid cell. */}
-      <main className="flex-1 min-w-0 pb-[60px] lg:pb-0">{children}</main>
+          fixed 52px bottom nav. Desktop expands to fill the grid cell.
+          BackToParent renders a subtle "← <Parent>" affordance that hides
+          itself on /app (the workspace root). */}
+      <main className="flex-1 min-w-0 pb-[60px] lg:pb-0">
+        <BackToParent />
+        {children}
+      </main>
 
       {/* Desktop F3 right rail (360px). SSR-rendered with bounded skill
           summaries; client reads ?skill=<decisionId>:<index> to pick the
