@@ -72,18 +72,9 @@ export default function AskPage() {
   const [stream, setStream] = React.useState<StreamState | null>(null);
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const abortRef = React.useRef<AbortController | null>(null);
+  const autoSubmittedRef = React.useRef<string | null>(null);
 
-  // Load history from sessionStorage on mount.
-  React.useEffect(() => {
-    setHistory(loadHistory());
-  }, []);
-
-  // Scroll to bottom as answers stream in.
-  React.useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [stream?.tokens, history.length]);
-
-  async function handleSubmit(question: string) {
+  const handleSubmit = React.useCallback(async (question: string) => {
     // Abort any in-flight stream.
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -214,9 +205,11 @@ export default function AskPage() {
                   wasGrounded: event.wasGrounded ?? false,
                   wasPersonalized: event.wasPersonalized ?? false,
                 };
-                const newHistory = [...(history ?? []), entry];
-                saveHistory(newHistory);
-                setHistory(newHistory);
+                setHistory((prevHistory) => {
+                  const newHistory = [...prevHistory, entry];
+                  saveHistory(newHistory);
+                  return newHistory;
+                });
                 return updated;
               });
             } else if (event.type === "error") {
@@ -247,7 +240,26 @@ export default function AskPage() {
           : prev,
       );
     }
-  }
+  }, []);
+
+  // Load history from sessionStorage on mount.
+  React.useEffect(() => {
+    setHistory(loadHistory());
+  }, []);
+
+  // Let /app/ask?q=... behave like an actual searchable entry point from home.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const question = new URLSearchParams(window.location.search).get("q")?.trim();
+    if (!question || autoSubmittedRef.current === question) return;
+    autoSubmittedRef.current = question;
+    void handleSubmit(question);
+  }, [handleSubmit]);
+
+  // Scroll to bottom as answers stream in.
+  React.useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [stream?.tokens, history.length]);
 
   const isSubmitting = stream?.isStreaming === true;
 
