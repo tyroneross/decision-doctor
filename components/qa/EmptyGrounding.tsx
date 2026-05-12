@@ -30,7 +30,7 @@ export function EmptyGrounding({ question }: EmptyGroundingProps) {
           className="text-[15px] font-medium leading-[22px]"
           style={{ color: "var(--ink)" }}
         >
-          Decision Doctor doesn&apos;t have grounded sources for that yet.
+          Aida doesn&apos;t have grounded sources for that yet.
         </p>
         {question && (
           <p className="text-[13px] leading-[18px]" style={{ color: "var(--mute)" }}>

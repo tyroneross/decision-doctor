@@ -38,12 +38,12 @@ export async function sendMagicLinkEmail({
   const { error } = await resend.emails.send({
     from: env.AUTH_FROM_EMAIL,
     to: email,
-    subject: "Sign in to Decision Doctor",
+    subject: "Sign in to Aida",
     html: `
       <div style="font-family: -apple-system, system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
-        <h1 style="font-size: 20px; color: #111; margin: 0 0 12px;">Sign in to Decision Doctor</h1>
+        <h1 style="font-size: 20px; color: #111; margin: 0 0 12px;">Sign in to Aida</h1>
         <p style="color: #555; line-height: 1.5; margin: 0 0 20px;">Click below to sign in. This link expires in 10 minutes and can only be used once.</p>
-        <a href="${url}" style="display: inline-block; padding: 12px 20px; background: #111; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 500;">Sign in to Decision Doctor</a>
+        <a href="${url}" style="display: inline-block; padding: 12px 20px; background: #111; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 500;">Sign in to Aida</a>
         <p style="color: #888; font-size: 12px; margin-top: 28px; line-height: 1.5;">If you didn't request this, you can safely ignore this email. Magic links never sign you in unless you click them.</p>
       </div>
     `,

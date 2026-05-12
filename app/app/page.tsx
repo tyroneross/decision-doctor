@@ -69,10 +69,10 @@ export default async function HomePage() {
       {/* Brand + tagline */}
       <header className="space-y-1">
         <h1 className="text-[32px] font-bold leading-none text-ink">
-          decision doctor
+          Aida
         </h1>
         <p className="text-[14px] font-normal text-mute">
-          AI deployment strategist for your practice
+          Let AI help you so you can help others.
         </p>
       </header>
 
@@ -109,7 +109,7 @@ export default async function HomePage() {
           href="/app/ask"
           className="text-ink font-medium hover:underline underline-offset-2"
         >
-          Ask Decision Doctor →
+          Ask Aida →
         </Link>
       </nav>
 

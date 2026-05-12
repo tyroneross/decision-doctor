@@ -142,7 +142,7 @@ export default async function AppLayout({
             href="/app"
             className="text-[16px] font-bold text-ink leading-none"
           >
-            decision doctor
+            Aida
           </Link>
         </div>
       </header>

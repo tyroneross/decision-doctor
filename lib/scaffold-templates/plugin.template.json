@@ -2,7 +2,7 @@
   "name": "{{slug}}",
   "version": "0.1.0",
   "description": "{{description}}",
-  "author": "Decision Doctor",
+  "author": "Aida",
   "homepage": "https://decision-doctor-xi.vercel.app",
   "commands": [
     {

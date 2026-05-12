@@ -369,8 +369,8 @@ function fallbackReducer(
   return {
     type: "skill",
     title: "Re-run with updated assumptions",
-    description: "Open Decision Doctor again in 60 days with the same template and updated numbers to confirm the recommendation still holds.",
-    artifact: { skillName: "decision-doctor-revisit" },
+    description: "Open Aida again in 60 days with the same template and updated numbers to confirm the recommendation still holds.",
+    artifact: { skillName: "aida-revisit" },
     automationLevel: "user_executes",
     coverage: "task_setup",
     permission_tier: "T0",

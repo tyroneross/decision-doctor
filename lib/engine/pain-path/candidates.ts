@@ -269,7 +269,7 @@ const LIBRARY_STUBS: Record<PainPathId, CandidateTask[]> = {
 // LLM candidate generation
 // ---------------------------------------------------------------------------
 
-const CANDIDATE_GEN_SYSTEM_PROMPT = `You are the candidate task generator for Decision Doctor, an AI deployment strategist for solo healthcare practitioners.
+const CANDIDATE_GEN_SYSTEM_PROMPT = `You are the candidate task generator for Aida, an AI assistant helping solo healthcare practitioners spend less time on admin and more time on patients.
 
 Given a pain path, challenge description, and goal, generate 3-5 specific candidate AI tasks the practitioner could try.
 

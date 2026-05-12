@@ -382,10 +382,30 @@ export const AiTaskRecommendationSchema = z.object({
 export type AiTaskRecommendation = z.infer<typeof AiTaskRecommendationSchema>;
 
 // RecommendationInput schema (for route handlers — E3).
+//
+// scoringInput is an optional partial slice of ScoringInputSchema. The
+// intake flow forwards user-reported values (frequency, time burden, pain
+// severity, risk tolerance, AI comfort). dataReadiness is intentionally
+// omitted from the intake (no question collects it) and gets a server
+// default in the orchestrator. We accept any subset so guests / API
+// callers / older clients still work without it.
 export const RecommendationInputSchema = z.object({
   painPath: PainPathIdSchema,
   challengeText: z.string().min(1).max(800),
-  goal: z.string().min(1).max(400).optional(),
+  goal: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z.string().min(1).max(400).optional(),
+  ),
+  scoringInput: z
+    .object({
+      painSeverity: z.number().min(0).max(1).optional(),
+      frequency: z.number().min(0).max(1).optional(),
+      timeBurden: z.number().min(0).max(1).optional(),
+      riskTolerance: z.number().min(0).max(1).optional(),
+      aiComfort: z.number().min(0).max(1).optional(),
+      dataReadiness: z.number().min(0).max(1).optional(),
+    })
+    .optional(),
   userId: z.string().uuid().optional(),
   tenantId: z.string().uuid().optional(),
 });

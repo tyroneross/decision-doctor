@@ -109,7 +109,7 @@ export function DesktopSidebar({
           href="/app"
           className="block text-[20px] font-bold leading-tight text-ink"
         >
-          decision doctor
+          Aida
         </Link>
         {(totalHrs > 0 || skillCount > 0) && (
           <p className="mt-1 text-[12px] font-medium text-mute leading-snug">
