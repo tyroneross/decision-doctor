@@ -17,7 +17,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Decision } from "@/lib/db/schema";
 import { ScaffoldViewer } from "@/components/scaffold/ScaffoldViewer";
 import type { Scaffold, AiFeasibility } from "@/shared/schema";
 import {
@@ -59,6 +58,16 @@ type WorkloadReducer = {
   };
 };
 
+type RecommendationDecisionRow = {
+  recommendation: unknown;
+  alternatives: unknown;
+  robustAlternative: unknown;
+  methodTrace: unknown;
+  workloadReducers: unknown;
+  status: string;
+  templateId: string | null;
+};
+
 // Plain-language confidence labels per spec (text-only — no chip).
 function confidenceLabel(conf: number | null | undefined): string {
   if (typeof conf !== "number") return "values-dominant";
@@ -93,7 +102,7 @@ function implementationTag(r: WorkloadReducer): { icon: string; label: string } 
 
 // ─── Component ──────────────────────────────────────────────────────────
 
-export function RecommendationView({ row }: { row: Decision }) {
+export function RecommendationView({ row }: { row: RecommendationDecisionRow }) {
   const rec = (row.recommendation as Recommendation | null) ?? null;
   const alternatives = (row.alternatives as Alternative[] | null) ?? [];
   const robust = (row.robustAlternative as Robust | null) ?? null;

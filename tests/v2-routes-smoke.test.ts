@@ -63,6 +63,7 @@ const V2_ROUTES: { label: string; file: string }[] = [
   { label: "/app/history (renamed from decisions)", file: "app/app/history/page.tsx" },
   // API routes
   { label: "/api/recommendations",              file: "app/api/recommendations/route.ts" },
+  { label: "/api/recommendations/[id]",         file: "app/api/recommendations/[id]/route.ts" },
   { label: "/api/ai-adoption-qa",               file: "app/api/ai-adoption-qa/route.ts" },
   // Library API routes (7)
   { label: "/api/library/use-cases",            file: "app/api/library/use-cases/route.ts" },

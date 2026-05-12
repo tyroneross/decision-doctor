@@ -14,14 +14,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
+import { GUEST_TENANT_ID, GUEST_USER_ID } from "@/lib/guest-identity";
 import { searchLibrary } from "@/lib/library";
 import type { LibraryKind, PainPath } from "@/lib/library";
 
 // Hardening item 7.
 export const runtime = "nodejs";
-
-const GUEST_USER_ID = "00000000-0000-0000-0000-000000000000";
-const GUEST_TENANT_ID = "00000000-0000-0000-0000-000000000000";
 
 const VALID_KINDS = ["use_case", "prompt", "skill", "plugin", "corpus", "kb_article"] as const;
 const VALID_PATHS = [

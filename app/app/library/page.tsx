@@ -12,6 +12,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { isGuestRequest } from "@/lib/auth-guest";
 import { getSessionActor } from "@/lib/auth-session";
+import { GUEST_PLACEHOLDER_UUID } from "@/lib/guest-identity";
 import { getUseCasesForPath, getPromptsForPath } from "@/lib/library";
 import type { LibraryUseCase, LibraryPrompt, PainPath } from "@/lib/library";
 import { LibraryPageClient } from "./LibraryPageClient";
@@ -28,8 +29,6 @@ const ALL_PATHS: PainPath[] = [
   "custom",
 ];
 
-const GUEST_UUID = "00000000-0000-0000-0000-000000000000";
-
 // SSR fetches top use_cases + prompts for initial render.
 // Client-side refetch takes over on filter/search changes.
 export default async function LibraryPage() {
@@ -38,8 +37,8 @@ export default async function LibraryPage() {
   const isAuthed = !!session?.user;
 
   const actor = isAuthed ? await getSessionActor() : null;
-  const userId = actor?.userId ?? GUEST_UUID;
-  const tenantId = actor?.tenantId ?? GUEST_UUID;
+  const userId = actor?.userId ?? GUEST_PLACEHOLDER_UUID;
+  const tenantId = actor?.tenantId ?? GUEST_PLACEHOLDER_UUID;
 
   // SSR: fetch global use_cases + prompts across all paths.
   // Best-effort — failure silently falls back to empty initial state.

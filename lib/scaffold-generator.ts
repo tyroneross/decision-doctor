@@ -89,7 +89,7 @@ const PLUGIN_TEMPLATE = `{
   "version": "0.1.0",
   "description": "{{description}}",
   "author": "Aida",
-  "homepage": "https://decision-doctor-xi.vercel.app",
+  "homepage": "{{homepage}}",
   "commands": [
     {
       "name": "{{slug}}",
@@ -140,6 +140,8 @@ export function generateScaffold(reducer: WorkloadReducer): Scaffold | null {
   const generatedAt = "{{ASOF}}"; // deterministic placeholder per build (tests don't assert exact ts)
   const coverage = reducer.coverage ?? "partial_task";
   const permissionTier = reducer.permission_tier ?? "T0";
+  const homepage =
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://decision-doctor-xi.vercel.app";
 
   const ctx: Record<string, string> = {
     slug,
@@ -149,6 +151,7 @@ export function generateScaffold(reducer: WorkloadReducer): Scaffold | null {
     generatedAt,
     coverage,
     permissionTier,
+    homepage,
   };
 
   const skillMd = renderTemplate(SKILL_TEMPLATE, ctx);

@@ -34,7 +34,12 @@ export default async function RecommendationDetailPage({ params }: Props) {
 
   try {
     // Try the API route first (E3). Falls back to inline 404 on 404/503.
-    const apiUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/recommendations/${id}`;
+    const host = h.get("host");
+    const forwardedProto = h.get("x-forwarded-proto") ?? "https";
+    const origin =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      (host ? `${forwardedProto}://${host}` : "http://localhost:3000");
+    const apiUrl = `${origin}/api/recommendations/${id}`;
     const res = await fetch(apiUrl, {
       headers: {
         // Forward session cookie. In SSR, headers() carries the incoming cookies.

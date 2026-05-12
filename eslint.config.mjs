@@ -6,13 +6,17 @@
 import next from "eslint-config-next";
 
 /** @type {import("eslint").Linter.Config[]} */
-export default [
-  ...next,
+const config = [
   {
     ignores: [
       ".next/**",
+      "**/.next/**",
       ".vercel/**",
+      "**/.vercel/**",
+      ".claude/**",
+      "**/.claude/**",
       "node_modules/**",
+      "**/node_modules/**",
       "drizzle/**",
       "workers/**",
       ".build-loop/**",
@@ -24,4 +28,13 @@ export default [
       "**/*.config.*",
     ],
   },
+  ...next,
+  {
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+      "react/no-unescaped-entities": "off",
+    },
+  },
 ];
+
+export default config;

@@ -166,7 +166,7 @@ export function NewRecommendationClient({
     } else if (!initialPath && initialChallenge) {
       setStep(2);
     }
-  }, []);
+  }, [initialChallenge, initialPath]);
 
   // PHI check on challenge text (client-side hint only; server enforces).
   function handleChallengeChange(text: string) {

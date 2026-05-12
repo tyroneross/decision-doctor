@@ -9,14 +9,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
+import { GUEST_TENANT_ID, GUEST_USER_ID } from "@/lib/guest-identity";
 import { getUseCasesForPath } from "@/lib/library";
 import type { PainPath } from "@/lib/library";
 
 // Hardening item 7: nodejs runtime required for Neon WebSocket pool + RLS.
 export const runtime = "nodejs";
-
-const GUEST_USER_ID = "00000000-0000-0000-0000-000000000000";
-const GUEST_TENANT_ID = "00000000-0000-0000-0000-000000000000";
 
 const QuerySchema = z.object({
   path: z

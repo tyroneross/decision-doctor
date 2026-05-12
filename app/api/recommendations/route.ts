@@ -17,6 +17,7 @@ import { recommendations, auditEvents } from "@/lib/db/schema";
 import { RecommendationInputSchema } from "@/shared/schema";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
+import { GUEST_PLACEHOLDER_UUID } from "@/lib/guest-identity";
 import { runRecommendation } from "@/lib/engine/orchestrator";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { desc, eq } from "drizzle-orm";
@@ -24,9 +25,6 @@ import type { NextRequest } from "next/server";
 
 // LD-08 — Edge runtime breaks the Neon WebSocket pool that RLS depends on.
 export const runtime = "nodejs";
-
-// Synthetic UUID for guest audit rows (matches decisions route pattern from 68b2c7c).
-const GUEST_PLACEHOLDER_UUID = "00000000-0000-0000-0000-000000000000";
 
 export async function POST(req: NextRequest) {
   // 1. Resolve actor (authed OR guest)

@@ -65,7 +65,7 @@ export interface LibraryPageClientProps {
 // ---- Helpers ----------------------------------------------------------------
 
 /** Convert the SSR-fetched rows into LibraryHit shape for unified rendering. */
-function useCasesToHits(rows: LibraryUseCase[]): LibraryHit[] {
+function libraryUseCasesToHits(rows: LibraryUseCase[]): LibraryHit[] {
   return rows.map((r) => ({
     kind: "use_case" as const,
     id: r.id,
@@ -104,7 +104,7 @@ export function LibraryPageClient({
   const [pathFilter, setPathFilter] = React.useState<string[]>(["all"]);
   const [onlyMine, setOnlyMine] = React.useState(false);
   const [results, setResults] = React.useState<LibraryHit[]>(() => [
-    ...useCasesToHits(initialUseCases),
+    ...libraryUseCasesToHits(initialUseCases),
     ...promptsToHits(initialPrompts),
   ]);
   const [loading, setLoading] = React.useState(false);
@@ -131,7 +131,7 @@ export function LibraryPageClient({
     if (!q.trim() && kinds.includes("all") && paths.includes("all") && !mine) {
       // No active filters and no query — show SSR initial data.
       setResults([
-        ...useCasesToHits(initialUseCases),
+        ...libraryUseCasesToHits(initialUseCases),
         ...promptsToHits(initialPrompts),
       ]);
       return;
