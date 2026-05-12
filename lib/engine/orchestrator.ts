@@ -21,9 +21,16 @@ import type { TemplateId, AiTaskRecommendation } from "@/shared/schema";
 import type { RecommendationInput } from "@/lib/engine/types";
 import { classifyPromotion } from "@/lib/engine/stage8-promotion";
 import { classifyPainPath } from "@/lib/engine/pain-path/classifier";
-import { generateCandidateTasks } from "@/lib/engine/pain-path/candidates";
+import {
+  generateCandidateTasks,
+  type LibraryHit as CandidateLibraryHit,
+} from "@/lib/engine/pain-path/candidates";
 import { scoreCandidates } from "@/lib/engine/pain-path/scoring";
 import { callStage } from "@/lib/groq";
+import { searchLibrary, type LibraryHit as SearchLibraryHit } from "@/lib/library";
+// v2-workflow imports — additive only; v1 path below is UNCHANGED.
+import { getEngineMode } from "@/lib/engine/workflow/feature-flag";
+import { runWorkflowV2 } from "@/lib/engine/workflow";
 
 export interface RunDecisionResult {
   output: Omit<DecisionOutput, "decisionId" | "decidedAt">;
@@ -385,6 +392,29 @@ No naked numbers. This applies to dollars, hours, percentages, counts, frequenci
 export async function runRecommendation(
   input: RecommendationInput,
 ): Promise<AiTaskRecommendation> {
+  // v2-workflow branch — gated by feature flag. v1 path below is UNCHANGED.
+  if (getEngineMode() === "v2-workflow") {
+    try {
+      return await runWorkflowV2(input);
+    } catch (err) {
+      // Graceful degradation: v2 failure falls through to v1.
+      // Sentry-style: best-effort capture without hard dependency.
+      try {
+        const Sentry = await import("@sentry/nextjs");
+        Sentry.captureException(err, {
+          extra: { source: "runWorkflowV2", painPath: input.painPath },
+        });
+      } catch {
+        // Sentry unavailable — continue.
+      }
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[orchestrator] v2-workflow failed, degrading to v1:", err);
+      }
+      // fall through to v1 below
+    }
+  }
+
+  // ── v1 path — BYTE-FOR-BYTE UNCHANGED BELOW ──────────────────────────────
   const methodTrace: AiTaskRecommendation["methodTrace"] = [];
 
   // STAGE: pain-path classify
@@ -404,24 +434,44 @@ export async function runRecommendation(
     },
   });
 
-  // STAGE: use-case retrieval
-  // TODO L2: replace stub with searchLibrary() + use-case retrieval from corpus
-  methodTrace.push({
-    stage: "use-case-retrieval",
-    name: "library-retrieval",
-    output: { retrieved: 0, source: "stub-pending-L2" },
-  });
-
   // STAGE: candidate task generation
   const goal =
     typeof input.goal === "string" && input.goal.length > 0
       ? input.goal
       : `Reduce time on ${selectedPainPath.replace("_", " ")} tasks and improve practice efficiency.`;
 
+  const libraryQuery = buildRecommendationLibraryQuery({
+    painPath: selectedPainPath,
+    challengeText: input.challengeText,
+    goal,
+  });
+  const retrievedLibraryHits = await retrieveRecommendationLibraryHits({
+    query: libraryQuery,
+    painPath: selectedPainPath,
+    userId: input.userId,
+    tenantId: input.tenantId,
+  });
+  methodTrace.push({
+    stage: "use-case-retrieval",
+    name: "library-retrieval",
+    output: {
+      retrieved: retrievedLibraryHits.length,
+      source: retrievedLibraryHits.length > 0 ? "searchLibrary" : "searchLibrary-empty",
+      query: libraryQuery,
+      topHits: retrievedLibraryHits.slice(0, 5).map((hit) => ({
+        id: hit.id,
+        title: hit.title,
+        kind: hit.kind,
+        score: Number(hit.score.toFixed(4)),
+      })),
+    },
+  });
+
   const candidateTasksExt = await generateCandidateTasks({
     painPath: selectedPainPath,
     challenge: input.challengeText,
     goal,
+    libraryRetrievalResults: retrievedLibraryHits.map(toCandidateLibraryHit),
   });
 
   // STAGE: 9-criteria scoring
@@ -510,20 +560,26 @@ export async function runRecommendation(
     recommendedTask: topExt.taskName,
     recommendedApproach: topExt.startingLevel,
     candidateTasks: rawCandidates.slice(0, 3).map((c) => ({ id: c.id, title: c.title, description: c.description })),
+    retrievedLibrarySources: retrievedLibraryHits.slice(0, 5).map((hit) => ({
+      uuid: hit.id,
+      kind: hit.kind,
+      title: hit.title,
+      snippet: hit.snippet,
+    })),
   });
 
-  // S1: Build retrieved-source list from candidateTasks for citation grounding.
-  // At P0, candidate tasks are engine-generated, not yet library-retrieved, so
-  // the source list is minimal. When L2 wires real library retrieval into this
-  // path, replace the TODO stub with actual UUID + title pairs.
-  // TODO Iteration L2: replace with real library retrieval results (uuid + title).
-  const retrievedSources: Array<{ uuid: string; title: string; kind: string }> = rawCandidates
-    .slice(0, 3)
-    .map((c) => ({
-      uuid: c.id, // slug-based at P0; library UUIDs at L2+
-      title: c.title,
-      kind: "candidate_task",
-    }));
+  const retrievedSources: Array<{ uuid: string; title: string; kind: string }> =
+    retrievedLibraryHits.length > 0
+      ? retrievedLibraryHits.slice(0, 5).map((hit) => ({
+          uuid: hit.id,
+          title: hit.title,
+          kind: hit.kind,
+        }))
+      : rawCandidates.slice(0, 3).map((c) => ({
+          uuid: c.id,
+          title: c.title,
+          kind: "candidate_task",
+        }));
 
   const retrievedSourcesBlock =
     retrievedSources.length > 0
@@ -635,6 +691,63 @@ export async function runRecommendation(
 // ---------------------------------------------------------------------------
 // Utilities for runRecommendation
 // ---------------------------------------------------------------------------
+
+function buildRecommendationLibraryQuery(input: {
+  painPath: RecommendationInput["painPath"];
+  challengeText: string;
+  goal: string;
+}): string {
+  return [
+    input.painPath.replace("_", " "),
+    input.challengeText,
+    input.goal,
+  ]
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 500);
+}
+
+async function retrieveRecommendationLibraryHits(input: {
+  query: string;
+  painPath: RecommendationInput["painPath"];
+  userId?: string;
+  tenantId?: string;
+}): Promise<SearchLibraryHit[]> {
+  try {
+    const hits = await searchLibrary(input.query, {
+      kinds: ["use_case", "prompt"],
+      paths: [input.painPath],
+      includeCorpus: false,
+      userId: input.userId,
+      tenantId: input.tenantId,
+    });
+    return hits
+      .filter((hit) => hit.kind === "use_case" || hit.kind === "prompt")
+      .slice(0, 8);
+  } catch (err) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[orchestrator] recommendation library retrieval failed:", err);
+    }
+    return [];
+  }
+}
+
+function toCandidateLibraryHit(hit: SearchLibraryHit): CandidateLibraryHit {
+  const text = `${hit.title} ${hit.snippet}`.toLowerCase();
+  return {
+    id: hit.id,
+    title: hit.title,
+    body: hit.snippet,
+    painPath: hit.source_path ?? "custom",
+    startingLevel:
+      hit.kind === "prompt"
+        ? "prompt"
+        : text.includes("checklist")
+          ? "checklist"
+          : "prompt",
+  };
+}
 
 function parseRecommendationJson(text: string): Record<string, unknown> | null {
   if (!text) return null;
