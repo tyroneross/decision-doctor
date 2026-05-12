@@ -16,7 +16,8 @@
     "test": "vitest",
     "library:seed": "tsx scripts/seed-library.ts",
     "library:seed:dry": "tsx scripts/seed-library.ts --dry-run",
-    "library:reset": "tsx scripts/seed-library.ts --reset"
+    "library:reset": "tsx scripts/seed-library.ts --reset",
+    "plugins:seed": "tsx scripts/seed-plugins.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",
