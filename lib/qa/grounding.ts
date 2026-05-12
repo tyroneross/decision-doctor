@@ -94,14 +94,20 @@ export function formatSourcesForPrompt(sources: SourceForGrounding[]): string {
  *
  * Triggers when:
  *   - fewer than 2 sources present, OR
- *   - ALL sources have score < minScore (default 0.3).
+ *   - ALL sources have score < minScore.
+ *
+ * Search scores come from Reciprocal Rank Fusion, not a 0..1 relevance
+ * probability. With k=60, strong multi-leg hits commonly land around
+ * 0.03, so the default floor must stay on the RRF scale.
  *
  * When this returns true the route emits an empty-grounding state instead
  * of synthesizing a zero-shot answer.
  */
+export const DEFAULT_MIN_RRF_GROUNDING_SCORE = 0.01;
+
 export function shouldEmitEmptyGrounding(
   sources: SourceForGrounding[],
-  minScore = 0.3,
+  minScore = DEFAULT_MIN_RRF_GROUNDING_SCORE,
 ): boolean {
   if (sources.length < 2) return true;
   // If every source has a defined score and all are below threshold → no grounding.

@@ -1,7 +1,7 @@
 // tests/qa-grounding.test.ts — Q1: Unit tests for lib/qa/grounding.ts.
 //
 // Tests:
-//   - shouldEmitEmptyGrounding returns true on low-score sources
+//   - shouldEmitEmptyGrounding returns true on low RRF-score sources
 //   - shouldEmitEmptyGrounding returns true when count < 2
 //   - shouldEmitEmptyGrounding returns false with >=2 adequate sources
 //   - formatSourcesForPrompt includes UUID + kind header
@@ -71,12 +71,20 @@ describe("shouldEmitEmptyGrounding", () => {
     expect(shouldEmitEmptyGrounding(sources, 0.3)).toBe(false);
   });
 
-  it("uses default minScore of 0.3", () => {
+  it("uses an RRF-scale default minScore", () => {
     const sources: SourceForGrounding[] = [
-      makeSource({ score: 0.29 }),
-      makeSource({ score: 0.29 }),
+      makeSource({ score: 0.009 }),
+      makeSource({ score: 0.009 }),
     ];
     expect(shouldEmitEmptyGrounding(sources)).toBe(true);
+  });
+
+  it("accepts real RRF-scale search scores by default", () => {
+    const sources: SourceForGrounding[] = [
+      makeSource({ score: 0.01639344262295082 }),
+      makeSource({ score: 0.030090497737556562 }),
+    ];
+    expect(shouldEmitEmptyGrounding(sources)).toBe(false);
   });
 });
 
