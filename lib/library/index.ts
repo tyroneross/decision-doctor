@@ -185,6 +185,69 @@ export async function getPromptsForPath(
 }
 
 /**
+ * Get a single use-case row by id. Returns null if not visible to the actor
+ * (RLS filters scope='global' OR scope=user_id).
+ *
+ * Also returns the matching same-pain-path prompt (first hit) as scaffolding
+ * for the example-output generator. Single Q -> small JOIN-like fan-out kept
+ * simple as two sequential reads inside one withActor tx for RLS uniformity.
+ */
+export async function getUseCaseWithPrompt(
+  userId: string,
+  tenantId: string,
+  id: string,
+): Promise<{
+  useCase: LibraryUseCase;
+  prompt: LibraryPrompt | null;
+} | null> {
+  return runWithActor({ userId, tenantId }, async () =>
+    withActor(async (tx) => {
+      const useCaseRows = await tx
+        .select()
+        .from(libraryUseCases)
+        .where(eq(libraryUseCases.id, id))
+        .limit(1);
+      const useCase = useCaseRows[0];
+      if (!useCase) return null;
+
+      const promptRows = await tx
+        .select()
+        .from(libraryPrompts)
+        .where(eq(libraryPrompts.painPath, useCase.painPath))
+        .limit(1);
+      const prompt = promptRows[0] ?? null;
+
+      return { useCase, prompt };
+    }),
+  );
+}
+
+/**
+ * Write the cached example output for a use-case row, but only if it's still
+ * NULL. Race-safe: two concurrent first-time generators both stream; the
+ * second writer no-ops. Returns true if this call won the write.
+ */
+export async function setUseCaseExampleOutputIfNull(
+  userId: string,
+  tenantId: string,
+  id: string,
+  text: string,
+): Promise<boolean> {
+  return runWithActor({ userId, tenantId }, async () =>
+    withActor(async (tx) => {
+      const rows = await tx
+        .update(libraryUseCases)
+        .set({ exampleOutput: text })
+        .where(
+          sql`${libraryUseCases.id} = ${id} AND ${libraryUseCases.exampleOutput} IS NULL`,
+        )
+        .returning({ id: libraryUseCases.id });
+      return rows.length > 0;
+    }),
+  );
+}
+
+/**
  * Get user's promoted skills. Authed-only — guests see nothing (RLS blocks
  * all non-global scope rows; global skills will be visible if they exist).
  */

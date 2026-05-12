@@ -253,6 +253,10 @@ export const libraryUseCases = pgTable(
     rationale: text("rationale").notNull().default(""),
     estimatedMinutesSavedPerWeek: integer("estimated_minutes_saved_per_week"),
     metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+    // Cached Groq-generated example output. NULL = not yet generated.
+    // Reset via: UPDATE library_use_cases SET example_output = NULL WHERE id = $1.
+    // See drizzle/0010_use_case_example.sql.
+    exampleOutput: text("example_output"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
