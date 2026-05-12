@@ -144,6 +144,41 @@ at runtime.
 - L3-seeder (pending) — seed runner for library content
 - U5 (this commit) — /app/decisions → /app/history rename, NoPhiNotice on free-text surfaces, V2 route smoke test
 
+## Plugin & Skill Library — `feat/plugin-skill-library-a2128c` (✅ shipped on branch)
+
+Separate-namespace plugin/skill assets surface for solo healthcare practitioners.
+Browseable + filterable + downloadable + AI-explainable + per-user editable via
+explicit fork + per-user dismissible. Assets do NOT execute in-app; they are
+stored, displayed, and downloaded.
+
+| # | Commit | SHA | Notes |
+|---|---|---|---|
+| C1 | feat(db): 0009 plugins+skills+asset_files+user_dismissals | 6a003b7 | 8/8 RLS tests pass; XOR-on-asset_files enforced via CHECK |
+| C2 | feat(seed): scripts/seed-plugins.ts — 7 sources w/ audience | deb928f | 2 plugins / 11 skills / 6 plugin_skills / 97 asset_files; idempotent |
+| C3 | feat(api): plugins/skills list+detail+fork+PATCH+DELETE+dismiss+download | fcae4e8 | All routes rate-limited + audited; 403 on global mutation |
+| C4 | feat(api): /api/assets/explain — SSE Learn-More | d03d6ac | Groq stream w/ priority-file context (SKILL.md, README.md, etc., ≤24k chars) |
+| C5 | feat(ui): /app/library/plugins — full lifecycle UI | 8cff479 | Calm Precision; ink-only; muted-until-dirty Save |
+| C6 | chore(nav+status): add Library nav entry + STATUS | (this commit) | Desktop sidebar entry; mobile add deferred (5-tab cap) |
+
+Seeder row counts after the live run against shared Neon:
+  `plugins=2 skills=11 plugin_skills=6 asset_files=97`
+
+Validation gates passed:
+- `pnpm typecheck` ✅
+- `pnpm vitest run tests/rls-plugins.test.ts` ✅ 8/8
+- `pnpm vitest run tests/seed-plugins-smoke.test.ts` ✅ 5/5
+- `pnpm build` ✅ — all 7 new API routes + `/app/library/plugins` present
+
+Deferred (not in this build):
+- R2 storage migration (columns + storage_kind reserved, no code path)
+- Per-file revision history
+- Upstream-update propagation UI
+- Marketplace publishing
+- Ranking
+- Audience filter UI chip (audience tags seeded; no filter exposed yet)
+- Mobile bottom-nav entry (5-tab cap; needs a more-menu rework)
+- IBR scan at 375px for /app/library/plugins drawer + filter chips wrap
+
 Open items before main merge:
 - B1 (backend worktree) — corpus extraction fix in workers/src/adapters/*
   for the 1,516-corpus-doc audit findings (openai stubs, Perplexity stubs,
