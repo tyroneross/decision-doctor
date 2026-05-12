@@ -73,9 +73,15 @@ No new DB columns are required for this slice. A later normalization can promote
 - Findings after priority backfill: `perplexity-research` repaired to 18 `full_text` rows and 1 `source_summary`; OpenAI stale hashes repaired to 0, but 29 OpenAI pages still returned a challenge/loading shell through static fetch and CDP.
 - Added OpenAI official RSS fallback for blocked rendered pages: if the OpenAI article page is still a challenge shell, match the page URL against `https://openai.com/news/rss.xml` and store the feed description as `source_summary` instead of keeping poisoned page text.
 - Verified follow-up worker tests pass with the RSS fallback: `pnpm --dir workers typecheck` and `pnpm --dir workers test` (8 files, 42 tests).
+- Deployed pinned worker commit `ba5aa4d` as Railway deployment `53e2f861-48a4-499e-b447-e93d94cabe29`; deployment succeeded and health returned `ok=true`, `postgres_ok=true`, queue count 0 before enqueue.
+- Enqueued 52 `openai-news` `content-extract` jobs after deployment; Railway drained the queue from 50 to 0 through the health endpoint.
+- Verified pg-boss outcomes after the enqueue window: 52 completed `content-extract`, 52 completed `ai-summarize`, 52 completed `kg-extract`, and 52 completed `embed-document`.
+- Ran post-fallback validator and wrote `.build-loop/memory/pattern_corpus_quality_2026-05-12_after-openai-rss-fallback.md`.
+- OpenAI result after fallback: 52 docs, 25 `full_text`, 25 `source_summary`, 2 `metadata_only`, 0 `blocked`, 0 challenge shells, 0 stale hashes. The two metadata-only rows are OpenAI system-card rows whose RSS fallback body is only the title.
+- Overall validator still fails because older non-OpenAI sources retain stale hashes/challenge shells/stubs: worst non-baseline stub source is `chicago-booth-research` at 38%; global stale content hashes remain 163; challenge shell rows remain 10 outside OpenAI.
 
 ## Follow-Up
 
-- Deploy the RSS fallback and rerun `openai-news` backfill on Railway.
-- Run corpus validation after the fallback deployment and confirm OpenAI challenge shells are no longer stored as document bodies.
+- Repair remaining non-OpenAI corpus quality failures by source priority: `chicago-booth-research` stubs, stale hashes in `ibm-research`/`anthropic-docs`/`chicago-booth-research`, and challenge shells in `huggingface-blog`, `mcp-spec`, `mistral-blog`, and `stanford-hai`.
+- Decide whether short official source summaries should be eligible for lightweight embeddings/KG or intentionally remain retrieval-ineligible unless full text is available.
 - Consider promoting stable metadata fields (`body_kind`, `quality_score`, `extractor_version`, `next_extract_at`) into columns after the repair run proves the contract.

@@ -144,13 +144,15 @@ Important extraction correction:
 6. Verified worker typecheck and tests.
 7. Deployed worker `62039f67-0ab3-4cfd-a235-bb93b9effc1f`; Railway drained the `openai-news` and `perplexity-research` priority backfill.
 8. Added OpenAI RSS fallback after validation showed 29 OpenAI pages still rendered as challenge shells.
+9. Deployed pinned worker commit `ba5aa4d` as Railway deployment `53e2f861-48a4-499e-b447-e93d94cabe29`.
+10. Reran `openai-news` backfill on Railway: 52 completed jobs each for `content-extract`, `ai-summarize`, `kg-extract`, and `embed-document`.
+11. Ran post-fallback validation: OpenAI now has 0 blocked rows, 0 challenge shells, and 0 stale hashes.
 
 ## Operational Next
 
-1. Deploy the OpenAI RSS fallback.
-2. Rerun `openai-news` backfill on Railway.
-3. Review the validator report for any rows still classified as `blocked`, `degraded`, `metadata_only`, stale hash, or challenge shell.
-4. Promote stable metadata fields to DB columns only after backfill proves the metadata contract is enough.
+1. Repair remaining non-OpenAI source issues shown in `.build-loop/memory/pattern_corpus_quality_2026-05-12_after-openai-rss-fallback.md`.
+2. Decide policy for short official summaries: keep them retrieval-ineligible, or add a separate lightweight-summary enrichment path.
+3. Promote stable metadata fields to DB columns only after the broader repair run proves the metadata contract is enough.
 
 ## Later Architecture Promotion
 
