@@ -23,9 +23,11 @@ import type { AiTaskRecommendation } from "@/lib/engine/types";
 import type { AdoptionPathwayRung } from "@/lib/engine/types";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
+import { Pill } from "@/components/ui/Pill";
 import { AdoptionPathwayPicker } from "@/components/promotion/AdoptionPathwayPicker";
 import { CandidateTasksList } from "@/components/recommendations/CandidateTasksList";
 import { BaselineCapture } from "@/components/recommendations/BaselineCapture";
+import { splitTaskHeadline } from "@/lib/recommendations/split-headline";
 
 // ---------------------------------------------------------------------------
 // Pain path display label
@@ -153,18 +155,38 @@ export function RecommendationView({
         >
           RECOMMENDED · {confidence}% · {painPathLabel(selectedPainPath)}
         </p>
-        <h1
-          className="mt-2 text-[28px] sm:text-[32px] font-bold leading-tight tracking-tight"
-          style={{ color: "var(--ink)" }}
-        >
-          {recommendedTask}
-        </h1>
-        <p
-          className="mt-2 text-[15px] leading-relaxed"
-          style={{ color: "var(--mute)" }}
-        >
-          {approachLabel(recommendedApproach)}
-        </p>
+        {(() => {
+          const parsed = splitTaskHeadline(recommendedTask);
+          return (
+            <>
+              <h1
+                className="mt-2 text-[28px] sm:text-[32px] font-bold leading-tight tracking-tight"
+                style={{ color: "var(--ink)" }}
+              >
+                {parsed.headline || recommendedTask}
+              </h1>
+              {parsed.stack.length > 0 && (
+                <div
+                  className="mt-3 flex flex-wrap gap-1.5"
+                  title="Tools in this stack"
+                  aria-label="Tools in this stack"
+                >
+                  {parsed.stack.map((tool) => (
+                    <Pill key={tool} tone="mute">
+                      {tool}
+                    </Pill>
+                  ))}
+                </div>
+              )}
+              <p
+                className="mt-2 text-[15px] leading-relaxed"
+                style={{ color: "var(--mute)" }}
+              >
+                {approachLabel(recommendedApproach)}
+              </p>
+            </>
+          );
+        })()}
         {successMetric && (
           <p
             className="mt-3 inline-flex items-baseline gap-1 text-[14px] font-semibold"
