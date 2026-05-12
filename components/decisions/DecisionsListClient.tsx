@@ -3,15 +3,15 @@
 // C8 — Decisions list D2: ink ledger hero + chip filters + ink rows.
 //
 // Hero ledger:
-//   eyebrow "SINCE YOU STARTED" + huge "🕐 +N hrs/wk back" in text-ok
-//   meta row "{count} decisions · {skillCount} skills · {streakDays}d streak"
+//   eyebrow "SINCE YOU STARTED"
+//   meta row "{count} decisions · {skillCount} skills"
 //   on bg-paper card.
 //
 // Filter chips: All / Capacity / Pricing / Admin / Custom — neutral ink
 //   Chip primitives, selected = ink fill.
 //
-// Decision rows: title + meta line + right-aligned green hours-saved pill
-//   (green text only, no chip background).
+// Decision rows: benefit-led headline + meta line + "Recommended tools:" chips
+//   + right-aligned green hours-saved text.
 //
 // Empty state: ink-only card pointing to /app.
 
@@ -25,6 +25,10 @@ import {
 } from "@/lib/decision-display";
 import type { AiFeasibility } from "@/shared/schema";
 import { Chip } from "@/components/ui/Chip";
+import {
+  splitTaskHeadline,
+  deriveWorkflowHeadline,
+} from "@/lib/recommendations/split-headline";
 
 // Server-side projection of a decisions row.
 export interface DecisionRow {
@@ -41,13 +45,8 @@ export interface DecisionRow {
 }
 
 export interface ListSummary {
-  totalHoursPerWeek: number;
   decisions: number;
   skillsShipped: number;
-  /** Plan calls for "streakDays" copy; existing ListSummary tracks weeks.
-   *  We keep the existing field name and surface the unit ("wk") next to it
-   *  so we don't have to rewire the server-side aggregation in C8. */
-  streakWeeks: number;
 }
 
 interface Props {
@@ -97,7 +96,7 @@ export function DecisionsListClient({ rows, summary }: Props) {
 
   return (
     <section className="space-y-6">
-      {/* HERO LEDGER — ink-only on bg-paper, hours-saved as the headline */}
+      {/* HERO LEDGER — ink-only on bg-paper, real counts only */}
       <article
         data-component="LedgerHero"
         className="rounded-2xl border border-line bg-paper p-6 sm:p-7"
@@ -105,17 +104,11 @@ export function DecisionsListClient({ rows, summary }: Props) {
         <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-mute">
           SINCE YOU STARTED
         </p>
-        <p className="mt-2 text-[32px] font-bold leading-tight tracking-tight text-ok sm:text-[36px]">
-          🕐 +{formatHrs(summary.totalHoursPerWeek)} hrs/wk back
-        </p>
         <p className="mt-2 text-[15px] text-mute">
           {summary.decisions} decision
           {summary.decisions === 1 ? "" : "s"} ·{" "}
           {summary.skillsShipped} skill
-          {summary.skillsShipped === 1 ? "" : "s"} ·{" "}
-          {summary.streakWeeks > 0
-            ? `${summary.streakWeeks}wk streak`
-            : "no streak yet"}
+          {summary.skillsShipped === 1 ? "" : "s"}
         </p>
       </article>
 
@@ -178,22 +171,29 @@ export function DecisionsListClient({ rows, summary }: Props) {
 
 function DecisionRow({ row }: { row: DecisionRow }) {
   const cat = categoryFor(row.templateId);
-  const title = row.title ?? row.recommendationOption ?? "Untitled decision";
+  const headline = deriveWorkflowHeadline({
+    title: row.title,
+    templateId: row.templateId,
+    recommendationOption: row.recommendationOption,
+  });
   const reducerLabel =
     row.reducerCount > 0
       ? `${row.reducerCount} reducer${row.reducerCount === 1 ? "" : "s"}`
       : "Recorded";
   const confLabel = confidenceLabel(row.recommendationConfidence);
 
+  // Stack chips derived from the raw engine option string.
+  const { stack } = splitTaskHeadline(row.recommendationOption ?? "");
+
   return (
     <li>
       <Link
         href={`/app/history/${row.id}`}
-        className="flex items-center gap-4 px-5 py-4 transition-colors duration-150 hover:bg-line/30 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ink/20"
+        className="flex items-start gap-4 px-5 py-4 transition-colors duration-150 hover:bg-line/30 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ink/20"
       >
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-[15px] font-semibold leading-snug text-text">
-            {title}
+            {headline}
           </h3>
           <p className="mt-0.5 text-[12px] font-medium text-mute">
             {cat.label} ·{" "}
@@ -202,6 +202,30 @@ function DecisionRow({ row }: { row: DecisionRow }) {
               : confLabel}{" "}
             · {reducerLabel} · {relativeDay(row.createdAt)}
           </p>
+          {stack.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-mute">
+                Recommended tools:
+              </span>
+              {stack.map((tool, i) => (
+                <span key={tool}>
+                  <span
+                    className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium
+                      bg-gradient-to-br from-[#fde6d6] to-[#f5cfb0]
+                      text-[#7a3414] ring-1 ring-inset ring-[#f0b78d]/40
+                      shadow-sm shadow-[#c2410c]/5"
+                  >
+                    {tool}
+                  </span>
+                  {i < stack.length - 1 && (
+                    <span className="ml-1.5 text-[11px] text-mute" aria-hidden>
+                      ·
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         {row.hoursSaved > 0 && (
           <span

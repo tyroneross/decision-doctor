@@ -3,7 +3,7 @@ import { decisions } from "@/lib/db/schema";
 import { runWithActor, withActor } from "@/lib/db/actor";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
-import { totalHoursSaved, streakWeeks } from "@/lib/decision-display";
+import { totalHoursSaved } from "@/lib/decision-display";
 import {
   DecisionsListClient,
   type DecisionRow,
@@ -87,10 +87,8 @@ export default async function HistoryPage() {
   });
 
   const summary: ListSummary = {
-    totalHoursPerWeek: projected.reduce((s, r) => s + r.hoursSaved, 0),
     decisions: projected.length,
     skillsShipped: projected.reduce((s, r) => s + r.reducerCount, 0),
-    streakWeeks: streakWeeks(rows.map((r) => r.createdAt)),
   };
 
   return <DecisionsListClient rows={projected} summary={summary} />;

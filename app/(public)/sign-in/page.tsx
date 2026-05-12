@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { signIn, signUp } from "@/lib/auth-client";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -9,18 +10,12 @@ import { Button } from "@/components/ui/Button";
 /**
  * D0 — Single-screen sign-in / sign-up.
  *
- * One screen, one button: "Send magic link · or sign in".
+ * Two explicit paths:
+ *   - Magic link (primary CTA): signIn.magicLink(email, callbackURL: /app)
+ *   - Password sign-in (secondary until active): signIn.email(email, password)
+ *     with USER_NOT_FOUND fallback to signUp.email (autoSignIn: true)
  *
- * Submit branches:
- *   - password.length > 0 → signIn.email(email, password)
- *   - password empty       → signIn.magicLink(email, callbackURL: /app)
- *
- * Account creation: email + password is enough (Better Auth's email/password
- * flow auto-creates if not found, when configured server-side; magic-link
- * path provisions on first verification regardless).
- *
- * Redirects on success to /app — the F1 search-first home (shipped in
- * C5). The decisions list is one bottom-nav tap away.
+ * Redirects on success to /app.
  */
 export default function SignInPage() {
   return (
@@ -44,43 +39,52 @@ function SignInPageInner() {
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const canSubmit = !busy && /.+@.+\..+/.test(email);
+  const emailValid = /.+@.+\..+/.test(email);
 
-  async function submit(e?: React.FormEvent) {
-    e?.preventDefault();
-    if (!canSubmit) return;
+  async function handleMagicLink() {
+    if (busy || !emailValid) return;
     setBusy(true);
     setErr(null);
     setMsg(null);
     try {
-      if (password.length > 0) {
-        // Try sign-in first; fall through to sign-up on USER_NOT_FOUND.
-        // Better Auth's `autoSignIn: true` (lib/auth.ts) means the
-        // signUp.email call also signs the new account in.
-        const res = await signIn.email({ email, password });
-        if (res.error) {
-          const code = res.error.code ?? "";
-          const msg = res.error.message ?? "";
-          if (code === "USER_NOT_FOUND" || /not.*found|no.*user/i.test(msg)) {
-            const sup = await signUp.email({
-              email,
-              password,
-              name: email.split("@")[0] ?? "",
-            });
-            if (sup.error) throw new Error(sup.error.message);
-          } else {
-            throw new Error(msg);
-          }
+      const res = await signIn.magicLink({
+        email,
+        callbackURL: "/app",
+      });
+      if (res.error) throw new Error(res.error.message);
+      setMsg("Check your email. Your sign-in link expires in 60 min.");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handlePasswordSignIn() {
+    if (busy || !emailValid || password.length === 0) return;
+    setBusy(true);
+    setErr(null);
+    setMsg(null);
+    try {
+      // Try sign-in first; fall through to sign-up on USER_NOT_FOUND.
+      // Better Auth's `autoSignIn: true` (lib/auth.ts) means the
+      // signUp.email call also signs the new account in.
+      const res = await signIn.email({ email, password });
+      if (res.error) {
+        const code = res.error.code ?? "";
+        const message = res.error.message ?? "";
+        if (code === "USER_NOT_FOUND" || /not.*found|no.*user/i.test(message)) {
+          const sup = await signUp.email({
+            email,
+            password,
+            name: email.split("@")[0] ?? "",
+          });
+          if (sup.error) throw new Error(sup.error.message);
+        } else {
+          throw new Error(message);
         }
-        router.push("/app");
-      } else {
-        const res = await signIn.magicLink({
-          email,
-          callbackURL: "/app",
-        });
-        if (res.error) throw new Error(res.error.message);
-        setMsg("Check your email. Your sign-in link expires in 60 min.");
       }
+      router.push("/app");
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -91,12 +95,14 @@ function SignInPageInner() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-12">
       <header className="space-y-1">
-        <h1 className="text-[32px] font-bold leading-tight text-text">
-          Aida
-        </h1>
-        <p className="text-[13px] font-medium text-mute">
-          Let AI help you so you can help others.
-        </p>
+        <Image
+          src="/aida-logo.png"
+          alt="Aida"
+          width={420}
+          height={280}
+          priority
+          className="max-w-[220px] sm:max-w-[260px] h-auto"
+        />
         <p className="text-[12px] font-medium text-mute pt-1">
           sign in to your practice
         </p>
@@ -111,10 +117,8 @@ function SignInPageInner() {
         </p>
       )}
 
-      <form className={reasonHint ? "mt-4" : "mt-8"} onSubmit={submit}>
-        {/* Credentials group — email + password belong together (one
-            "enter your details" intent). Tight 12px gap groups them
-            visually per Gestalt proximity. */}
+      <form className={reasonHint ? "mt-4" : "mt-8"} onSubmit={(e) => e.preventDefault()}>
+        {/* Credentials group */}
         <div className="space-y-3">
           <Input
             type="email"
@@ -130,35 +134,39 @@ function SignInPageInner() {
             type="password"
             autoComplete="current-password"
             label="Password (optional)"
-            placeholder="leave blank for magic link"
+            placeholder="only needed for password sign-in"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
 
-        {/* OR divider — separates the credentials group from the submit
-            so the button doesn't read as "submits the password". */}
-        <div
-          className="my-6 flex items-center gap-3"
-          role="separator"
-          aria-label="or"
-        >
-          <span className="h-px flex-1 bg-line" aria-hidden />
-          <span className="text-[11px] font-medium uppercase tracking-wider text-mute">
-            or
-          </span>
-          <span className="h-px flex-1 bg-line" aria-hidden />
-        </div>
+        {/* Two explicit action buttons */}
+        <div className="mt-6 space-y-2">
+          {/* Button A: Magic link — always primary-styled */}
+          <Button
+            type="button"
+            variant="primary"
+            full
+            disabled={busy || !emailValid}
+            aria-busy={busy}
+            onClick={handleMagicLink}
+            className="disabled:opacity-60"
+          >
+            {busy ? "Working…" : "Send magic link"}
+          </Button>
 
-        <Button
-          type="submit"
-          variant="primary"
-          full
-          disabled={!canSubmit}
-          aria-busy={busy}
-        >
-          {busy ? "Working…" : "Send magic link · or sign in"}
-        </Button>
+          {/* Button B: Password sign-in — secondary until both fields valid */}
+          <Button
+            type="button"
+            variant={emailValid && password.length > 0 ? "primary" : "secondary"}
+            full
+            disabled={busy || !emailValid || password.length === 0}
+            aria-busy={busy}
+            onClick={handlePasswordSignIn}
+          >
+            Sign in
+          </Button>
+        </div>
 
         {msg && (
           <p role="status" className="mt-4 text-[13px] status-ok">
