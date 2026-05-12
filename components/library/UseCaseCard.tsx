@@ -135,7 +135,7 @@ export function UseCaseCard({
               </Button>
             )}
             <a
-              href={`/app/recommendations/new?path=${painPath ?? "custom"}&seed_use_case=${id}`}
+              href={`/app/library/use-case/${id}`}
               className="inline-flex items-center gap-1 text-[13px] font-medium text-ink hover:underline"
             >
               Try it
