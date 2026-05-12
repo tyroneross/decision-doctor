@@ -406,10 +406,150 @@ export const RecommendationInputSchema = z.object({
       dataReadiness: z.number().min(0).max(1).optional(),
     })
     .optional(),
+  intakeLog: z.unknown().optional(),
   userId: z.string().uuid().optional(),
   tenantId: z.string().uuid().optional(),
 });
 export type RecommendationInput = z.infer<typeof RecommendationInputSchema>;
+
+// ---------------------------------------------------------------------------
+// Adaptive recommendation intake schemas
+// ---------------------------------------------------------------------------
+
+const RecommendationIntakeWidgetSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("chips"),
+    fieldId: z.string().min(1).max(64),
+    label: z.string().min(1).max(120),
+    hint: z.string().max(200).optional(),
+    options: z
+      .array(
+        z.object({
+          value: z.string().min(1).max(64),
+          label: z.string().min(1).max(80),
+        }),
+      )
+      .min(2)
+      .max(8),
+    defaultValue: z.string().max(64).optional(),
+  }),
+  z.object({
+    kind: z.literal("slider"),
+    fieldId: z.string().min(1).max(64),
+    label: z.string().min(1).max(120),
+    hint: z.string().max(200).optional(),
+    min: z.number().finite(),
+    max: z.number().finite(),
+    step: z.number().positive().finite().optional(),
+    defaultValue: z.number().finite(),
+    unit: z.string().max(24).optional(),
+  }),
+]);
+
+export const RecommendationIntakeFillSchema = z.object({
+  path: z.string().min(1).max(80),
+  kind: z.enum(["string", "number", "pain_path"]),
+  mergeStrategy: z.enum(["replace", "append"]).default("replace"),
+});
+export type RecommendationIntakeFill = z.infer<
+  typeof RecommendationIntakeFillSchema
+>;
+
+export const RecommendationIntakeBlockingScoreSchema = z.object({
+  topic: z.string().min(1).max(80),
+  evidenceGap: z.number().min(0).max(5),
+  reversibility: z.number().min(0).max(5),
+  risk: z.number().min(0).max(5),
+  blocking: z.number().min(0).max(15),
+  decision: z.enum(["ask", "infer"]),
+  reason: z.string().min(1).max(240),
+});
+export type RecommendationIntakeBlockingScore = z.infer<
+  typeof RecommendationIntakeBlockingScoreSchema
+>;
+
+export const RecommendationIntakeQuestionSchema = z.object({
+  id: z.string().min(1).max(80),
+  topic: z.string().min(1).max(80),
+  prompt: z.string().min(1).max(240),
+  widget: RecommendationIntakeWidgetSchema,
+  fills: RecommendationIntakeFillSchema,
+  blockingScore: RecommendationIntakeBlockingScoreSchema,
+});
+export type RecommendationIntakeQuestion = z.infer<
+  typeof RecommendationIntakeQuestionSchema
+>;
+
+export const RecommendationIntakeAnswerSchema = z.object({
+  questionId: z.string().min(1).max(80),
+  topic: z.string().min(1).max(80),
+  fills: RecommendationIntakeFillSchema,
+  display: z.string().min(1).max(240),
+  raw: z.union([z.string().max(240), z.number().finite()]),
+  answeredAt: z.string().datetime(),
+});
+export type RecommendationIntakeAnswer = z.infer<
+  typeof RecommendationIntakeAnswerSchema
+>;
+
+export const RecommendationIntakeAssumptionSchema = z.object({
+  topic: z.string().min(1).max(80),
+  path: z.string().min(1).max(80),
+  value: z.union([z.string().max(400), z.number().finite()]),
+  confidence: z.enum(["high", "medium", "low"]),
+  rationale: z.string().min(1).max(280),
+  challengePrompt: z.string().min(1).max(240),
+});
+export type RecommendationIntakeAssumption = z.infer<
+  typeof RecommendationIntakeAssumptionSchema
+>;
+
+export const RecommendationIntakeStateSchema = z.object({
+  challengeText: z.string().min(1).max(800),
+  painPath: PainPathIdSchema.optional(),
+  goal: z.string().min(1).max(400).optional(),
+  scoringInput: RecommendationInputSchema.shape.scoringInput.default({}),
+  answers: z.array(RecommendationIntakeAnswerSchema).default([]),
+  assumptions: z.array(RecommendationIntakeAssumptionSchema).default([]),
+  askedTopics: z.array(z.string().min(1).max(80)).default([]),
+  filledPaths: z.array(z.string().min(1).max(80)).default([]),
+  questionCount: z.number().int().min(0).max(20).default(0),
+});
+export type RecommendationIntakeState = z.infer<
+  typeof RecommendationIntakeStateSchema
+>;
+
+export const RecommendationIntakeActionSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("ask"),
+    state: RecommendationIntakeStateSchema,
+    question: RecommendationIntakeQuestionSchema,
+    progress: z.object({
+      asked: z.number().int().min(0),
+      max: z.number().int().min(1),
+      remainingHighLeverage: z.number().int().min(0),
+    }),
+  }),
+  z.object({
+    action: z.literal("infer"),
+    state: RecommendationIntakeStateSchema,
+    defaults: z.array(RecommendationIntakeAssumptionSchema).min(1).max(8),
+    progress: z.object({
+      asked: z.number().int().min(0),
+      max: z.number().int().min(1),
+      remainingHighLeverage: z.number().int().min(0),
+    }),
+  }),
+  z.object({
+    action: z.literal("done"),
+    state: RecommendationIntakeStateSchema,
+    recommendationInput: RecommendationInputSchema,
+    reason: z.string().min(1).max(240),
+  }),
+]);
+export type RecommendationIntakeAction = z.infer<
+  typeof RecommendationIntakeActionSchema
+>;
 
 // ---------------------------------------------------------------------------
 // E2 — Pain-path classifier + 9-criteria scoring schemas

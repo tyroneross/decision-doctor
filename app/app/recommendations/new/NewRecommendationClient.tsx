@@ -1,110 +1,19 @@
 "use client";
 
-// app/app/recommendations/new/NewRecommendationClient.tsx
-//
-// Lightweight intake form per PRD P0-02: max 5 clarifier questions before
-// the first recommendation.
-//
-// Step flow:
-//   Step 1 — Challenge description (PillSearchBar multiline maxRows=6).
-//   Step 2 — Path selection (skip if initialPath provided; otherwise 6 chips).
-//   Steps 3-5 — 5 critical ClarifierChips: frequency, time burden, severity,
-//               risk tolerance, AI comfort. Defaults shown; user adjusts.
-//
-// On submit: POST /api/recommendations.
-//   - Authed: redirect to /app/recommendations/<id>.
-//   - Guest: stash recommendation in sessionStorage, redirect to guest-preview.
-//
-// Progress UI: honest indeterminate spinner (~12-15s engine end-to-end).
-// Error: 404 or engine not deployed → "retry" button.
-//
-// Theme tokens only. Zero per-pain colors.
-
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PainPathId } from "@/lib/engine/types";
 import type { ResolvedActor } from "@/lib/auth-session";
+import type {
+  RecommendationIntakeAction,
+  RecommendationIntakeQuestion,
+  RecommendationIntakeState,
+} from "@/shared/schema";
 import { PillSearchBar } from "@/components/ui/PillSearchBar";
 import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
 import { NoPhiNotice } from "@/components/recommendations/NoPhiNotice";
 import { detectPHI } from "@/lib/phi-guard";
-import { PAIN_PATHS } from "@/components/pain-cards/PainCardGrid";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-// The 5 intake clarifier questions (chip-based, per PRD P0-02).
-// fieldId matches ScoringInput fields.
-
-const INTAKE_QUESTIONS = [
-  {
-    fieldId: "frequency",
-    label: "How often does this challenge come up?",
-    hint: "Rough estimate is fine.",
-    options: [
-      { value: "0.25", label: "Rarely (monthly)" },
-      { value: "0.5", label: "Occasionally (weekly)" },
-      { value: "0.75", label: "Often (several times a week)" },
-      { value: "1", label: "Constantly (daily)" },
-    ],
-    defaultValue: "0.5",
-  },
-  {
-    fieldId: "time_burden",
-    label: "How much time does it take per occurrence?",
-    hint: "Pick the closest option.",
-    options: [
-      { value: "0.2", label: "Under 15 minutes" },
-      { value: "0.5", label: "15 to 60 minutes" },
-      { value: "0.75", label: "1 to 3 hours" },
-      { value: "1", label: "More than 3 hours" },
-    ],
-    defaultValue: "0.5",
-  },
-  {
-    fieldId: "pain_severity",
-    label: "How much does it slow your practice down?",
-    hint: "Your honest gut read.",
-    options: [
-      { value: "0.2", label: "Minor inconvenience" },
-      { value: "0.5", label: "Noticeable friction" },
-      { value: "0.75", label: "Real drag on my day" },
-      { value: "1", label: "Serious bottleneck" },
-    ],
-    defaultValue: "0.5",
-  },
-  {
-    fieldId: "risk_tolerance",
-    label: "How comfortable are you with AI making mistakes on this?",
-    hint: "Higher risk tolerance = faster AI adoption.",
-    options: [
-      { value: "0.2", label: "Very cautious. I review everything." },
-      { value: "0.5", label: "Moderate. I spot-check outputs." },
-      { value: "0.75", label: "Comfortable. Errors are easy to catch." },
-      { value: "1", label: "Relaxed. Low-stakes task." },
-    ],
-    defaultValue: "0.5",
-  },
-  {
-    fieldId: "ai_comfort",
-    label: "How familiar are you with AI tools for this type of work?",
-    hint: "Honest. It helps us pick the right starting level.",
-    options: [
-      { value: "0.2", label: "Never tried AI for this" },
-      { value: "0.5", label: "Used it a few times" },
-      { value: "0.75", label: "Use AI tools regularly" },
-      { value: "1", label: "Very experienced with AI workflows" },
-    ],
-    defaultValue: "0.5",
-  },
-] as const;
-
-type IntakeAnswers = Record<string, string>;
-
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
 
 export interface NewRecommendationClientProps {
   initialPath: PainPathId | null;
@@ -112,440 +21,451 @@ export interface NewRecommendationClientProps {
   actor: ResolvedActor | null;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+type SubmitState = "idle" | "loading-next" | "saving-answer" | "finalizing";
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const message =
+      (payload as { message?: string; error?: string }).message ??
+      (payload as { error?: string }).error ??
+      `Request failed (${res.status})`;
+    throw new Error(message);
+  }
+  return payload as T;
+}
 
 export function NewRecommendationClient({
   initialPath,
   initialChallenge,
-  actor,
+  actor: _actor,
 }: NewRecommendationClientProps) {
   const router = useRouter();
-
-  // Step state: 1=challenge, 2=path (skip if initialPath), 3-7=intake questions
-  const startStep = initialPath ? 2 : 1;
-  const [step, setStep] = useState<number>(
-    initialChallenge ? (initialPath ? 2 : 2) : 1
-  );
-
   const [challenge, setChallenge] = useState(initialChallenge ?? "");
-  const [selectedPath, setSelectedPath] = useState<PainPathId | null>(
-    initialPath
+  const [state, setState] = useState<RecommendationIntakeState | null>(null);
+  const [action, setAction] = useState<RecommendationIntakeAction | null>(null);
+  const [selectedValue, setSelectedValue] = useState<string | number | null>(
+    null,
   );
-  // Intake answers — pre-filled with defaults
-  const [answers, setAnswers] = useState<IntakeAnswers>(() => {
-    const defaults: IntakeAnswers = {};
-    INTAKE_QUESTIONS.forEach((q) => {
-      defaults[q.fieldId] = q.defaultValue;
-    });
-    return defaults;
-  });
+  const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [error, setError] = useState<string | null>(null);
 
-  // Current intake question index (0-4)
-  const [questionIdx, setQuestionIdx] = useState(0);
+  const phi = useMemo(
+    () =>
+      challenge.trim().length > 10
+        ? detectPHI(challenge)
+        : { hasPHI: false, reasons: [] },
+    [challenge],
+  );
 
-  // PHI detection
-  const [phiWarning, setPhiWarning] = useState(false);
-  const [phiReasons, setPhiReasons] = useState<string[]>([]);
-
-  // Progress + submit state. We don't fake per-stage progress; the engine
-  // call is opaque from the client side, so a single indeterminate spinner
-  // with an honest "12-15s" expectation hint is more truthful than a 4-step
-  // dots animation tied to setTimeout.
-  const [submitting, setSubmitting] = useState(false);
-  const [engineError, setEngineError] = useState<string | null>(null);
-
-  // Handle step skip logic: if initialPath and initialChallenge are both set,
-  // jump straight to the first intake question.
-  useEffect(() => {
-    if (initialPath && initialChallenge) {
-      setStep(3);
-    } else if (initialPath && !initialChallenge) {
-      setStep(1);
-    } else if (!initialPath && initialChallenge) {
-      setStep(2);
-    }
-  }, [initialChallenge, initialPath]);
-
-  // PHI check on challenge text (client-side hint only; server enforces).
-  function handleChallengeChange(text: string) {
-    setChallenge(text);
-    if (text.length > 10) {
-      const { hasPHI, reasons } = detectPHI(text);
-      setPhiWarning(hasPHI);
-      setPhiReasons(reasons);
-    } else {
-      setPhiWarning(false);
-      setPhiReasons([]);
+  async function loadNext(
+    nextState?: RecommendationIntakeState,
+    challengeOverride?: string,
+  ) {
+    setSubmitState("loading-next");
+    setError(null);
+    setSelectedValue(null);
+    try {
+      const result = await postJson<RecommendationIntakeAction>(
+        "/api/recommendations/intake/next",
+        nextState
+          ? { state: nextState }
+          : {
+              challengeText: (challengeOverride ?? challenge).trim(),
+              ...(initialPath ? { painPath: initialPath } : {}),
+            },
+      );
+      setAction(result);
+      setState(result.state);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load intake.");
+    } finally {
+      setSubmitState("idle");
     }
   }
+
+  useEffect(() => {
+    if (initialChallenge?.trim()) {
+      void loadNext();
+    }
+    // Initial load only. The URL-derived values are immutable for this mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleChallengeSubmit(text: string) {
-    if (!text.trim()) return;
-    setChallenge(text.trim());
-    // Move to path selection or first intake question.
-    setStep(initialPath ? 3 : 2);
+    if (!text.trim() || phi.hasPHI) return;
+    const nextChallenge = text.trim();
+    setChallenge(nextChallenge);
+    setState(null);
+    setAction(null);
+    void loadNext(undefined, nextChallenge);
   }
 
-  function handlePathSelect(pathId: PainPathId) {
-    setSelectedPath(pathId);
-    setStep(3);
-    setQuestionIdx(0);
-  }
+  async function submitAnswer(question: RecommendationIntakeQuestion) {
+    if (!state || selectedValue === null) return;
 
-  function handleAnswer(fieldId: string, value: string) {
-    setAnswers((prev) => ({ ...prev, [fieldId]: value }));
-  }
+    const selectedOption =
+      question.widget.kind === "chips"
+        ? question.widget.options.find((o) => o.value === selectedValue)
+        : null;
+    const display =
+      selectedOption?.label ??
+      (question.widget.kind === "slider" && question.widget.unit
+        ? `${selectedValue} ${question.widget.unit}`
+        : String(selectedValue));
 
-  function handleNextQuestion() {
-    if (questionIdx < INTAKE_QUESTIONS.length - 1) {
-      setQuestionIdx((i) => i + 1);
-    } else {
-      handleSubmit();
-    }
-  }
-
-  async function handleSubmit() {
-    if (!challenge.trim()) {
-      setStep(1);
-      return;
-    }
-
-    const painPath = selectedPath ?? "custom";
-
-    setSubmitting(true);
-    setEngineError(null);
-
-    // Pack intake answers into the scoringInput payload. Stored as numeric
-    // strings; parseFloat is safe because the chip-option values were
-    // hardcoded above (0.2, 0.5, 0.75, 1, etc.). dataReadiness has no
-    // intake question — orchestrator applies its server-side default.
-    const scoringInput = {
-      painSeverity: parseFloat(answers.pain_severity ?? ""),
-      frequency: parseFloat(answers.frequency ?? ""),
-      timeBurden: parseFloat(answers.time_burden ?? ""),
-      riskTolerance: parseFloat(answers.risk_tolerance ?? ""),
-      aiComfort: parseFloat(answers.ai_comfort ?? ""),
-    };
-    // Drop NaN entries so the server-side defaults take over rather than
-    // failing Zod validation. Defensive — pre-filled defaults mean every
-    // field should parse, but the user could conceivably skip a question.
-    const cleanScoring = Object.fromEntries(
-      Object.entries(scoringInput).filter(([, v]) => Number.isFinite(v)),
-    );
-
+    setSubmitState("saving-answer");
+    setError(null);
     try {
-      const res = await fetch("/api/recommendations", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          painPath,
-          challengeText: challenge.trim(),
-          scoringInput: cleanScoring,
-        }),
-      });
+      const result = await postJson<{ state: RecommendationIntakeState }>(
+        "/api/recommendations/intake/answer",
+        {
+          state,
+          question,
+          display,
+          raw: selectedValue,
+        },
+      );
+      setState(result.state);
+      await loadNext(result.state);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save answer.");
+      setSubmitState("idle");
+    }
+  }
 
-      if (res.status === 404 || res.status === 503) {
-        setEngineError(
-          "The recommendation engine route isn't deployed yet. Try again in a moment."
-        );
-        setSubmitting(false);
-        return;
-      }
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setEngineError(
-          (body as { error?: string }).error ?? `Engine error (${res.status}). Please try again.`
-        );
-        setSubmitting(false);
-        return;
-      }
-
-      const data = (await res.json()) as {
+  async function finalizeRecommendation(finalState: RecommendationIntakeState) {
+    setSubmitState("finalizing");
+    setError(null);
+    try {
+      const data = await postJson<{
         guestMode: boolean;
         id?: string;
         recommendation: unknown;
-      };
+      }>("/api/recommendations/intake/finalize", { state: finalState });
 
       if (data.guestMode) {
-        // Store in sessionStorage and redirect to guest-preview.
-        if (typeof window !== "undefined") {
-          window.sessionStorage.setItem(
-            "dd:guest:lastRecommendation",
-            JSON.stringify({ recommendation: data.recommendation, painPath })
-          );
-        }
+        window.sessionStorage.setItem(
+          "dd:guest:lastRecommendation",
+          JSON.stringify({
+            recommendation: data.recommendation,
+            painPath: finalState.painPath ?? "custom",
+          }),
+        );
         router.push("/app/recommendations/guest-preview");
       } else {
-        // Authed — redirect to the persisted recommendation detail.
         router.push(`/app/recommendations/${data.id}`);
       }
-    } catch {
-      setEngineError("Network error. Please check your connection and try again.");
-      setSubmitting(false);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not create recommendation.",
+      );
+      setSubmitState("idle");
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Render — progress overlay
-  // ---------------------------------------------------------------------------
+  const busy = submitState !== "idle";
 
-  if (submitting) {
-    return (
-      <div className="max-w-xl mx-auto px-5 py-16 space-y-4">
-        <div className="flex items-center gap-3">
-          {/* Indeterminate spinner — pure CSS, no animation library. */}
-          <span
-            aria-hidden="true"
-            className="inline-block w-4 h-4 rounded-full border-2 animate-spin"
-            style={{
-              borderColor: "var(--line)",
-              borderTopColor: "var(--ink)",
-            }}
-          />
-          <p
-            className="text-[14px] font-medium"
-            style={{ color: "var(--ink)" }}
-          >
-            Working on your recommendation
-          </p>
-        </div>
-        <p className="text-[12px]" style={{ color: "var(--mute)" }}>
-          This usually takes 12 to 15 seconds.
-        </p>
-      </div>
-    );
+  if (submitState === "finalizing") {
+    return <LoadingState title="Working on your recommendation" />;
   }
 
-  // ---------------------------------------------------------------------------
-  // Render — engine error
-  // ---------------------------------------------------------------------------
-
-  if (engineError) {
+  if (!action) {
     return (
-      <div className="max-w-xl mx-auto px-5 py-12 space-y-4">
-        <h2
-          className="text-[18px] font-semibold"
-          style={{ color: "var(--ink)" }}
-        >
-          Something went wrong
-        </h2>
-        <p className="text-[14px]" style={{ color: "var(--mute)" }}>
-          {engineError}
-        </p>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setEngineError(null);
-            setStep(3);
-            setQuestionIdx(INTAKE_QUESTIONS.length - 1);
-          }}
-        >
-          Retry
-        </Button>
-      </div>
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Step 1 — Challenge description
-  // ---------------------------------------------------------------------------
-
-  if (step === 1) {
-    return (
-      <div className="max-w-xl mx-auto px-5 py-10 space-y-6">
+      <div className="mx-auto max-w-xl space-y-6 px-5 py-10">
         <header className="space-y-1">
-          <p
-            className="text-[12px] font-medium uppercase tracking-wider"
-            style={{ color: "var(--mute)" }}
-          >
-            Step 1 of {initialPath ? "5" : "6"}
+          <p className="text-[12px] font-medium uppercase tracking-wider text-mute">
+            Adaptive intake
           </p>
-          <h1
-            className="text-[24px] font-bold leading-snug"
-            style={{ color: "var(--ink)" }}
-          >
+          <h1 className="text-[24px] font-bold leading-snug text-ink">
             What do you want AI to help with?
           </h1>
-          <p className="text-[14px]" style={{ color: "var(--mute)" }}>
-            Describe the challenge in your own words.
+          <p className="text-[14px] text-mute">
+            Describe the operational pain. Aida will ask only what it needs.
           </p>
         </header>
 
-        <NoPhiNotice warning={phiWarning} reasons={phiReasons} />
+        <NoPhiNotice warning={phi.hasPHI} reasons={phi.reasons} />
 
         <PillSearchBar
           multiline
           maxRows={6}
           value={challenge}
-          onChange={handleChallengeChange}
+          onChange={setChallenge}
           onSubmit={handleChallengeSubmit}
-          placeholder="e.g. I spend hours every week following up on referrals manually..."
+          placeholder="e.g. Prior authorization paperwork eats every Monday morning..."
           ariaLabel="Describe your challenge"
           autoFocus
+          disabled={busy}
         />
-        {phiWarning && (
-          <p className="text-[12px]" style={{ color: "var(--mute)" }}>
-            Remove patient-identifiable details before continuing.
-          </p>
-        )}
+
+        {error && <ErrorText>{error}</ErrorText>}
       </div>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Step 2 — Pain path selection (skip if initialPath was set)
-  // ---------------------------------------------------------------------------
-
-  if (step === 2) {
+  if (action.action === "ask") {
     return (
-      <div className="max-w-xl mx-auto px-5 py-10 space-y-6">
-        <header className="space-y-1">
-          <p
-            className="text-[12px] font-medium uppercase tracking-wider"
-            style={{ color: "var(--mute)" }}
-          >
-            Step 2 of 6
-          </p>
-          <h2
-            className="text-[24px] font-bold leading-snug"
-            style={{ color: "var(--ink)" }}
-          >
-            Which area does this affect most?
-          </h2>
-          <p className="text-[14px]" style={{ color: "var(--mute)" }}>
-            Pick the closest match. We use this to find the most relevant
-            AI tasks.
-          </p>
-        </header>
+      <div className="mx-auto max-w-xl space-y-6 px-5 py-10">
+        <IntakeHeader
+          eyebrow={`${action.progress.asked} of ${action.progress.max} questions asked`}
+          title={action.question.widget.label}
+          subtitle={action.question.widget.hint ?? action.question.prompt}
+        />
 
-        <div className="grid grid-cols-1 gap-2">
-          {PAIN_PATHS.map((entry) => (
-            <button
-              key={entry.pathId}
-              type="button"
-              onClick={() => handlePathSelect(entry.pathId as PainPathId)}
-              className="flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-colors hover:border-ink"
-              style={{
-                borderColor: "var(--line)",
-                backgroundColor: "var(--paper)",
-              }}
-            >
-              <div>
-                <p
-                  className="text-[14px] font-medium"
-                  style={{ color: "var(--ink)" }}
-                >
-                  {entry.label}
-                </p>
-                <p className="text-[12px]" style={{ color: "var(--mute)" }}>
-                  {entry.oneLineHook}
-                </p>
-              </div>
-            </button>
-          ))}
+        <QuestionControl
+          question={action.question}
+          value={selectedValue}
+          onChange={setSelectedValue}
+          disabled={busy}
+        />
+
+        {error && <ErrorText>{error}</ErrorText>}
+
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setAction(null);
+              setState(null);
+            }}
+            className="text-[13px] font-medium text-mute"
+          >
+            Edit challenge
+          </button>
+          <Button
+            variant="primary"
+            onClick={() => submitAnswer(action.question)}
+            disabled={busy || selectedValue === null}
+          >
+            {busy ? "Saving..." : "Continue"}
+          </Button>
         </div>
       </div>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Steps 3-7 — Intake clarifier questions
-  // ---------------------------------------------------------------------------
+  if (action.action === "infer") {
+    return (
+      <div className="mx-auto max-w-xl space-y-6 px-5 py-10">
+        <IntakeHeader
+          eyebrow="Assumptions"
+          title="Aida can safely infer the rest."
+          subtitle="Review the assumptions before continuing."
+        />
 
-  const currentQuestion = INTAKE_QUESTIONS[questionIdx];
-  if (!currentQuestion) return null;
+        <div className="space-y-3">
+          {action.defaults.map((item) => (
+            <div
+              key={`${item.topic}:${item.path}`}
+              className="rounded-xl border border-line bg-paper p-4"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[13px] font-semibold text-ink">
+                  {labelForPath(item.path)}
+                </p>
+                <span className="text-[11px] uppercase tracking-wider text-mute">
+                  {item.confidence}
+                </span>
+              </div>
+              <p className="mt-2 text-[14px] text-text">{String(item.value)}</p>
+              <p className="mt-2 text-[12px] text-mute">{item.rationale}</p>
+            </div>
+          ))}
+        </div>
 
-  const stepNum = (initialPath ? 1 : 2) + questionIdx + 1;
-  const totalSteps = (initialPath ? 1 : 2) + INTAKE_QUESTIONS.length;
-  const isLast = questionIdx === INTAKE_QUESTIONS.length - 1;
-  const currentAnswer = answers[currentQuestion.fieldId] ?? currentQuestion.defaultValue;
+        {error && <ErrorText>{error}</ErrorText>}
+
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setAction(null);
+              setState(action.state);
+            }}
+            className="text-[13px] font-medium text-mute"
+          >
+            Edit challenge
+          </button>
+          <Button
+            variant="primary"
+            onClick={() => loadNext(action.state)}
+            disabled={busy}
+          >
+            {busy ? "Checking..." : "Continue"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-xl mx-auto px-5 py-10 space-y-6">
-      <header className="space-y-1">
-        <p
-          className="text-[12px] font-medium uppercase tracking-wider"
-          style={{ color: "var(--mute)" }}
-        >
-          Step {stepNum} of {totalSteps}
-        </p>
-        <h2
-          className="text-[22px] font-bold leading-snug"
-          style={{ color: "var(--ink)" }}
-        >
-          {currentQuestion.label}
-        </h2>
-        {currentQuestion.hint && (
-          <p className="text-[13px]" style={{ color: "var(--mute)" }}>
-            {currentQuestion.hint}
-          </p>
-        )}
-      </header>
+    <div className="mx-auto max-w-xl space-y-6 px-5 py-10">
+      <IntakeHeader
+        eyebrow="Ready"
+        title="Aida has enough signal to recommend a first task."
+        subtitle={action.reason}
+      />
 
-      {/* Chip options */}
-      <div className="flex flex-col gap-2">
-        {currentQuestion.options.map((opt) => {
-          const isSelected = currentAnswer === opt.value;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => handleAnswer(currentQuestion.fieldId, opt.value)}
-              className="rounded-xl border px-4 py-3 text-left text-[14px] font-medium transition-colors"
-              style={{
-                borderColor: isSelected ? "var(--ink)" : "var(--line)",
-                color: isSelected ? "var(--ink)" : "var(--mute)",
-                backgroundColor: "var(--paper)",
-              }}
-              aria-pressed={isSelected}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
+      <div className="rounded-xl border border-line bg-paper p-4">
+        <p className="text-[13px] font-semibold text-ink">
+          {labelForPainPath(action.recommendationInput.painPath)}
+        </p>
+        <p className="mt-2 text-[14px] text-text">
+          {action.recommendationInput.challengeText}
+        </p>
+        <p className="mt-2 text-[12px] text-mute">
+          {action.recommendationInput.goal}
+        </p>
       </div>
 
-      {/* Navigation */}
+      {error && <ErrorText>{error}</ErrorText>}
+
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => {
-            if (questionIdx > 0) {
-              setQuestionIdx((i) => i - 1);
-            } else {
-              setStep(initialPath ? 1 : 2);
-            }
+            setAction(null);
+            setState(action.state);
           }}
-          className="text-[13px] font-medium"
-          style={{ color: "var(--mute)" }}
+          className="text-[13px] font-medium text-mute"
         >
-          Back
+          Edit challenge
         </button>
         <Button
           variant="primary"
-          onClick={handleNextQuestion}
-          disabled={!currentAnswer}
+          onClick={() => finalizeRecommendation(action.state)}
+          disabled={busy}
         >
-          {isLast ? "Get my recommendation" : "Next"}
+          Get my recommendation
         </Button>
-      </div>
-
-      {/* Progress bar */}
-      <div className="flex gap-1">
-        {INTAKE_QUESTIONS.map((_, i) => (
-          <div
-            key={i}
-            className="h-1 flex-1 rounded-full transition-colors"
-            style={{
-              backgroundColor:
-                i <= questionIdx ? "var(--ink)" : "var(--line)",
-            }}
-          />
-        ))}
       </div>
     </div>
   );
+}
+
+function LoadingState({ title }: { title: string }) {
+  return (
+    <div className="mx-auto max-w-xl space-y-4 px-5 py-16">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="inline-block h-4 w-4 animate-spin rounded-full border-2"
+          style={{ borderColor: "var(--line)", borderTopColor: "var(--ink)" }}
+        />
+        <p className="text-[14px] font-medium text-ink">{title}</p>
+      </div>
+      <p className="text-[12px] text-mute">
+        This usually takes 12 to 15 seconds.
+      </p>
+    </div>
+  );
+}
+
+function IntakeHeader({
+  eyebrow,
+  title,
+  subtitle,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <header className="space-y-1">
+      <p className="text-[12px] font-medium uppercase tracking-wider text-mute">
+        {eyebrow}
+      </p>
+      <h1 className="text-[24px] font-bold leading-snug text-ink">{title}</h1>
+      {subtitle && <p className="text-[14px] text-mute">{subtitle}</p>}
+    </header>
+  );
+}
+
+function QuestionControl({
+  question,
+  value,
+  onChange,
+  disabled,
+}: {
+  question: RecommendationIntakeQuestion;
+  value: string | number | null;
+  onChange: (value: string | number) => void;
+  disabled: boolean;
+}) {
+  if (question.widget.kind === "slider") {
+    const current =
+      typeof value === "number" ? value : question.widget.defaultValue;
+    return (
+      <div className="rounded-xl border border-line bg-paper p-4">
+        <input
+          type="range"
+          min={question.widget.min}
+          max={question.widget.max}
+          step={question.widget.step ?? 1}
+          value={current}
+          disabled={disabled}
+          onChange={(event) => onChange(Number(event.currentTarget.value))}
+          className="w-full accent-ink"
+          aria-label={question.widget.label}
+        />
+        <p className="mt-2 text-[13px] font-medium text-ink">
+          {current}
+          {question.widget.unit ? ` ${question.widget.unit}` : ""}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {question.widget.options.map((option) => (
+        <Chip
+          key={option.value}
+          tone={value === option.value ? "selected" : "default"}
+          pressed={value === option.value}
+          disabled={disabled}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </Chip>
+      ))}
+    </div>
+  );
+}
+
+function ErrorText({ children }: { children: string }) {
+  return (
+    <p className="rounded-xl border border-line bg-paper p-3 text-[13px] text-ink">
+      {children}
+    </p>
+  );
+}
+
+function labelForPath(path: string): string {
+  const labels: Record<string, string> = {
+    goal: "Goal",
+    "scoringInput.riskTolerance": "Risk posture",
+    "scoringInput.aiComfort": "AI comfort",
+    "scoringInput.dataReadiness": "Data readiness",
+  };
+  return labels[path] ?? path;
+}
+
+function labelForPainPath(path: PainPathId): string {
+  const labels: Record<PainPathId, string> = {
+    referrals: "Referral growth or management",
+    research: "Research and evidence tracking",
+    admin: "Administrative overload",
+    capacity_growth: "Capacity, pricing, or growth",
+    follow_up: "Patient follow-up consistency",
+    custom: "Custom challenge",
+  };
+  return labels[path];
 }

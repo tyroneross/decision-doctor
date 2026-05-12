@@ -5,15 +5,15 @@ import { useRouter } from "next/navigation";
 import { PillSearchBar } from "@/components/ui/PillSearchBar";
 
 /**
- * HomeComposer — client wrapper around PillSearchBar for the primary AI-
- * adoption search/ask path. Free text routes to /app/ask?q=<encoded>, where
- * the question is grounded through the hybrid /api/search retrieval pipeline.
+ * HomeComposer — client wrapper around PillSearchBar for the primary pain-to-
+ * recommendation path. Informational Q&A remains available via /app/ask; the
+ * home composer now starts Aida's adaptive recommendation intake.
  */
 export function HomeComposer() {
   const router = useRouter();
 
   function handleSubmit(value: string) {
-    router.push(`/app/ask?q=${encodeURIComponent(value)}`);
+    router.push(`/app/recommendations/new?challenge=${encodeURIComponent(value)}`);
   }
 
   return (

@@ -240,10 +240,17 @@ describe("NoPhiNotice promotion to components/ui/", () => {
 // ── 6. Search entry-point wiring ───────────────────────────────────────────
 
 describe("AI-adoption search entry points", () => {
-  it("home composer routes submitted text to /app/ask", () => {
+  it("home composer routes submitted text to adaptive recommendation intake", () => {
     expect(
-      fileContains("app/app/_components/HomeComposer.tsx", "/app/ask?q="),
-      "Home search must open the AI-adoption Q&A surface"
+      fileContains("app/app/_components/HomeComposer.tsx", "/app/recommendations/new?challenge="),
+      "Home search must open the primary adaptive recommendation intake"
+    ).toBe(true);
+  });
+
+  it("home keeps explicit access to the AI-adoption Q&A surface", () => {
+    expect(
+      fileContains("app/app/page.tsx", 'href="/app/ask"'),
+      "Q&A must remain available as a secondary entry point"
     ).toBe(true);
   });
 
