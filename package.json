@@ -18,7 +18,8 @@
     "library:seed:dry": "tsx scripts/seed-library.ts --dry-run",
     "library:reset": "tsx scripts/seed-library.ts --reset",
     "kb:seed": "tsx scripts/seed-kb.ts",
-    "kb:seed:dry": "tsx scripts/seed-kb.ts --dry-run"
+    "kb:seed:dry": "tsx scripts/seed-kb.ts --dry-run",
+    "plugins:seed": "tsx scripts/seed-plugins.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",

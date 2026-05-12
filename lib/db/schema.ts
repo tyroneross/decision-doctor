@@ -253,6 +253,10 @@ export const libraryUseCases = pgTable(
     rationale: text("rationale").notNull().default(""),
     estimatedMinutesSavedPerWeek: integer("estimated_minutes_saved_per_week"),
     metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+    // Cached Groq-generated example output. NULL = not yet generated.
+    // Reset via: UPDATE library_use_cases SET example_output = NULL WHERE id = $1.
+    // See drizzle/0010_use_case_example.sql.
+    exampleOutput: text("example_output"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -454,3 +458,137 @@ export type Recommendation = typeof recommendations.$inferSelect;
 export type NewRecommendation = typeof recommendations.$inferInsert;
 export type KbArticle = typeof kbArticles.$inferSelect;
 export type NewKbArticle = typeof kbArticles.$inferInsert;
+
+// --- Plugin & Skill Library (0009) ---
+// Separate surface from library_* (0007). Tables: plugins, skills, plugin_skills,
+// asset_files, user_dismissals. Scope-based RLS mirrors 0007 (scope='global' OR
+// scope=user_id::text). asset_files is XOR on (plugin_id, skill_id).
+
+export const plugins = pgTable(
+  "plugins",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    scope: text("scope").notNull(),
+    ownerUserId: uuid("owner_user_id"),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    version: text("version").notNull().default("0.0.0"),
+    sourceUrl: text("source_url"),
+    forkedFromId: uuid("forked_from_id"),
+    forkedAt: timestamp("forked_at", { withTimezone: true }),
+    upstreamVersion: text("upstream_version"),
+    metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    scopeSlugUniq: uniqueIndex("plugins_scope_slug_uniq").on(t.scope, t.slug),
+    scopeIdx: index("plugins_scope_idx").on(t.scope),
+    ownerIdx: index("plugins_owner_idx").on(t.ownerUserId),
+    forkedFromIdx: index("plugins_forked_from_idx").on(t.forkedFromId),
+  }),
+);
+
+export const skills = pgTable(
+  "skills",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    scope: text("scope").notNull(),
+    ownerUserId: uuid("owner_user_id"),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    version: text("version").notNull().default("0.0.0"),
+    sourceUrl: text("source_url"),
+    forkedFromId: uuid("forked_from_id"),
+    forkedAt: timestamp("forked_at", { withTimezone: true }),
+    upstreamVersion: text("upstream_version"),
+    metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    scopeSlugUniq: uniqueIndex("skills_scope_slug_uniq").on(t.scope, t.slug),
+    scopeIdx: index("skills_scope_idx").on(t.scope),
+    ownerIdx: index("skills_owner_idx").on(t.ownerUserId),
+    forkedFromIdx: index("skills_forked_from_idx").on(t.forkedFromId),
+  }),
+);
+
+export const pluginSkills = pgTable(
+  "plugin_skills",
+  {
+    pluginId: uuid("plugin_id").notNull(),
+    skillId: uuid("skill_id").notNull(),
+    position: integer("position").notNull().default(0),
+    addedAt: timestamp("added_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    pk: uniqueIndex("plugin_skills_pkey_idx").on(t.pluginId, t.skillId),
+    skillIdx: index("plugin_skills_skill_idx").on(t.skillId),
+    pluginIdx: index("plugin_skills_plugin_idx").on(t.pluginId),
+  }),
+);
+
+export const assetFiles = pgTable(
+  "asset_files",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    pluginId: uuid("plugin_id"),
+    skillId: uuid("skill_id"),
+    path: text("path").notNull(),
+    content: text("content").notNull().default(""),
+    contentType: text("content_type").notNull().default("text/plain"),
+    sha256: text("sha256").notNull(),
+    sizeBytes: integer("size_bytes").notNull().default(0),
+    storageKind: text("storage_kind").notNull().default("inline"),
+    r2Key: text("r2_key"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    pluginIdx: index("asset_files_plugin_idx").on(t.pluginId),
+    skillIdx: index("asset_files_skill_idx").on(t.skillId),
+  }),
+);
+
+export const userDismissals = pgTable(
+  "user_dismissals",
+  {
+    userId: uuid("user_id").notNull(),
+    assetKind: text("asset_kind").notNull(),
+    assetId: uuid("asset_id").notNull(),
+    dismissedAt: timestamp("dismissed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    userIdx: index("user_dismissals_user_idx").on(t.userId),
+  }),
+);
+
+export type Plugin = typeof plugins.$inferSelect;
+export type NewPlugin = typeof plugins.$inferInsert;
+export type Skill = typeof skills.$inferSelect;
+export type NewSkill = typeof skills.$inferInsert;
+export type PluginSkill = typeof pluginSkills.$inferSelect;
+export type NewPluginSkill = typeof pluginSkills.$inferInsert;
+export type AssetFile = typeof assetFiles.$inferSelect;
+export type NewAssetFile = typeof assetFiles.$inferInsert;
+export type UserDismissal = typeof userDismissals.$inferSelect;
+export type NewUserDismissal = typeof userDismissals.$inferInsert;
