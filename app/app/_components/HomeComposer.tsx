@@ -5,17 +5,15 @@ import { useRouter } from "next/navigation";
 import { PillSearchBar } from "@/components/ui/PillSearchBar";
 
 /**
- * HomeComposer — client wrapper around PillSearchBar for the V2 hybrid
- * first screen. Submit routes free text to /app/recommendations/new?challenge=<encoded>
- * (chat-first path). Route wired in U2; until then, 404 is expected and graceful.
+ * HomeComposer — client wrapper around PillSearchBar for the primary AI-
+ * adoption search/ask path. Free text routes to /app/ask?q=<encoded>, where
+ * the question is grounded through the hybrid /api/search retrieval pipeline.
  */
 export function HomeComposer() {
   const router = useRouter();
 
   function handleSubmit(value: string) {
-    router.push(
-      `/app/recommendations/new?challenge=${encodeURIComponent(value)}`
-    );
+    router.push(`/app/ask?q=${encodeURIComponent(value)}`);
   }
 
   return (
@@ -23,10 +21,10 @@ export function HomeComposer() {
       multiline
       maxRows={6}
       onSubmit={handleSubmit}
-      placeholder="describe what you want AI to help with first…"
+      placeholder="search or ask about AI adoption…"
       autoFocus
       minLength={3}
-      ariaLabel="describe your AI challenge"
+      ariaLabel="search or ask about AI adoption"
     />
   );
 }

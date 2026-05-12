@@ -86,7 +86,7 @@ const WORKSPACE: WorkspaceItem[] = [
     requiresAuth: true,
   },
   {
-    href: "/app/library/plugins",
+    href: "/app/library",
     label: "Library",
     icon: Library,
     match: (p: string) => p.startsWith("/app/library"),
