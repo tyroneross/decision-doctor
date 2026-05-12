@@ -18,6 +18,11 @@ import {
   isVdd,
   reframeMessageFor,
 } from "@/lib/engine/stage0-classifier";
+import {
+  detectDecisionIntent,
+  shouldOfferHelp,
+  type DecisionDetection,
+} from "@/lib/chat/decision-detector";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
 import { GUEST_USER_ID, GUEST_TENANT_ID } from "@/lib/guest-identity";
@@ -64,6 +69,17 @@ const FieldValueSchema = z.union([
 // the wire-format validator. Future non-chat surfaces (voice / native /
 // async weekly-audit) reuse the same schema without going through this
 // streaming HTTP path. See lib/engine/clarifier.ts for the rationale.
+
+// Phase-1 chat-as-decision-front-door — offer-help affordance shape.
+// Optional metadata attached to "asking" responses when the user's latest
+// message classifies as decision-shaped with confidence ≥ MIN_CONFIDENCE.
+// Client renders an inline chip below the assistant message; click triggers
+// future-phase intake. Never blocks the chat response.
+export interface OfferHelpAffordance {
+  kind: "offer-decision-help";
+  suggestedPath: "decision" | "recommendation";
+  rationale: string;
+}
 
 const AssistantPayloadSchema = z.discriminatedUnion("status", [
   z.object({
@@ -169,6 +185,22 @@ export async function POST(req: Request) {
     }
   }
 
+  // Phase-1 chat-as-decision-front-door — kick off decision-intent detection
+  // on the most recent user message IN PARALLEL with the Groq response
+  // synthesis. The detector never throws and adds no latency on the critical
+  // path because we await both with Promise.allSettled below.
+  const latestUserMessage =
+    [...parsed.data.messages].reverse().find((m) => m.role === "user")
+      ?.content ?? "";
+  const detectionPromise: Promise<DecisionDetection> = latestUserMessage
+    ? detectDecisionIntent(latestUserMessage)
+    : Promise.resolve({
+        kind: "not-decision" as const,
+        confidence: 0,
+        suggestedPath: null,
+        rationale: "no user message",
+      });
+
   // 4. Ask Groq for next message OR ready directive.
   let raw = "{}";
   try {
@@ -208,9 +240,30 @@ export async function POST(req: Request) {
 
   // Phase A — continue the conversation
   if (parsedAssistant.status === "asking") {
+    // Resolve detection (kicked off in parallel earlier). Safe to await —
+    // the detector never throws and is typically faster than the Groq call.
+    const detection = await detectionPromise;
+    if (process.env.NODE_ENV !== "production") {
+      console.info(
+        "[/api/chat] decision-intent:",
+        JSON.stringify({
+          kind: detection.kind,
+          confidence: detection.confidence,
+          suggestedPath: detection.suggestedPath,
+        }),
+      );
+    }
+    const offerHelp: OfferHelpAffordance | undefined = shouldOfferHelp(detection)
+      ? {
+          kind: "offer-decision-help",
+          suggestedPath: detection.suggestedPath!,
+          rationale: detection.rationale,
+        }
+      : undefined;
     return NextResponse.json({
       status: "asking",
       reply: parsedAssistant.reply,
+      ...(offerHelp ? { offerHelp } : {}),
     });
   }
 
