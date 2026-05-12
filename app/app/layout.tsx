@@ -17,6 +17,50 @@ import { CommandPalette } from "@/components/ui/CommandPalette";
 import { GuestBanner } from "@/components/GuestBanner";
 import { desc } from "drizzle-orm";
 
+/**
+ * Pick a human-readable title for a recent-decision row, in order of preference:
+ *   1. r.title (set by the engine after Stage 1 — the happy path)
+ *   2. recommendation.option (the recommended task name)
+ *   3. first non-empty string field in intake.fields (the user's input)
+ *   4. literal fallback "Decision draft"
+ *
+ * All branches truncate to 60 chars to keep the sidebar tidy. Defensive on
+ * jsonb shape — fields can be null / arrays / nested objects, so we narrow
+ * before dereferencing.
+ */
+function smartDecisionTitle(
+  title: string | null,
+  recommendation: unknown,
+  intake: unknown,
+): string {
+  const trim = (s: string) =>
+    s.length > 60 ? s.slice(0, 57).trimEnd() + "…" : s;
+
+  if (typeof title === "string" && title.trim().length > 0) {
+    return trim(title.trim());
+  }
+
+  if (recommendation && typeof recommendation === "object") {
+    const opt = (recommendation as Record<string, unknown>).option;
+    if (typeof opt === "string" && opt.trim().length > 0) {
+      return trim(opt.trim());
+    }
+  }
+
+  if (intake && typeof intake === "object") {
+    const fields = (intake as Record<string, unknown>).fields;
+    if (fields && typeof fields === "object") {
+      for (const v of Object.values(fields as Record<string, unknown>)) {
+        if (typeof v === "string" && v.trim().length > 0) {
+          return trim(v.trim());
+        }
+      }
+    }
+  }
+
+  return "Decision draft";
+}
+
 // Auth gate for everything under /app/*. SSR redirect — no client flash.
 //
 // UI Guidelines v0.1 shell (split by viewport):
@@ -66,6 +110,8 @@ export default async function AppLayout({
                 id: decisions.id,
                 title: decisions.title,
                 workloadReducers: decisions.workloadReducers,
+                recommendation: decisions.recommendation,
+                intake: decisions.intake,
               })
               .from(decisions)
               .orderBy(desc(decisions.createdAt))
@@ -83,7 +129,7 @@ export default async function AppLayout({
       ).length;
       recent = rows.slice(0, 5).map((r) => ({
         id: r.id,
-        title: r.title ?? "(untitled decision)",
+        title: smartDecisionTitle(r.title, r.recommendation, r.intake),
       }));
       // Project bounded skill summaries for the desktop F3 right rail.
       // We cap at ~25 across the recent 50 decisions to keep the prop
@@ -107,7 +153,7 @@ export default async function AppLayout({
               : 0;
           projected.push({
             decisionId: r.id,
-            decisionTitle: r.title ?? "(untitled decision)",
+            decisionTitle: smartDecisionTitle(r.title, r.recommendation, r.intake),
             index: i,
             title,
             description,

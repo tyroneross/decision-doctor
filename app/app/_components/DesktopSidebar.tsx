@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   MessageSquare,
   FileText,
@@ -11,6 +11,7 @@ import {
   Lock,
   Library,
   GraduationCap,
+  Trash2,
 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { SignOutButton } from "./sign-out";
@@ -108,6 +109,33 @@ export function DesktopSidebar({
   guest = false,
 }: DesktopSidebarProps) {
   const pathname = usePathname() ?? "";
+  const router = useRouter();
+  const [pendingDelete, setPendingDelete] = React.useState<string | null>(null);
+
+  async function handleDelete(id: string, title: string) {
+    if (typeof window === "undefined") return;
+    const ok = window.confirm(
+      `Delete "${title}"? This can't be undone.`,
+    );
+    if (!ok) return;
+    setPendingDelete(id);
+    try {
+      const res = await fetch(`/api/decisions/${id}`, { method: "DELETE" });
+      if (res.status === 204) {
+        // SSR refresh re-queries layout.tsx → drops the row.
+        router.refresh();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        console.warn("[sidebar] delete failed:", res.status, body);
+        window.alert("Couldn't delete that decision. Please try again.");
+      }
+    } catch (err) {
+      console.warn("[sidebar] delete error:", err);
+      window.alert("Network error. Please try again.");
+    } finally {
+      setPendingDelete(null);
+    }
+  }
 
   return (
     <aside
@@ -205,17 +233,45 @@ export function DesktopSidebar({
         )}
         {recentDecisions.length > 0 && (
           <ul className="mt-1 space-y-0.5">
-            {recentDecisions.slice(0, 5).map((d) => (
-              <li key={d.id}>
-                <Link
-                  href={`/app/history/${d.id}`}
-                  className="block px-3 py-1 rounded-md text-[13px] text-mute hover:bg-line/30 hover:text-text leading-snug line-clamp-1"
-                  title={d.title}
+            {recentDecisions.slice(0, 5).map((d) => {
+              const isDeleting = pendingDelete === d.id;
+              return (
+                <li
+                  key={d.id}
+                  className={twMerge(
+                    "group relative flex items-center rounded-md",
+                    "hover:bg-line/30",
+                    isDeleting && "opacity-50"
+                  )}
                 >
-                  {d.title}
-                </Link>
-              </li>
-            ))}
+                  <Link
+                    href={`/app/history/${d.id}`}
+                    className="flex-1 min-w-0 px-3 py-1 text-[13px] text-mute hover:text-text leading-snug line-clamp-1"
+                    title={d.title}
+                  >
+                    {d.title}
+                  </Link>
+                  {!guest && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(d.id, d.title)}
+                      disabled={isDeleting}
+                      aria-label={`Delete decision: ${d.title}`}
+                      title="Delete this decision"
+                      className={twMerge(
+                        "shrink-0 px-2 py-1 text-mute opacity-0",
+                        "transition-opacity",
+                        "group-hover:opacity-100 focus-visible:opacity-100",
+                        "hover:text-red-600",
+                        "disabled:cursor-not-allowed"
+                      )}
+                    >
+                      <Trash2 size={14} aria-hidden />
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
