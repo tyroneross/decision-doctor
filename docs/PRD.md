@@ -4,7 +4,7 @@ slug: decision-doctor
 mode: Build
 platform: Web (Next.js 16 mobile-first PWA)
 created: 2026-05-09
-revised: 2026-05-09
+revised: 2026-05-12
 analytical_lens: "Layered MCDA pipeline (radical preference simplification)"
 risk_reason: user trust claim
 modifies_api: true
@@ -14,7 +14,7 @@ sources_consulted:
   - research_local: ~/dev/git-folder/decision-doctor/Decisio Science Research/ (PEDE/MCDA pipeline notes)
   - research_canonical: ~/dev/research/topics/product-dev/product-dev.agentic-systems-security-references.md
   - research_implementation: ~/dev/git-folder/ProductPilot/ (RLS pattern + AsyncLocalStorage actor context)
-  - prompt: ~/Desktop/Equity & Access to AI — MLT20 AI Buildathon.pdf
+  - historical_prompt: "~/Desktop/Equity & Access to AI — MLT20 AI Buildathon.pdf (archival only; current plan is product-build oriented)"
 threat_model: "OWASP LLM Top 10 + OWASP Agentic Top 10 + Cisco DefenseClaw 3-pillar (see §11)"
 ---
 
@@ -59,7 +59,7 @@ User-reported success: "I got my Mondays back" and "the math made it feel safe."
 
 3. **SMBs need AI tied to the decisions they already care about.** Enterprises can spin up AI teams to find use cases; SMB owners can't. The wedge is to **meet them in the work they're already doing** — pricing, capacity, admin, referrals, notes — and incorporate AI exactly where they're already focused. Adoption follows attention. Decision Doctor inverts the typical "here's AI; find a use case" framing: the use case is the user's existing question, and the AI tool is the answer that ships alongside the decision.
 
-Near-term anchor: **MLT20 Buildathon Round 1 due 2026-05-12**. The equity prompt rewards owner-operator ICP and named users — both already satisfied. Longer-term, the LLM capability curve makes customized skills/plugins/agents for solo practitioners technically feasible and economically rational at consumer pricing — a window that did not exist 12 months ago.
+Near-term anchor: **post-buildathon productization**. The original MLT20 Buildathon prompt helped validate the owner-operator ICP and named-user specificity; this PRD is no longer optimizing for a hackathon deadline or rubric. Longer-term, the LLM capability curve makes customized skills/plugins/agents for solo practitioners technically feasible and economically rational at consumer pricing — a window that did not exist 12 months ago.
 
 ## 2A. How to execute this PRD (LLM context)
 
@@ -86,13 +86,13 @@ If the LLM hits one of these, follow as written or pause and ask:
 
 These improve the build but skipping them does not violate the spec. If deferred, log in §16 Decision Log.
 
-- **PWA installable** (F-07) — **next step after core functionality ships**. Hand-rolled SW per OQ-02 fallback acceptable. Demote-but-keep — phone-first usage between patients is a real adoption driver, just not a round-1 blocker.
+- **PWA installable** (F-07) — **next step after core functionality ships**. Hand-rolled SW per OQ-02 fallback acceptable. Demote-but-keep — phone-first usage between patients is a real adoption driver, just not a core blocker.
 - **1-page print/PDF export** (F-05 / T-04) — nice-to-have, not major. Browser-print path acceptable; full PDF rendering deferred. If under time pressure, skip the dedicated print-optimized layout — share-by-link is the higher-leverage path.
 - **No hard cap on engine latency** — prior <6s p95 target removed. Target remains ≤8s p95 as a design goal, but the build should **plan for parallel processing where the dependency graph allows** rather than chase a strict number. Adding F-08 + F-09 inevitably adds pipeline stages; parallelism is the right answer, not stage-cutting.
 - **Sentry + structured logging** — wire in production only; blank in dev
-- **All Q-criteria green** (§18.2) — Q-01–Q-04 required; Q-05 (migration on fresh DB) and Q-07 (Lighthouse ≥90) are nice-to-have for hackathon
-- **Upstash-backed rate limiter** — in-memory acceptable for hackathon (Upstash swap already shipped as of 2026-05-10 commit `73d1dc1`)
-- **Custom domain** (`decisiondoctor.app`) — Vercel preview URL is acceptable for Round 1
+- **All Q-criteria green** (§18.2) — Q-01–Q-04 required; Q-05 (migration on fresh DB) and Q-07 (Lighthouse ≥90) are post-core hardening goals
+- **Upstash-backed rate limiter** — in-memory fallback is acceptable only for local development; Upstash swap already shipped as of 2026-05-10 commit `73d1dc1`
+- **Custom domain** (`decisiondoctor.app`) — Vercel preview URL is acceptable until the production domain is configured
 
 ### Flexible (LLM picks based on what's optimal at build time)
 
@@ -148,7 +148,7 @@ Human-readable architecture summary lives at `docs/architecture/architecture.md`
 | Research log — UI overhaul grounding | `docs/research/ui-overhaul-2026-05-10.md` |
 | Research log — F-08/F-09 architecture plan | `docs/research/f08-f09-plan-2026-05-10.md` |
 | Next-steps execution plan | `docs/next-steps.md` |
-| Hackathon material | `Reference files/Hackathon and Rubric/` (gitignored) |
+| Historical challenge material | `Reference files/Hackathon and Rubric/` (gitignored; archival only) |
 | Status + open follow-ups | `docs/handover/STATUS.md` |
 | Mockups (visual north star) | `/Users/tyroneross/dev/git-folder/UI Guidance/mockups/decision-doctor--v2-*` |
 
@@ -184,7 +184,7 @@ The north star has three components: **(a)** "3 decisions in 20 minutes" (effici
 | LD-04 (single-user UX, multi-tenant arch) | (a) + (c) | Single-user UI removes friction for "20 minutes". Multi-tenant arch protects (c) when v2 ships shared org workspaces — RLS correctness is what makes "the math" trustworthy. |
 | LD-05 (composable per-stage engine) | (c) | Discrete stages = discrete reasoning blocks the UI can show. A mega-prompt would collapse the trace into one wall of text. |
 | LD-06 (Better Auth + Resend) | (b) | Magic link removes signup friction. Practitioners "putting off" decisions also "put off" tool adoption — easy auth fights this. |
-| LD-07 (Next.js stack) | (a) | Stack the user has shipped before; no learning tax. Hackathon-speed shipping with a known stack frees time for the engine + transparency UI (the (c) work). |
+| LD-07 (Next.js stack) | (a) | Stack the user has shipped before; no learning tax. A known stack preserves delivery speed while keeping attention on the engine + transparency UI (the (c) work). |
 | LD-08 (runtime split) | (c) | Node runtime is required for the WebSocket pool that RLS depends on. RLS correctness is what makes the trust claim defensible. |
 | LD-09 (PWA installable) | (a) + (b) | "Between patients" implies phone-first usage; offline-tolerant intake keeps the 20-min budget achievable when connectivity is spotty. Removes "I'll do it when I'm at my desk" — the procrastination pattern. |
 
@@ -204,7 +204,7 @@ The traceability spine. Every feature in §5 satisfies ≥1 of these; every test
 
 ## 5. MVP Scope
 
-P0 features ship for Round 1. Each feature: ID + size + needs satisfied + data points touched + verifying test.
+P0 features define the current MVP baseline. Each feature: ID + size + needs satisfied + data points touched + verifying test.
 
 ### P0 — Day-one
 
@@ -225,11 +225,11 @@ P0 features ship for Round 1. Each feature: ID + size + needs satisfied + data p
 
 | ID | Feature | Size | Why "next" |
 |---|---|---|---|
-| **F-07** | PWA installable + IndexedDB intake-state cache + queued submission | M | Phone-first usage between patients drives adoption; deferred from round-1 must-have only because OQ-02 hit Next 16 friction. Hand-rolled SW per OQ-02 fallback is the right path; ship right after core. |
+| **F-07** | PWA installable + IndexedDB intake-state cache + queued submission | M | Phone-first usage between patients drives adoption; deferred from core must-have only because OQ-02 hit Next 16 friction. Hand-rolled SW per OQ-02 fallback is the right path; ship right after core. |
 
-### P0++ — Chat-first + semantic-search wave (round-2 commitments)
+### P0++ — Chat-first + semantic-search wave (post-MVP commitments)
 
-Round-1 (`buildathon-round-1.2`) shipped F-08/F-09/F-10/F-11. Round-2 introduces a corpus-backed chat-first IA so users can ask questions across AI-research literature instead of starting from an empty decision template. Sources, sizing, and tradeoffs are evidence-backed in `docs/research/pipeline-simplification-2026-05-10.md`.
+The initial buildathon branch (`buildathon-round-1.2`) shipped F-08/F-09/F-10/F-11. The current product roadmap introduces a corpus-backed chat-first IA so users can ask questions across AI-research literature instead of starting from an empty decision template. Sources, sizing, and tradeoffs are evidence-backed in `docs/research/pipeline-simplification-2026-05-10.md`.
 
 | ID | Feature | Size | Satisfies | Reads / writes | Test |
 |---|---|---|---|---|---|
@@ -301,7 +301,7 @@ Round-1 (`buildathon-round-1.2`) shipped F-08/F-09/F-10/F-11. Round-2 introduces
 | ID | Feature | Size | Why deferred |
 |---|---|---|---|
 | F-10 | Voice intake (Whisper Large v3 Turbo via Groq) | M | Strong Equity-prompt fit ("phone-first user") but adds 1 day; ship text-first first |
-| F-11 | On-device LLM fallback (WebLLM or Transformers.js) | L | Parallel-explored by background agents; not blocking Round 1 |
+| F-11 | On-device LLM fallback (WebLLM or Transformers.js) | L | Parallel-explored by background agents; not blocking MVP core |
 | F-12 | Decision-template authoring UI (admin) | M | v1 templates hardcoded TS files; user-extensible later |
 | F-13 | Multi-decision threading (linked decisions over weeks) | M | v1 treats every decision as standalone |
 | F-14 | HIPAA posture (BAAs + encryption + audit log) | L | v1 explicitly refuses PHI per ADR-002; v2 enables |
@@ -643,7 +643,7 @@ For each key: status flag should be set after secrets-vault check.
 - **Initialization:** `const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })`
 - **Reasoning extraction:** `reasoning_format: 'parsed'` returns reasoning content separate from final answer
 - **Recommended model:** `openai/gpt-oss-120b` — Production · 131k context · 65k max output · ~500 tokens/sec · ~$0.15/M input, $0.60/M output · supports reasoning
-- **Rate limits:** Free tier rate-limited; pay-as-you-go from day one is fine for hackathon volume
+- **Rate limits:** Free tier rate-limited; pay-as-you-go from day one is fine for early MVP volume
 - **Source:** https://console.groq.com/docs/models · https://console.groq.com/docs/api-reference · retrieved 2026-05-09 · ✅ T1
 
 ## 11. Tailored Security Checklist
@@ -786,8 +786,8 @@ Before Claude Code / Codex starts:
 - [ ] Set `BETTER_AUTH_URL` (dev: `http://localhost:3000`)
 - [ ] If ⏳ on `RESEND_API_KEY` → https://resend.com (verify domain `decisiondoctor.app` if deploying to prod; localhost works without verification for dev)
 - [ ] Set `AUTH_FROM_EMAIL` (e.g. `Decision Doctor <auth@decisiondoctor.app>`)
-- [ ] Buy domain `decisiondoctor.app` (or pick a temp Vercel preview URL for hackathon)
-- [ ] Confirm Groq pricing tier — pay-as-you-go is fine for hackathon volume
+- [ ] Buy domain `decisiondoctor.app` (or pick a temporary Vercel preview URL until production domain is ready)
+- [ ] Confirm Groq pricing tier — pay-as-you-go is fine for early MVP volume
 
 ## 15. ADRs
 
@@ -863,7 +863,7 @@ Captures decisions made during the build. Empty on day 1; appended to as the bui
 | A-07 | Decision intake forms ≤ 7 fields per template | S | Concept card sets ~5 min input target |
 | A-08 | No real-time / streaming UI for v1 | S | Groq's 500 t/s makes ~6s p95 realistic; can add streaming v1.1 |
 | A-09 | Confidence (0–100) computed deterministically from TOPSIS top-1/top-2 margin | M | Open: exact formula. LLM-self-reported confidence is unreliable; derive from method_trace |
-| A-10 | Demo data + real wife data both flow through same code path; no demo mode | XS | One code path is simpler for hackathon |
+| A-10 | Demo data + real wife data both flow through same code path; no demo mode | XS | One code path is simpler for MVP validation |
 | A-11 | All v1 workloadReducers ship at `automationLevel: "user_executes"` | S | V1 is text-only artifacts; ai_assisted and fully_automated are v2 connectors |
 | A-12 | Stage 5 (final ranking) generates ≥3 workloadReducers per recommendation | S | Bake into Stage 5 prompt template; verify in T-03 |
 
@@ -906,7 +906,7 @@ Captures decisions made during the build. Empty on day 1; appended to as the bui
 
 **Total: ~1.1M tokens · ~18 hr wall-clock**
 
-3-day hackathon = ~24 working hours. ~6 hr buffer for demo polish + integration debugging. After build, audit actuals and PR-back any rubric refinements.
+Historical sizing: the original 3-day build window assumed ~24 working hours with ~6 hr buffer for demo polish + integration debugging. Current planning should treat that as an archival estimate only; productization work should scope by feature readiness, validation quality, and deployment readiness.
 
 ⚠️ **Scope warning:** This is at the upper edge of one-shot feasibility. If F-03 over-runs, drop F-07 to v1.1.
 
@@ -920,7 +920,7 @@ Each must satisfy build-loop's blocking-and-novel gate: (a) changing the answer 
 | OQ-02 | Confirm `@ducanh2912/next-pwa` Next.js 16 compatibility | T-07 | `npm install` + smoke test on day 1; fallback = hand-rolled service worker (~30 min XS) |
 | OQ-03 | Exact confidence-score formula (TOPSIS top-1/top-2 margin or alternative) | T-03, T-04 | 30-min eval comparing 3 formulas against 3 sample decisions |
 | OQ-04 | Should the default confidence threshold for "high confidence" green badge be ≥75 or ≥80? | T-04 | Spot-check with 3–5 sample recommendations; tune based on UX feel |
-| OQ-05 | Custom domain decision before May 12 | none directly | User decision |
+| OQ-05 | Custom domain decision | none directly | User decision |
 | OQ-06 | Groq BAA path for v2 (if PHI ever accepted) | none in v1 (gates F-14, not P0) | Vendor inquiry to Groq enterprise sales |
 
 OQ-05 and OQ-06 don't gate v1; tracked here for traceability.
@@ -1022,7 +1022,7 @@ pnpm add groq-sdk
 pnpm add @ducanh2912/next-pwa
 
 # 6. Add rate limiter (for security checklist P1)
-pnpm add @upstash/ratelimit @upstash/redis  # or roll a simple in-memory limiter for hackathon
+pnpm add @upstash/ratelimit @upstash/redis  # in-memory fallback is local-only
 
 # 7. Add observability (optional)
 pnpm add pino @sentry/nextjs
@@ -1257,8 +1257,8 @@ Only after all 7 are green: start on F-01.
 Paste-ready for Claude Code or Codex. Self-contained.
 
 ```
-You are building Decision Doctor for the MLT20 Equity & Access to AI Buildathon.
-Round 1 due 2026-05-12. Round 1 rubric weights: Problem & Audience Fit 30%, Impact 25%, Demo & Storytelling 25%, Prototype Quality 10%, Sustainability 10%.
+You are building Decision Doctor as a post-buildathon productized MVP.
+This PRD no longer targets the MLT20 Buildathon deadline or rubric; optimize for user value, validation quality, and production readiness.
 
 ## Goal
 A transparent decision engine for solo healthcare practitioners. ~5-min intake → one recommendation per high-stakes decision, with the math made visible. Each recommendation ships with paste-ready prompts, playbooks, and MCP-tool hooks that turn the decision into action.

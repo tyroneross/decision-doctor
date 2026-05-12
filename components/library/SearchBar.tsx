@@ -5,6 +5,7 @@
 
 import * as React from "react";
 import { PillSearchBar } from "@/components/ui/PillSearchBar";
+import { usePredictiveSuggestions } from "@/components/search/usePredictiveSuggestions";
 
 export interface SearchBarProps {
   value?: string;
@@ -26,11 +27,16 @@ export function SearchBar({
   disabled,
   autoFocus,
 }: SearchBarProps) {
+  const { suggestions, loading } = usePredictiveSuggestions(value ?? "");
+
   return (
     <PillSearchBar
       value={value}
       onChange={onChange}
       onSubmit={onSubmit}
+      suggestions={suggestions}
+      suggestionsLoading={loading}
+      onSuggestionSelect={(suggestion) => onSubmit(suggestion.title)}
       placeholder="search the library + corpus…"
       multiline
       maxRows={4}

@@ -7,6 +7,7 @@
 
 import * as React from "react";
 import { PillSearchBar } from "@/components/ui/PillSearchBar";
+import { usePredictiveSuggestions } from "@/components/search/usePredictiveSuggestions";
 
 export interface AskComposerProps {
   onSubmit: (question: string) => void;
@@ -16,6 +17,7 @@ export interface AskComposerProps {
 
 export function AskComposer({ onSubmit, disabled, autoFocus }: AskComposerProps) {
   const [value, setValue] = React.useState("");
+  const { suggestions, loading } = usePredictiveSuggestions(value);
 
   function handleSubmit(q: string) {
     if (!q.trim()) return;
@@ -32,6 +34,10 @@ export function AskComposer({ onSubmit, disabled, autoFocus }: AskComposerProps)
         placeholder="Ask about AI tools, adoption, or how to start…"
         multiline
         maxRows={8}
+        suggestions={suggestions}
+        suggestionsLoading={loading}
+        suggestionsPlacement="above"
+        onSuggestionSelect={(suggestion) => handleSubmit(suggestion.title)}
         disabled={disabled}
         autoFocus={autoFocus}
         ariaLabel="Ask a question about AI adoption"

@@ -309,15 +309,15 @@ export function Chat({ seed }: { seed?: string } = {}) {
           <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-mute">
             Tell me what's eating your time
           </p>
-          <h1 className="mt-2 text-[26px] font-semibold leading-[1.1] tracking-tight text-text sm:text-[32px]">
+          <h1 className="mt-2 text-[22px] font-semibold leading-[1.2] tracking-tight text-text sm:text-[24px]">
             I'll rank what AI can take off your plate, and build the skill to do it.
           </h1>
-          <p className="mt-3 max-w-xl text-[15px] leading-snug text-mute sm:text-[16px]">
+          <p className="mt-3 max-w-xl text-[14px] leading-[1.5] text-mute sm:text-[16px]">
             Five-minute conversation. You get a ranked list of capacity drains, an
             AI-feasibility score for each, and a paste-ready skill or playbook for
             the top one, so the time comes back this week, not "someday."
           </p>
-          <p className="mt-3 text-[12.5px] text-mute">
+          <p className="mt-3 text-[12px] text-mute">
             Already know the shape of it?{" "}
             <Link
               href="/app/history/new"

@@ -3,6 +3,15 @@
 import * as React from "react";
 import { twMerge } from "tailwind-merge";
 import { Search, ArrowUp } from "lucide-react";
+import { type BodyKind, bodyKindBadgeLabel } from "@/lib/corpus/body-kind";
+
+export interface PillSearchSuggestion {
+  id: string;
+  title: string;
+  kind: string;
+  source?: string | null;
+  bodyKind?: BodyKind | null;
+}
 
 /**
  * PillSearchBar — UI Guidelines v0.1.
@@ -41,6 +50,13 @@ export interface PillSearchBarProps {
   multiline?: boolean;
   /** Max visible rows in multiline mode before content scrolls. Default 8. */
   maxRows?: number;
+  /** Predictive suggestions shown as the user types. */
+  suggestions?: PillSearchSuggestion[];
+  /** Called when the user picks a predictive suggestion. */
+  onSuggestionSelect?: (suggestion: PillSearchSuggestion) => void;
+  /** Place suggestions above sticky bottom composers. Default below. */
+  suggestionsPlacement?: "above" | "below";
+  suggestionsLoading?: boolean;
 }
 
 export function PillSearchBar({
@@ -57,6 +73,10 @@ export function PillSearchBar({
   autoFocus,
   multiline = false,
   maxRows = 8,
+  suggestions = [],
+  onSuggestionSelect,
+  suggestionsPlacement = "below",
+  suggestionsLoading = false,
 }: PillSearchBarProps) {
   const [internal, setInternal] = React.useState("");
   const isControlled = value !== undefined;
@@ -90,96 +110,160 @@ export function PillSearchBar({
     el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
   }, [v, multiline, maxRows]);
 
+  const showSuggestions = suggestions.length > 0 || suggestionsLoading;
+
   return (
-    <form
-      role="search"
-      onSubmit={(e) => {
-        e.preventDefault();
-        submit();
-      }}
-      className={twMerge(
-        "flex w-full bg-paper border-[1.5px] border-ink shadow-card " +
-          // pill shape works for single-line; for multi-line, the rounded
-          // corners still read as pill at the top and a soft tray at the bottom.
-          "rounded-[28px] pl-4 pr-1.5 " +
-          (multiline ? "items-end gap-2 py-2" : "items-center gap-2 py-1.5"),
-        disabled && "opacity-60",
-        className
-      )}
-    >
-      {leftIcon && (
-        <Search
-          size={18}
-          className={twMerge(
-            "text-mute shrink-0",
-            // In multiline mode anchor the icon to the first line so it
-            // doesn't drift up as the textarea grows.
-            multiline && "mb-[5px]"
-          )}
-          aria-hidden
-        />
-      )}
+    <div className="relative w-full">
+      <form
+        role="search"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+        className={twMerge(
+          "flex w-full bg-paper border-[1.5px] border-ink shadow-card " +
+            // pill shape works for single-line; for multi-line, the rounded
+            // corners still read as pill at the top and a soft tray at the bottom.
+            "rounded-[28px] pl-4 pr-1.5 " +
+            (multiline ? "items-end gap-2 py-2" : "items-center gap-2 py-1.5"),
+          disabled && "opacity-60",
+          className
+        )}
+      >
+        {leftIcon && (
+          <Search
+            size={18}
+            className={twMerge(
+              "text-mute shrink-0",
+              // In multiline mode anchor the icon to the first line so it
+              // doesn't drift up as the textarea grows.
+              multiline && "mb-[5px]"
+            )}
+            aria-hidden
+          />
+        )}
 
-      {multiline ? (
-        <textarea
-          ref={textareaRef}
-          rows={1}
-          aria-label={ariaLabel}
-          placeholder={placeholder}
-          value={v}
-          onChange={(e) => set(e.target.value)}
-          onKeyDown={(e) => {
-            // Enter submits; Shift+Enter (or Cmd/Ctrl+Enter) adds a newline.
-            if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
-              e.preventDefault();
-              submit();
+        {multiline ? (
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            aria-label={ariaLabel}
+            placeholder={placeholder}
+            value={v}
+            onChange={(e) => set(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter submits; Shift+Enter (or Cmd/Ctrl+Enter) adds a newline.
+              if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            disabled={disabled}
+            autoFocus={autoFocus}
+            className={
+              "flex-1 min-w-0 resize-none bg-transparent border-0 outline-none " +
+              "text-[15px] leading-[22px] text-text placeholder:text-mute " +
+              "focus:ring-0 py-[5px]"
             }
-          }}
-          disabled={disabled}
-          autoFocus={autoFocus}
-          className={
-            "flex-1 min-w-0 resize-none bg-transparent border-0 outline-none " +
-            "text-[15px] leading-[22px] text-text placeholder:text-mute " +
-            "focus:ring-0 py-[5px]"
-          }
-        />
-      ) : (
-        <input
-          type="text"
-          aria-label={ariaLabel}
-          placeholder={placeholder}
-          value={v}
-          onChange={(e) => set(e.target.value)}
-          disabled={disabled}
-          autoFocus={autoFocus}
-          className={
-            "flex-1 min-w-0 bg-transparent border-0 outline-none " +
-            "text-[15px] text-text placeholder:text-mute " +
-            "focus:ring-0"
-          }
-        />
-      )}
+          />
+        ) : (
+          <input
+            type="text"
+            aria-label={ariaLabel}
+            placeholder={placeholder}
+            value={v}
+            onChange={(e) => set(e.target.value)}
+            disabled={disabled}
+            autoFocus={autoFocus}
+            className={
+              "flex-1 min-w-0 bg-transparent border-0 outline-none " +
+              "text-[15px] text-text placeholder:text-mute " +
+              "focus:ring-0"
+            }
+          />
+        )}
 
-      {sendButton && (
-        <button
-          type="submit"
-          aria-label="send"
-          disabled={!canSubmit}
+        {sendButton && (
+          <button
+            type="submit"
+            aria-label="send"
+            disabled={!canSubmit}
+            className={twMerge(
+              "shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-full " +
+                "transition-[background-color,color] duration-150 " +
+                (canSubmit
+                  ? "bg-ink text-paper hover:bg-ink/90"
+                  : "bg-line text-mute cursor-not-allowed") +
+                " focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20",
+              // In multiline mode keep the send button pinned to the bottom
+              // so it sits at the end of the textarea, not floating beside line 1.
+              multiline && "self-end"
+            )}
+          >
+            <ArrowUp size={18} />
+          </button>
+        )}
+      </form>
+
+      {showSuggestions && (
+        <div
+          role="listbox"
           className={twMerge(
-            "shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-full " +
-              "transition-[background-color,color] duration-150 " +
-              (canSubmit
-                ? "bg-ink text-paper hover:bg-ink/90"
-                : "bg-line text-mute cursor-not-allowed") +
-              " focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20",
-            // In multiline mode keep the send button pinned to the bottom
-            // so it sits at the end of the textarea, not floating beside line 1.
-            multiline && "self-end"
+            "absolute left-0 right-0 z-40 max-h-[260px] overflow-y-auto " +
+              "rounded-[12px] border border-line bg-paper shadow-card p-1",
+            suggestionsPlacement === "above" ? "bottom-full mb-2" : "top-full mt-2"
           )}
         >
-          <ArrowUp size={18} />
-        </button>
+          {suggestionsLoading && suggestions.length === 0 ? (
+            <div className="px-3 py-2 text-[12px] text-mute">Searching...</div>
+          ) : (
+            suggestions.map((suggestion) => {
+              const badge = bodyKindBadgeLabel(suggestion.bodyKind);
+              return (
+                <button
+                  key={`${suggestion.kind}:${suggestion.id}`}
+                  type="button"
+                  role="option"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => onSuggestionSelect?.(suggestion)}
+                  className={
+                    "block w-full rounded-[8px] px-3 py-2 text-left " +
+                    "hover:bg-line/50 focus:bg-line/50 focus:outline-none"
+                  }
+                >
+                  <span className="block truncate text-[13px] font-medium text-ink">
+                    {suggestion.title}
+                  </span>
+                  <span className="mt-0.5 flex flex-wrap gap-1.5 text-[11px] text-mute">
+                    <span>{labelForSuggestionKind(suggestion.kind)}</span>
+                    {suggestion.source && <span>{suggestion.source}</span>}
+                    {badge && <span>{badge}</span>}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
       )}
-    </form>
+    </div>
   );
+}
+
+function labelForSuggestionKind(kind: string): string {
+  switch (kind) {
+    case "corpus":
+      return "Corpus";
+    case "use_case":
+      return "Use case";
+    case "prompt":
+      return "Prompt";
+    case "skill":
+      return "Skill";
+    case "plugin":
+      return "Plugin";
+    case "kb_article":
+      return "Learn";
+    default:
+      return kind;
+  }
 }
