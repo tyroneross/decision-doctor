@@ -72,7 +72,7 @@ const LIBRARY_STUBS: Record<PainPathId, CandidateTask[]> = {
         "Use a structured checklist to track, score, and prioritize referral sources by volume, recency, and specialty fit.",
       aiCapability: "classification",
       dataNeeded: "List of referral sources and approximate volumes.",
-      guardrails: "Business data only — no patient-level PHI in tracking.",
+      guardrails: "Business data only. No patient-level PHI in tracking.",
       startingLevel: "checklist",
       source: "library",
     },
@@ -130,7 +130,7 @@ const LIBRARY_STUBS: Record<PainPathId, CandidateTask[]> = {
       taskDescription:
         "Use a paste-ready AI prompt to categorize and draft responses to common administrative messages.",
       aiCapability: "drafting",
-      dataNeeded: "Sample message categories — no PHI.",
+      dataNeeded: "Sample message categories. No PHI.",
       guardrails: "Remove patient names, diagnoses, and any clinical content before using the prompt.",
       startingLevel: "prompt",
       source: "library",
@@ -200,7 +200,7 @@ const LIBRARY_STUBS: Record<PainPathId, CandidateTask[]> = {
       taskDescription:
         "Use a paste-ready AI prompt to draft personalized post-visit follow-up emails.",
       aiCapability: "drafting",
-      dataNeeded: "Visit type and general next steps — no PHI in the prompt.",
+      dataNeeded: "Visit type and general next steps. No PHI in the prompt.",
       guardrails: "Remove all patient identifiers. Clinician reviews before sending.",
       startingLevel: "prompt",
       source: "library",
@@ -211,7 +211,7 @@ const LIBRARY_STUBS: Record<PainPathId, CandidateTask[]> = {
       taskDescription:
         "Create a structured checklist categorizing patients by follow-up type, urgency, and due date.",
       aiCapability: "classification",
-      dataNeeded: "Aggregate follow-up categories — patient names stay in EHR, not in AI tools.",
+      dataNeeded: "Aggregate follow-up categories. Patient names stay in EHR, not in AI tools.",
       guardrails: "No PHI in the checklist template. Patient-specific data stays in EHR.",
       startingLevel: "checklist",
       source: "library",
@@ -222,7 +222,7 @@ const LIBRARY_STUBS: Record<PainPathId, CandidateTask[]> = {
       taskDescription:
         "Use a structured tracking template to flag and prioritize unresolved care actions and callbacks.",
       aiCapability: "monitoring",
-      dataNeeded: "Aggregate task categories — patient-specific data in EHR only.",
+      dataNeeded: "Aggregate task categories. Patient-specific data in EHR only.",
       guardrails: "No PHI in the tracker. Clinical escalations require practitioner judgment.",
       startingLevel: "checklist",
       source: "library",
@@ -279,7 +279,7 @@ Each candidate task should be:
 - Healthcare-safe: no PHI in prompts, outputs require clinician review for clinical content.
 - Achievable by a solo practitioner without staff, EHR vendor contracts, or significant capital.
 
-OUTPUT (JSON object only — no prose, no fences):
+OUTPUT (JSON object only. No prose, no fences):
 {
   "tasks": [
     {

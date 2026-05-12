@@ -223,7 +223,7 @@ export function ScaffoldViewer({
             <p className="max-w-sm text-[13px] text-mute">
               We don't have a paste-ready scaffold for this drain category
               yet. The skill description and steps are still in the
-              recommendation above — copy that to get started.
+              recommendation above. Copy that to get started.
             </p>
           </div>
         )}

@@ -9,7 +9,7 @@
 //   • Computed weights + CR come from runStage1bAhp() outside this component.
 //
 // Inconsistency UX: when CR > 0.10, surface the worstPair as inline ink text
-// ("Conflicts with your other answers — revise?") not a colored background pill.
+// ("Conflicts with your other answers. Revise?") not a colored background pill.
 //
 // E4 — Interaction-state matrix (`resolveAhpPairwiseState()` in
 // lib/component-state.ts is the test-covered resolver):
@@ -129,7 +129,7 @@ export function AhpPairwise({
     try {
       parsed = JSON.parse(rawDraft);
     } catch {
-      setRawError("Couldn't parse — make sure it's valid JSON.");
+      setRawError("Couldn't parse. Make sure it's valid JSON.");
       return;
     }
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
@@ -242,7 +242,7 @@ export function AhpPairwise({
           className="rounded-xl border border-ink bg-paper px-4 py-3 text-[13px] font-medium text-ink"
           role="status"
         >
-          ✓ Weights look consistent — you're done. Move on to compute results.
+          ✓ Weights look consistent. You're done. Move on to compute results.
         </div>
       )}
 
@@ -254,7 +254,7 @@ export function AhpPairwise({
           </h2>
           <p className="mt-1 max-w-prose text-[13px] text-mute">
             For each pair below, choose which criterion matters more to you and
-            by how much. The math turns these into weights — and flags any
+            by how much. The math turns these into weights, and flags any
             answers that conflict.
           </p>
         </div>
@@ -302,7 +302,7 @@ export function AhpPairwise({
                 </p>
                 {isWorst && (
                   <span className="text-[11px] font-semibold text-ink">
-                    Conflicts with your other answers — revise?
+                    Conflicts with your other answers. Revise?
                   </span>
                 )}
               </div>
@@ -502,7 +502,7 @@ function ScaleChip({
       onClick={onClick}
       aria-pressed={selected}
       aria-label={`${label} (${hint}, value ${value.toFixed(2)})`}
-      title={`${label} — ${hint}`}
+      title={`${label}: ${hint}`}
       className={`inline-flex h-10 min-w-[44px] items-center justify-center rounded-full border px-3 text-[11.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20 ${
         selected
           ? "border-ink bg-ink text-paper"

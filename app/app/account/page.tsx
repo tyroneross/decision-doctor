@@ -29,7 +29,7 @@ export default function AccountPage() {
       </Card>
 
       <p className="text-[12px] text-mute">
-        Theme F is the default. A and B preserve the layout — only the
+        Theme F is the default. A and B preserve the layout. Only the
         accent color and surface tones change.
       </p>
     </main>

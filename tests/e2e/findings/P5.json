@@ -9,24 +9,24 @@
     "recommendation": "outsource scheduling (virtual contractor) OR DIY-with-tooling; full hire wrong (winding down + low delegation comfort)",
     "confidenceRange": "55-75"
   },
-  "latencyMs": 6403,
+  "latencyMs": 6164,
   "error": null,
   "output": {
     "recommendation": {
       "option": "Hire a part-time virtual assistant (10–15 hrs/wk)",
       "confidence": 52,
-      "rationale": "A virtual assistant fits your priority to protect clinical time while staying under a $1,200 monthly budget and keeping risk low, offering flexible, low‑overhead scheduling support."
+      "rationale": "A part‑time virtual assistant gives you the most clinical‑time relief while staying inside your $1,200/month budget and limiting risk, which aligns with your need to protect time and keep costs low."
     },
     "alternatives": [
       {
-        "option": "Hire a part-time onsite admin (20 hrs/wk)",
+        "option": "Stay DIY with better tooling",
         "eliminatedAtStage": 4,
-        "reason": "Lower TOPSIS closeness (0.74) than the recommendation."
+        "reason": "Lower TOPSIS closeness (0.57) than the recommendation."
       },
       {
         "option": "Outsource billing to a service",
         "eliminatedAtStage": 4,
-        "reason": "Lower TOPSIS closeness (0.62) than the recommendation."
+        "reason": "Lower TOPSIS closeness (0.50) than the recommendation."
       }
     ],
     "robustAlternative": {
@@ -39,18 +39,18 @@
         "name": "values",
         "output": {
           "values": [
-            "clinical time",
-            "budget limits",
-            "low risk"
+            "budget constraints",
+            "risk aversion",
+            "clinical time"
           ],
           "adjustedWeights": {
-            "timeRecovered": 0.4411764705882352,
-            "cost": 0.18907563025210086,
-            "quality": 0.13445378151260506,
-            "risk": 0.23529411764705882
+            "timeRecovered": 0.24137931034482754,
+            "cost": 0.3448275862068965,
+            "quality": 0.15517241379310345,
+            "risk": 0.25862068965517243
           },
-          "rationale": "User wants to reclaim clinical hours, has a modest budget and low delegation comfort, and expects a shrinking practice, so time recovery and low‑risk options outweigh cost and quality.",
-          "reasoning": "We need to produce JSON with values (1-3 short statements) and weightAdjustments mapping criterion ids to numbers between 0.5 and 2.0, and rationale sentence.\n\nWe need to analyze intake to see which criteria matter most.\n\nTemplate criteria: timeRecovered, cost, quality, risk.\n\nIntake details:\n- weeklyAdminHours: 6 (admin hours per week)\n- monthlyBudgetUSD: 1200\n- monthsSavingsRunway: 24 (they have 24 months of savings runway)\n- growthExpectation: \"shrinking\"\n- adminTaskMix: \"scheduling-only\"\n- delegationComfort: \"low\"\n- horizonMonths: 60 (5-year horizon)\n\nInterpretation: Solo practitioner, low delegation comfort, admin tasks are just scheduling, wants to recover clinical hours. Budget is 1200 per month, runway 24 months (good cash). Growth expectation shrinking, so likely not expanding; may want to maintain stability, low risk. Horizon long (60 months) but growth shrinking.\n\nThus weight adjustments:\n- timeRecovered likely high importance because they want to reclaim clinical hours (6 hours/week). So increase weight maybe 1.5.\n- cost: they have budget 1200, runway 24 months, but cost efficiency still important but maybe moderate. Could keep default or slight increase? Since budget is okay, maybe cost less critical than timeRecovered. Could set 0.9.\n- quality: admin tasks are scheduling-only, low complexity, quality maybe moderate but not huge. Could keep default or slight decrease 0.8.\n- risk: low delegation comfort, shrinking growth, want low regret. So risk is important, increase weight maybe 1.4.\n\nBut we must ensure weightAdjustments values between 0.5 and 2.0.\n\nProvide values: maybe \"clinical time\", \"budget limits\", \"low risk\". Up to 3.\n\nLet's craft:\n\nvalues: [\"clinical time\",\"budget limits\",\"low risk\"]\n\nWeight adjustments:\n- timeRecovered: 1.5\n- cost: 0.9\n- quality: 0.8\n- risk: 1.4\n\nRationale: User wants to reclaim clinical hours, has modest budget and low comfort delegating, and expects shrinking practice, so prioritize time recovery and low‑risk options over cost and quality.\n\nMake JSON compact."
+          "rationale": "User has a tight $1.2k/month budget, shrinking practice and low comfort delegating, so cost and low‑regret matter most, while clinical time recovery is secondary.",
+          "reasoning": "We need to produce JSON with values (1-3 short statements), weightAdjustments mapping criterion ids to numbers between 0.5 and 2.0, and rationale sentence.\n\nWe must analyze intake to see which criteria matter most.\n\nTemplate criteria: timeRecovered, cost, quality, risk.\n\nIntake: weeklyAdminHours 6 (so admin tasks 6 hours per week). monthlyBudgetUSD 1200. monthsSavingsRunway 24 (i.e., runway). growthExpectation \"shrinking\". adminTaskMix \"scheduling-only\". delegationComfort \"low\". horizonMonths 60 (5 years).\n\nInterpretation: Practitioner has low delegation comfort, shrinking growth expectation, limited budget, wants to recover clinical hours but maybe cautious about risk. Since growth is shrinking, they may prioritize cost efficiency and risk (low-regret) over quality? But quality still important. They have low delegation comfort, meaning they may not want to rely heavily on admin hire; risk of misfit high. So risk weight higher, cost higher, timeRecovered maybe moderate but they have 6 admin hours weekly (approx 24 per month). They could recover those hours if hire works. But given low delegation comfort, they may not trust output quality; risk and cost dominate.\n\nThus adjust weights: increase cost (e.g., 1.6), increase risk (1.5), maybe decrease timeRecovered (0.8) and quality (0.9). Ensure numbers within 0.5-2.0.\n\nValues: short statements: \"budget constraints\", \"risk aversion\", \"clinical time\". Up to 3.\n\nReturn JSON.\n\nCheck JSON format: compact.\n\nLet's craft:\n\n{\n \"values\":[\"budget constraints\",\"risk aversion\",\"clinical time\"],\n \"weightAdjustments\":{\"cost\":1.6,\"risk\":1.5,\"timeRecovered\":0.8,\"quality\":0.9},\n \"rationale\":\"User has a tight $1.2k/month budget, shrinking practice and low comfort delegating, so cost and low‑regret matter most, while time recovery is secondary.\"\n}\n\nMake sure numbers are within range. Yes.\n\nReturn only JSON."
         }
       },
       {
@@ -73,10 +73,10 @@
         "name": "weights",
         "output": {
           "weights": {
-            "timeRecovered": 0.4411764705882352,
-            "cost": 0.18907563025210086,
-            "quality": 0.13445378151260506,
-            "risk": 0.23529411764705882
+            "timeRecovered": 0.24137931034482754,
+            "cost": 0.3448275862068965,
+            "quality": 0.15517241379310345,
+            "risk": 0.25862068965517243
           },
           "notes": "Weights normalized across 4 criteria."
         }
@@ -97,121 +97,121 @@
             {
               "aId": "hire-pt-virtual-assistant",
               "bId": "hire-billing-service",
-              "concordance": 0.6302521008403361,
+              "concordance": 0.5862068965517241,
               "discordance": 0.19999999999999996
             },
             {
               "aId": "hire-pt-virtual-assistant",
               "bId": "hire-pt-onsite",
-              "concordance": 0.4243697478991597,
+              "concordance": 0.603448275862069,
               "discordance": 0.15000000000000002
             },
             {
               "aId": "hire-pt-virtual-assistant",
               "bId": "diy-better-tooling",
-              "concordance": 0.5756302521008403,
+              "concordance": 0.396551724137931,
               "discordance": 0.19999999999999996
             },
             {
               "aId": "hire-pt-virtual-assistant",
               "bId": "wait-and-revisit",
-              "concordance": 0.5756302521008403,
+              "concordance": 0.396551724137931,
               "discordance": 0.29999999999999993
             },
             {
               "aId": "hire-billing-service",
               "bId": "hire-pt-virtual-assistant",
-              "concordance": 0.3697478991596639,
+              "concordance": 0.4137931034482759,
               "discordance": 0.15000000000000002
             },
             {
               "aId": "hire-billing-service",
               "bId": "hire-pt-onsite",
-              "concordance": 0.5588235294117647,
+              "concordance": 0.7586206896551724,
               "discordance": 0.25
             },
             {
               "aId": "hire-billing-service",
               "bId": "diy-better-tooling",
-              "concordance": 0.5756302521008403,
+              "concordance": 0.396551724137931,
               "discordance": 0.29999999999999993
             },
             {
               "aId": "hire-billing-service",
               "bId": "wait-and-revisit",
-              "concordance": 0.5756302521008403,
+              "concordance": 0.396551724137931,
               "discordance": 0.3999999999999999
             },
             {
               "aId": "hire-pt-onsite",
               "bId": "hire-pt-virtual-assistant",
-              "concordance": 0.5756302521008403,
+              "concordance": 0.396551724137931,
               "discordance": 0.25
             },
             {
               "aId": "hire-pt-onsite",
               "bId": "hire-billing-service",
-              "concordance": 0.4411764705882352,
+              "concordance": 0.24137931034482754,
               "discordance": 0.25
             },
             {
               "aId": "hire-pt-onsite",
               "bId": "diy-better-tooling",
-              "concordance": 0.5756302521008403,
+              "concordance": 0.396551724137931,
               "discordance": 0.44999999999999996
             },
             {
               "aId": "hire-pt-onsite",
               "bId": "wait-and-revisit",
-              "concordance": 0.5756302521008403,
+              "concordance": 0.396551724137931,
               "discordance": 0.5499999999999999
             },
             {
               "aId": "diy-better-tooling",
               "bId": "hire-pt-virtual-assistant",
-              "concordance": 0.4243697478991597,
+              "concordance": 0.603448275862069,
               "discordance": 0.35
             },
             {
               "aId": "diy-better-tooling",
               "bId": "hire-billing-service",
-              "concordance": 0.4243697478991597,
+              "concordance": 0.603448275862069,
               "discordance": 0.25
             },
             {
               "aId": "diy-better-tooling",
               "bId": "hire-pt-onsite",
-              "concordance": 0.4243697478991597,
+              "concordance": 0.603448275862069,
               "discordance": 0.44999999999999996
             },
             {
               "aId": "diy-better-tooling",
               "bId": "wait-and-revisit",
-              "concordance": 0.5756302521008403,
+              "concordance": 0.396551724137931,
               "discordance": 0.09999999999999998
             },
             {
               "aId": "wait-and-revisit",
               "bId": "hire-pt-virtual-assistant",
-              "concordance": 0.4243697478991597,
+              "concordance": 0.603448275862069,
               "discordance": 0.6
             },
             {
               "aId": "wait-and-revisit",
               "bId": "hire-billing-service",
-              "concordance": 0.4243697478991597,
+              "concordance": 0.603448275862069,
               "discordance": 0.44999999999999996
             },
             {
               "aId": "wait-and-revisit",
               "bId": "hire-pt-onsite",
-              "concordance": 0.4243697478991597,
+              "concordance": 0.603448275862069,
               "discordance": 0.7
             },
             {
               "aId": "wait-and-revisit",
               "bId": "diy-better-tooling",
-              "concordance": 0.4243697478991597,
+              "concordance": 0.603448275862069,
               "discordance": 0.25
             }
           ]
@@ -225,32 +225,32 @@
             {
               "id": "hire-pt-virtual-assistant",
               "label": "Hire a part-time virtual assistant (10–15 hrs/wk)",
-              "closeness": 0.774
-            },
-            {
-              "id": "hire-pt-onsite",
-              "label": "Hire a part-time onsite admin (20 hrs/wk)",
-              "closeness": 0.7387
-            },
-            {
-              "id": "hire-billing-service",
-              "label": "Outsource billing to a service",
-              "closeness": 0.6185
+              "closeness": 0.6162
             },
             {
               "id": "diy-better-tooling",
               "label": "Stay DIY with better tooling",
-              "closeness": 0.4162
+              "closeness": 0.573
+            },
+            {
+              "id": "hire-billing-service",
+              "label": "Outsource billing to a service",
+              "closeness": 0.5046
             },
             {
               "id": "wait-and-revisit",
               "label": "Defer for 60 days; revisit with more data",
-              "closeness": 0.2606
+              "closeness": 0.5018
+            },
+            {
+              "id": "hire-pt-onsite",
+              "label": "Hire a part-time onsite admin (20 hrs/wk)",
+              "closeness": 0.4956
             }
           ],
           "confidence": 52,
           "robustCandidateId": "hire-pt-virtual-assistant",
-          "reasoning": "We need to produce JSON with rationale and three workloadReducers. Chosen option: hire a part-time virtual assistant (10-15 hrs/wk). Values: clinical time, budget limits, low risk. Confidence 52 (moderate). Need rationale 1-2 sentences referencing values.\n\nWorkload reducers: need 3, each different type (prompt, playbook, skill). All automationLevel user_executes. At least one must be AI-driven workflow to reclaim clinical time non-clinical work. Likely a prompt that drafts patient communications (e.g., appointment reminders, rescheduling). Must embed user's intake context: \"I run a [specialty] practice...\" but we don't have specialty. We have weeklyAdminHours 6, monthlyBudgetUSD 1200, etc. Should embed context: \"I run a practice with 6 admin hours/week, budget $1200/month, and lose ~X hours to scheduling.\" Provide prompt that drafts communications. End with clear output spec.\n\nSecond reducer could be a playbook for onboarding virtual assistant, covering steps: define tasks, set up communication channel, create SOPs, schedule weekly check-ins. Type playbook.\n\nThird reducer a skill: maybe a \"virtual-assistant-scheduling-sync\" skill name. Provide skillName. Type skill. coverage maybe task_setup. permission tier T1.\n\nAll must have automationLevel user_executes.\n\nNow produce JSON compact.\n\nLet's craft:\n\nrationale: \"A virtual assistant matches your need to protect clinical time while staying within a $1,200 monthly budget and limiting risk, since it offers flexible, low‑overhead scheduling support.\"\n\nNow reducers:\n\n1. type prompt, title \"Draft patient reschedule messages\", description \"Generate ready‑to‑send notes so you don’t write each from scratch\", artifact.promptText: include context and ask for output.\n\nPrompt text: \n\"I run a solo practice that currently spends about 6 admin hours per week on scheduling and lose roughly 2–3 clinical hours to coordination. I have a $1,200/month budget and am hiring a part‑time virtual assistant (10‑15 hrs/week) to handle scheduling and patient communications. Draft three concise email templates: (1) appointment confirmation, (2) cancellation with re‑booking link, (3) reminder for missing info. Each template should be under 150 words and include placeholders for patient name, date, and provider.\"\n\nEnd with output spec: \"Return the three templates separated by headings.\"\n\n2. type playbook, title \"Onboard virtual assistant\", description \"Step‑by‑step guide to set up the assistant and hand off tasks\", artifact.playbookSteps: list 4 steps.\n\nSteps: \n- Define core scheduling tasks and expected response times.\n- Create shared calendar and communication channel (e.g., Google Calendar + Slack).\n- Provide SOP document with templates and escalation rules.\n- Schedule a weekly 15‑minute review call for the first month.\n\nCoverage: task_setup? Might be partial_task? It's onboarding, so task_setup. Use \"task_setup\". permission_tier T1? It's a playbook, no external tool, so T0? Playbook is just instructions, so T0.\n\n3. type skill, title \"Weekly no‑show pattern detector\", description \"Run a simple script that flags patients who missed appointments to focus outreach\", artifact.skillName: \"no-show-pattern-detector\". coverage partial_task? It analyzes data, not full task. Use partial_task. permission_tier T1 (skill installed locally).\n\nNow ensure each reducer has automationLevel \"user_executes\". Provide coverage accordingly.\n\nNow produce JSON compact.\n\n"
+          "reasoning": "We need to produce JSON with rationale and 3 workloadReducers. Chosen option: Hire a part-time virtual assistant (10–15 hrs/wk). Values: budget constraints, risk aversion, clinical time. Confidence 52 (moderate). Need rationale 1-2 sentences referencing values, explaining why this option ranked first.\n\nWorkload reducers: 3 items, each different type: prompt, playbook, skill.\n\nOne must be AI-driven workflow to reclaim clinical time. Could be a prompt that drafts patient communications (cancellations, rebooking) to save time. Must embed user's intake context: \"I run a [specialty] practice with [X] visits/week and lose ~[Y] hours to [pain-point]\". We have weeklyAdminHours=6, monthlyBudgetUSD=1200, adminTaskMix=\"scheduling-only\", delegationComfort low, etc. We need to embed context. Provide output spec.\n\nSecond reducer could be a playbook for onboarding the virtual assistant: steps to set up tasks, communication, security. Type playbook.\n\nThird reducer could be a skill: maybe a \"no-show-pattern-detector\" skill. Must be T1. Provide skillName.\n\nAll automationLevel user_executes. coverage: maybe full_task for prompt (drafting communications), partial_task for playbook (setup), task_setup for skill? Actually skill could be \"monthly-revenue-snapshot\" maybe task_setup. Choose appropriate.\n\nNow construct JSON.\n\nRationale: \"Because you need to protect clinical time while staying within a tight budget and low risk, a part‑time virtual assistant offers the most time saved for the modest cost, even though you’re cautious about delegation.\"\n\nNow workloadReducers:\n\n1. type: \"prompt\"\ntitle: \"Draft patient scheduling communications\"\ndescription: \"Generate ready‑to‑send messages for cancellations, reschedules, and reminders to free up your clinic time.\"\nartifact: {promptText: \"...\"} Must embed intake context. Provide prompt: \"I run a primary care practice with about X visits per week (maybe we don't have visits count; we have weekly admin hours 6). Provide context: \"I run a practice that spends ~6 admin hours per week on scheduling and lose about Y hours to manual coordination. I have a budget of $1200/month and low comfort delegating. Write a concise patient communication for a cancellation that includes rebooking options, tone friendly, and output only the message.\" Something like that.\n\nMake sure prompt ends with clear output spec: \"Return only the final message text.\"\n\n2. type: \"playbook\"\ntitle: \"Onboard part‑time virtual assistant\"\ndescription: \"Step‑by‑step guide to set up tasks, access, and quality checks for your new assistant.\"\nartifact: playbookSteps: list 4-5 steps.\n\n3. type: \"skill\"\ntitle: \"No‑show pattern detector\"\ndescription: \"A lightweight skill that flags patients with repeated missed appointments to prioritize outreach.\"\nartifact: skillName: \"no-show-pattern-detector\". permission_tier T1.\n\nCoverage: For prompt: full_task (draft communications). For playbook: task_setup. For skill: partial_task? Actually skill automates detection, which is a full task? Could be partial_task. Choose accordingly.\n\nNow produce compact JSON.\n\nCheck schema: each workloadReducer must have fields: type, title, description, artifact (with correct field), automationLevel, coverage, permission_tier.\n\nMake sure artifact only contains the correct field.\n\nNow craft JSON.\n\n"
         }
       },
       {
@@ -259,28 +259,28 @@
         "output": {
           "classifications": [
             {
-              "title": "Draft patient scheduling emails",
+              "title": "Draft patient scheduling communications",
               "aiFeasibility": "skill",
               "feasibilityScore": 100,
               "impactScore": 40,
               "combinedScore": 40
             },
             {
-              "title": "Weekly no‑show pattern detector",
-              "aiFeasibility": "plugin",
-              "feasibilityScore": 80,
+              "title": "No‑show pattern detector",
+              "aiFeasibility": "skill",
+              "feasibilityScore": 100,
               "impactScore": 28,
-              "combinedScore": 22
+              "combinedScore": 28
             },
             {
-              "title": "Onboard virtual assistant",
-              "aiFeasibility": "plugin",
-              "feasibilityScore": 80,
+              "title": "Onboard part‑time virtual assistant",
+              "aiFeasibility": "skill",
+              "feasibilityScore": 100,
               "impactScore": 18,
-              "combinedScore": 14
+              "combinedScore": 18
             }
           ],
-          "reasoning": "We need to classify each reducer by aiFeasibility tier: skill, plugin, agent, human.\n\nWe have three reducers:\n\n0: type prompt, title Draft patient scheduling emails, description generate ready‑to‑send messages, automationLevel user_executes, coverage full_task. This is a single-turn copy-pasteable prompt to generate emails. Fits \"skill\". signals: \"copy-paste\", \"single-turn\". rationale: \"User can paste a prompt and get the emails directly.\"\n\n1: type playbook, onboarding virtual assistant, step-by-step guide to set up assistant and hand off tasks. This is a multi-step guide, but still user executes. Likely \"plugin\"? Actually playbook is a guide, not code. Could be \"skill\"? But it's a multi-step guide, maybe \"plugin\" because needs directory layout? However it's just instructions, not code. The rubric: \"skill\" is single-turn copy-pasteable. This is multi-step guide, not a code artifact. Could be \"plugin\" if it requires small directory layout. But it's just a playbook, not code. Might be \"skill\" ambiguous, but default to skill. However the rubric says \"skill\" is single-turn copy-pasteable. This is not single-turn. So maybe \"plugin\" because multi-step bounded. It is a guide to set up assistant, which may involve multiple steps but bounded. So classify as \"plugin\". signals: \"setup\", \"multi-step\". rationale: \"User follows a bounded set of steps to install and hand off tasks.\"\n\n2: type skill, weekly no-show pattern detector, run a simple script that flags patients who missed appointments. This is a script, likely a small directory layout? Could be \"plugin\" because needs script execution, maybe a small code base. The rubric: \"plugin\" multi-step bounded, needs small directory layout. This fits. So classify as \"plugin\". signals: \"script\", \"weekly\". rationale: \"User runs a small script each week to flag no‑shows.\"\n\nCheck signals length <=20 chars each.\n\nNow produce JSON:\n\n{\n \"classifications\": [\n   {\"id\":0,\"aiFeasibility\":\"skill\",\"signals\":[\"copy-paste\",\"single-turn\"],\"rationale\":\"User can paste a prompt and instantly get ready‑to‑send scheduling emails.\"},\n   {\"id\":1,\"aiFeasibility\":\"plugin\",\"signals\":[\"setup\",\"multi-step\"],\"rationale\":\"User follows a bounded guide to install the virtual assistant and hand off tasks.\"},\n   {\"id\":2,\"aiFeasibility\":\"plugin\",\"signals\":[\"script\",\"weekly\"],\"rationale\":\"User runs a small weekly script that flags patients who missed appointments.\"}\n ]\n}\n\nMake sure JSON compact, no extra spaces? It's okay. Ensure valid."
+          "reasoning": "We need to classify each reducer by aiFeasibility tier: skill, plugin, agent, human.\n\nWe have three reducers:\n\n0: type prompt, title Draft patient scheduling communications. Description: generate ready-to-send messages for cancellations, reschedules, reminders. automationLevel user_executes, coverage full_task. This is a single-turn copy-pasteable prompt to generate messages. So tier \"skill\". signals: \"copy-paste\", \"single-turn\". rationale: \"User can paste a prompt and get messages instantly.\"\n\n1: type playbook, onboarding part-time virtual assistant. This is a step-by-step guide to set up tasks, access, quality checks. This is multi-step but bounded, likely a plugin? Actually it's a playbook for setting up a virtual assistant, which may involve configuring tasks, but the actual automation is not AI-run; it's a guide. Could be \"skill\"? But it's a guide, not an AI execution. The rubric: \"skill\" is single-turn copy-pasteable prompt or one-file skill. This is a playbook, not a prompt. It is multi-step but bounded, maybe \"plugin\"? However plugin requires small directory layout, commands, maybe a small server. This is just a guide, not code. Could be \"human\"? The user must do the onboarding manually; AI not needed. But classification is about AI workload-reducer: the playbook reduces workload by giving instructions. The AI is not executing; it's a human process. According to rubric, \"human\" is for tasks that cannot be AI-owned, like clinical judgment. This is not that. The playbook is a knowledge artifact; the AI is not performing the work. The user still does the work. The classification is about shipping: how the practitioner should ship each one. For a playbook, the user just reads it; no code. That seems like \"skill\"? But skill is copy-pasteable prompt. Not a playbook. Maybe \"plugin\"? But plugin is code. Not applicable. Could be \"human\" meaning the AI does not own the task; it's a human-executed guide. The rubric says \"human — Cannot or should not be AI-owned. Clinical judgment, regulated decisions, identity/values questions, irreversible commitments.\" This is not that. So maybe we treat it as \"skill\" default because ambiguous, per instruction: if ambiguous, prefer \"skill\". So we assign \"skill\". signals: \"guide\", \"step-by-step\". rationale: \"Provides a copy‑pasteable playbook; no code needed, so lowest‑friction default.\"\n\n2: type skill, No-show pattern detector, lightweight skill flags patients with repeated missed appointments. This is a skill that runs code to detect patterns. That's a bounded multi-step? It flags patients; likely a plugin (needs small directory layout). But description says \"lightweight skill\". In rubric, \"skill\" is single-turn copy-pasteable prompt or one-file skill. This is a skill file that can be run. Could be \"skill\". Since it's a lightweight skill, likely a single file that can be executed. So \"skill\". signals: \"pattern\", \"single-file\". rationale: \"Runs as a one‑file skill to flag no‑shows without extra infrastructure.\"\n\nThus output JSON with classifications array in order.\n\nLet's craft.\n\n"
         }
       },
       {
@@ -290,16 +290,16 @@
           "generatedCount": 3,
           "eligibleReducers": [
             {
-              "title": "Draft patient scheduling emails",
+              "title": "Draft patient scheduling communications",
               "fileCount": 2
             },
             {
-              "title": "Weekly no‑show pattern detector",
-              "fileCount": 3
+              "title": "No‑show pattern detector",
+              "fileCount": 2
             },
             {
-              "title": "Onboard virtual assistant",
-              "fileCount": 3
+              "title": "Onboard part‑time virtual assistant",
+              "fileCount": 2
             }
           ]
         }
@@ -308,16 +308,16 @@
     "workloadReducers": [
       {
         "type": "prompt",
-        "title": "Draft patient scheduling emails",
-        "description": "Generate ready‑to‑send messages so you don’t write each from scratch",
+        "title": "Draft patient scheduling communications",
+        "description": "Generate ready‑to‑send messages for cancellations, reschedules, and reminders so you don’t write each from scratch.",
         "artifact": {
-          "promptText": "I run a solo practice that currently spends about 6 admin hours per week on scheduling and lose roughly 2–3 clinical hours to coordination. I have a $1,200/month budget and am hiring a part‑time virtual assistant (10‑15 hrs/week) to handle scheduling and patient communications. Draft three concise email templates: (1) appointment confirmation, (2) cancellation with re‑booking link, (3) reminder for missing information. Each template should be under 150 words and include placeholders for patient name, date, and provider. Return the three templates separated by headings."
+          "promptText": "I run a practice that spends about 6 admin hours each week on scheduling and lose roughly 2‑3 hours to manual coordination. My monthly admin budget is $1,200 and I prefer low‑risk delegation. Write a concise, friendly patient message for a cancelled appointment that offers two rebooking options, includes a brief apology, and ends with a clear call‑to‑action. Return only the final message text."
         },
         "automationLevel": "user_executes",
         "coverage": "full_task",
         "permission_tier": "T0",
         "aiFeasibility": "skill",
-        "feasibilityRationale": "User can paste a prompt and instantly get ready‑to‑send scheduling emails.",
+        "feasibilityRationale": "User pastes a prompt and instantly gets ready‑to‑send scheduling messages.",
         "feasibilityScore": 100,
         "impactScore": 40,
         "combinedScore": 40,
@@ -329,12 +329,12 @@
           "files": [
             {
               "path": "SKILL.md",
-              "content": "---\nname: draft-patient-scheduling-emails\ndescription: Generate ready‑to‑send messages so you don’t write each from scratch\n---\n\n# Draft patient scheduling emails\n\nI run a solo practice that currently spends about 6 admin hours per week on scheduling and lose roughly 2–3 clinical hours to coordination. I have a $1,200/month budget and am hiring a part‑time virtual assistant (10‑15 hrs/week) to handle scheduling and patient communications. Draft three concise email templates: (1) appointment confirmation, (2) cancellation with re‑booking link, (3) reminder for missing information. Each template should be under 150 words and include placeholders for patient name, date, and provider. Return the three templates separated by headings.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples — use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Decision Doctor on {{ASOF}} from a workload-reducer scoped to \"full_task\" coverage at the T0 permission tier.\n",
+              "content": "---\nname: draft-patient-scheduling-communications\ndescription: Generate ready‑to‑send messages for cancellations, reschedules, and reminders so you don’t write each from scratch.\n---\n\n# Draft patient scheduling communications\n\nI run a practice that spends about 6 admin hours each week on scheduling and lose roughly 2‑3 hours to manual coordination. My monthly admin budget is $1,200 and I prefer low‑risk delegation. Write a concise, friendly patient message for a cancelled appointment that offers two rebooking options, includes a brief apology, and ends with a clear call‑to‑action. Return only the final message text.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"full_task\" coverage at the T0 permission tier.\n",
               "language": "markdown"
             },
             {
               "path": "AGENTS.md",
-              "content": "# Draft patient scheduling emails\n\nI run a solo practice that currently spends about 6 admin hours per week on scheduling and lose roughly 2–3 clinical hours to coordination. I have a $1,200/month budget and am hiring a part‑time virtual assistant (10‑15 hrs/week) to handle scheduling and patient communications. Draft three concise email templates: (1) appointment confirmation, (2) cancellation with re‑booking link, (3) reminder for missing information. Each template should be under 150 words and include placeholders for patient name, date, and provider. Return the three templates separated by headings.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples — use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md — generated from a Decision Doctor workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Decision Doctor on {{ASOF}} for a \"full_task\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
+              "content": "# Draft patient scheduling communications\n\nI run a practice that spends about 6 admin hours each week on scheduling and lose roughly 2‑3 hours to manual coordination. My monthly admin budget is $1,200 and I prefer low‑risk delegation. Write a concise, friendly patient message for a cancelled appointment that offers two rebooking options, includes a brief apology, and ends with a clear call‑to‑action. Return only the final message text.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"full_task\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
               "language": "markdown"
             }
           ]
@@ -342,83 +342,74 @@
       },
       {
         "type": "skill",
-        "title": "Weekly no‑show pattern detector",
-        "description": "Run a simple script that flags patients who missed appointments to focus outreach",
+        "title": "No‑show pattern detector",
+        "description": "A lightweight skill that flags patients with repeated missed appointments to prioritize outreach.",
         "artifact": {
           "skillName": "no-show-pattern-detector"
         },
         "automationLevel": "user_executes",
         "coverage": "partial_task",
         "permission_tier": "T1",
-        "aiFeasibility": "plugin",
-        "feasibilityRationale": "User runs a small weekly script that flags patients who missed appointments.",
-        "feasibilityScore": 80,
+        "aiFeasibility": "skill",
+        "feasibilityRationale": "Runs as a one‑file skill that flags repeat no‑shows without extra infrastructure.",
+        "feasibilityScore": 100,
         "impactScore": 28,
-        "combinedScore": 22,
+        "combinedScore": 28,
         "scaffold": {
           "targets": [
-            "claude-code-plugin",
-            "codex-plugin"
+            "claude-code-skill",
+            "codex-skill"
           ],
           "files": [
             {
               "path": "SKILL.md",
-              "content": "---\nname: no-show-pattern-detector\ndescription: Run a simple script that flags patients who missed appointments to focus outreach\n---\n\n# Weekly no‑show pattern detector\n\nRun a simple script that flags patients who missed appointments to focus outreach\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples — use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Decision Doctor on {{ASOF}} from a workload-reducer scoped to \"partial_task\" coverage at the T1 permission tier.\n",
+              "content": "---\nname: no-show-pattern-detector\ndescription: A lightweight skill that flags patients with repeated missed appointments to prioritize outreach.\n---\n\n# No‑show pattern detector\n\nA lightweight skill that flags patients with repeated missed appointments to prioritize outreach.\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"partial_task\" coverage at the T1 permission tier.\n",
               "language": "markdown"
             },
             {
               "path": "AGENTS.md",
-              "content": "# Weekly no‑show pattern detector\n\nRun a simple script that flags patients who missed appointments to focus outreach\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples — use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md — generated from a Decision Doctor workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Decision Doctor on {{ASOF}} for a \"partial_task\" coverage\n  workload-reducer at the T1 permission tier.\n-->\n",
+              "content": "# No‑show pattern detector\n\nA lightweight skill that flags patients with repeated missed appointments to prioritize outreach.\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"partial_task\" coverage\n  workload-reducer at the T1 permission tier.\n-->\n",
               "language": "markdown"
-            },
-            {
-              "path": "plugin.json",
-              "content": "{\n  \"name\": \"no-show-pattern-detector\",\n  \"version\": \"0.1.0\",\n  \"description\": \"Run a simple script that flags patients who missed appointments to focus outreach\",\n  \"author\": \"Decision Doctor\",\n  \"homepage\": \"https://decision-doctor-xi.vercel.app\",\n  \"commands\": [\n    {\n      \"name\": \"no-show-pattern-detector\",\n      \"description\": \"Weekly no‑show pattern detector\",\n      \"argument-hint\": \"<your inputs here>\"\n    }\n  ]\n}\n",
-              "language": "json"
             }
           ]
         }
       },
       {
         "type": "playbook",
-        "title": "Onboard virtual assistant",
-        "description": "Step‑by‑step guide to set up the assistant and hand off tasks",
+        "title": "Onboard part‑time virtual assistant",
+        "description": "Step‑by‑step guide to set up tasks, access, and quality checks for your new assistant.",
         "artifact": {
           "playbookSteps": [
-            "Define core scheduling tasks and expected response times",
-            "Create shared calendar and communication channel (e.g., Google Calendar + Slack)",
-            "Provide SOP document with templates and escalation rules",
-            "Schedule a weekly 15‑minute review call for the first month"
+            "Create a secure shared folder for scheduling documents and templates",
+            "Define daily task list: appointment entry, patient reminders, cancellation handling",
+            "Set up a weekly check‑in meeting to review completed tasks and address questions",
+            "Provide access to your practice’s scheduling software with limited permissions",
+            "Establish a simple KPI sheet (hours saved, error rate) to monitor performance"
           ]
         },
         "automationLevel": "user_executes",
         "coverage": "task_setup",
-        "permission_tier": "T0",
-        "aiFeasibility": "plugin",
-        "feasibilityRationale": "User follows a bounded guide to install the virtual assistant and hand off tasks.",
-        "feasibilityScore": 80,
+        "permission_tier": "T1",
+        "aiFeasibility": "skill",
+        "feasibilityRationale": "Provides a copy‑pasteable playbook; no code or runtime needed, so lowest‑friction default.",
+        "feasibilityScore": 100,
         "impactScore": 18,
-        "combinedScore": 14,
+        "combinedScore": 18,
         "scaffold": {
           "targets": [
-            "claude-code-plugin",
-            "codex-plugin"
+            "claude-code-skill",
+            "codex-skill"
           ],
           "files": [
             {
               "path": "SKILL.md",
-              "content": "---\nname: onboard-virtual-assistant\ndescription: Step‑by‑step guide to set up the assistant and hand off tasks\n---\n\n# Onboard virtual assistant\n\nRun through these steps in order:\n1. Define core scheduling tasks and expected response times\n2. Create shared calendar and communication channel (e.g., Google Calendar + Slack)\n3. Provide SOP document with templates and escalation rules\n4. Schedule a weekly 15‑minute review call for the first month\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples — use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Decision Doctor on {{ASOF}} from a workload-reducer scoped to \"task_setup\" coverage at the T0 permission tier.\n",
+              "content": "---\nname: onboard-part-time-virtual-assistant\ndescription: Step‑by‑step guide to set up tasks, access, and quality checks for your new assistant.\n---\n\n# Onboard part‑time virtual assistant\n\nRun through these steps in order:\n1. Create a secure shared folder for scheduling documents and templates\n2. Define daily task list: appointment entry, patient reminders, cancellation handling\n3. Set up a weekly check‑in meeting to review completed tasks and address questions\n4. Provide access to your practice’s scheduling software with limited permissions\n5. Establish a simple KPI sheet (hours saved, error rate) to monitor performance\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"task_setup\" coverage at the T1 permission tier.\n",
               "language": "markdown"
             },
             {
               "path": "AGENTS.md",
-              "content": "# Onboard virtual assistant\n\nRun through these steps in order:\n1. Define core scheduling tasks and expected response times\n2. Create shared calendar and communication channel (e.g., Google Calendar + Slack)\n3. Provide SOP document with templates and escalation rules\n4. Schedule a weekly 15‑minute review call for the first month\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples — use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md — generated from a Decision Doctor workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Decision Doctor on {{ASOF}} for a \"task_setup\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
+              "content": "# Onboard part‑time virtual assistant\n\nRun through these steps in order:\n1. Create a secure shared folder for scheduling documents and templates\n2. Define daily task list: appointment entry, patient reminders, cancellation handling\n3. Set up a weekly check‑in meeting to review completed tasks and address questions\n4. Provide access to your practice’s scheduling software with limited permissions\n5. Establish a simple KPI sheet (hours saved, error rate) to monitor performance\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"task_setup\" coverage\n  workload-reducer at the T1 permission tier.\n-->\n",
               "language": "markdown"
-            },
-            {
-              "path": "plugin.json",
-              "content": "{\n  \"name\": \"onboard-virtual-assistant\",\n  \"version\": \"0.1.0\",\n  \"description\": \"Step‑by‑step guide to set up the assistant and hand off tasks\",\n  \"author\": \"Decision Doctor\",\n  \"homepage\": \"https://decision-doctor-xi.vercel.app\",\n  \"commands\": [\n    {\n      \"name\": \"onboard-virtual-assistant\",\n      \"description\": \"Onboard virtual assistant\",\n      \"argument-hint\": \"<your inputs here>\"\n    }\n  ]\n}\n",
-              "language": "json"
             }
           ]
         }
@@ -428,7 +419,7 @@
       {
         "type": "user_ui",
         "delivered": true,
-        "deliveredAt": "2026-05-12T00:43:30.040Z"
+        "deliveredAt": "2026-05-12T03:35:58.161Z"
       }
     ],
     "weightSource": "llm"
@@ -437,17 +428,17 @@
     {
       "stage": 1,
       "tokensIn": 548,
-      "tokensOut": 571
+      "tokensOut": 531
     },
     {
       "stage": 5,
-      "tokensIn": 947,
-      "tokensOut": 1129
+      "tokensIn": 945,
+      "tokensOut": 1119
     },
     {
       "stage": 6,
-      "tokensIn": 807,
-      "tokensOut": 699
+      "tokensIn": 822,
+      "tokensOut": 818
     }
   ]
 }

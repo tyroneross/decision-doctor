@@ -47,16 +47,16 @@ const STAGE8_SYSTEM_PROMPT = `You are the adoption-pathway classifier for Aida, 
 Given a recommended AI task for a solo healthcare practitioner, classify which adoption-pathway rungs best fit the task. Return ONLY JSON.
 
 Rungs (evaluate each independently):
-- "prompt"     — A paste-ready prompt the practitioner uses in ChatGPT/Claude. Best for single-step drafting, summarizing, or extracting tasks.
-- "checklist"  — A structured checklist the practitioner follows each time. Best for multi-step recurring workflows that benefit from guided steps but don't need automation.
-- "skill"      — A Claude Code skill (installable; runs in their IDE/CLI). Best for tasks that repeat often and involve file or data manipulation. Requires some technical comfort.
-- "plugin"     — A Claude Code plugin (deployable; can integrate with external systems). Best for tasks that need persistent state, webhooks, or integration with third-party tools.
-- "agent"      — An autonomous Claude agent. Best for complex multi-session workflows with branching decisions.
+- "prompt":     A paste-ready prompt the practitioner uses in ChatGPT/Claude. Best for single-step drafting, summarizing, or extracting tasks.
+- "checklist":  A structured checklist the practitioner follows each time. Best for multi-step recurring workflows that benefit from guided steps but don't need automation.
+- "skill":      A Claude Code skill (installable; runs in their IDE/CLI). Best for tasks that repeat often and involve file or data manipulation. Requires some technical comfort.
+- "plugin":     A Claude Code plugin (deployable; can integrate with external systems). Best for tasks that need persistent state, webhooks, or integration with third-party tools.
+- "agent":      An autonomous Claude agent. Best for complex multi-session workflows with branching decisions.
 
 Assign each rung one of these states:
-- "recommended"    — Strong fit. The rung is the best first step for this task.
-- "optional"       — Could work, but is not the ideal first step. Show as secondary option.
-- "not-recommended" — Poor fit. Do not surface this rung.
+- "recommended":    Strong fit. The rung is the best first step for this task.
+- "optional":       Could work, but is not the ideal first step. Show as secondary option.
+- "not-recommended": Poor fit. Do not surface this rung.
 
 Rules:
 - At most 2 rungs should be "recommended". (Engine-gated; avoid decision overload.)
@@ -81,7 +81,7 @@ OUTPUT (JSON object, no prose, no fences):
   ]
 }
 
-The "rungs" array MUST contain exactly 5 entries — one per kind in this order: prompt, checklist, skill, plugin, agent.`;
+The "rungs" array MUST contain exactly 5 entries, one per kind in this order: prompt, checklist, skill, plugin, agent.`;
 
 // ---------------------------------------------------------------------------
 // LLM classification

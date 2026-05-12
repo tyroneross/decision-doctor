@@ -137,7 +137,7 @@ export function PromoteFlow({
     } catch (err) {
       setFlowState({
         stage: "error",
-        message: err instanceof Error ? err.message : "Network error — please try again.",
+        message: err instanceof Error ? err.message : "Network error. Please try again.",
         rung: flowState.stage !== "idle" ? (flowState as { rung: AdoptionPathwayRung }).rung : (adoptionPathway[0] as AdoptionPathwayRung),
       });
     }

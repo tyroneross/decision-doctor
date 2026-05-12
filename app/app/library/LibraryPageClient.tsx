@@ -202,7 +202,7 @@ export function LibraryPageClient({
         setSaveError((err as Record<string, string>).error ?? "Save failed");
       }
     } catch {
-      setSaveError("Network error — save failed");
+      setSaveError("Network error. Save failed.");
     }
   }
 

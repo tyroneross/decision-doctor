@@ -1,35 +1,35 @@
 {
-  "generatedAt": "2026-05-12T00:42:58.230Z",
+  "generatedAt": "2026-05-12T03:35:29.741Z",
   "total": 5,
   "results": [
     {
       "id": "P1",
       "template": "admin-hire",
-      "latencyMs": 6427,
-      "confidence": 52,
+      "latencyMs": 5909,
+      "confidence": 53,
       "recommendation": "Hire a part-time virtual assistant (10–15 hrs/wk)",
       "error": null
     },
     {
       "id": "P2",
       "template": "pricing",
-      "latencyMs": 7222,
-      "confidence": 58,
-      "recommendation": "Add a tiered or premium service line",
+      "latencyMs": 6046,
+      "confidence": 52,
+      "recommendation": "Raise rates 12–20% to match benchmark",
       "error": null
     },
     {
       "id": "P3",
       "template": "capacity",
-      "latencyMs": 4782,
-      "confidence": 54,
+      "latencyMs": 5392,
+      "confidence": 52,
       "recommendation": "Build a structured waitlist + tiered intake",
       "error": null
     },
     {
       "id": "P4",
       "template": "pricing",
-      "latencyMs": 6968,
+      "latencyMs": 4901,
       "confidence": 59,
       "recommendation": "Add a tiered or premium service line",
       "error": null
@@ -37,7 +37,7 @@
     {
       "id": "P5",
       "template": "admin-hire",
-      "latencyMs": 6403,
+      "latencyMs": 6164,
       "confidence": 52,
       "recommendation": "Hire a part-time virtual assistant (10–15 hrs/wk)",
       "error": null

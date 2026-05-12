@@ -35,7 +35,7 @@ export function CandidateTasksList({
   if (others.length === 0) {
     return (
       <p className="text-[13px]" style={{ color: "var(--mute)" }}>
-        No other tasks were considered — the engine surfaced one candidate.
+        No other tasks were considered. The engine surfaced one candidate.
       </p>
     );
   }

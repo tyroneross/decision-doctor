@@ -44,7 +44,7 @@ function buildSystemPrompt(args: {
 }): string {
   return `You are Decision Doctor's library example generator. Show a solo healthcare
 practitioner what a good output looks like for the AI use case described below.
-Use plausible but generic content — NEVER real patient data, identifiers, or
+Use plausible but generic content. NEVER real patient data, identifiers, or
 specific clinical details that could resemble a real person. Keep it concrete,
 2-6 short sections, markdown-formatted. End with a 1-line "Refine this for
 your situation by chatting below."

@@ -70,7 +70,7 @@ const STORAGE_KEY = "dd:chat:thread:v2";
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Hi — tell me where the hours go in a normal week. I'll rank what AI can take off your plate and ship you a starter skill so the time comes back this week.",
+    "Hi. Tell me where the hours go in a normal week. I'll rank what AI can take off your plate and ship you a starter skill so the time comes back this week.",
 };
 
 const QUICK_PROMPTS = [
@@ -279,7 +279,7 @@ export function Chat({ seed }: { seed?: string } = {}) {
       });
       // Hand the conversation back to free-text — the LLM will re-ask in a
       // sentence. Posting "I'm not sure on that one" gives it a clean signal.
-      runQuery("I'm not sure on that one — can you ask differently?");
+      runQuery("I'm not sure on that one. Can you ask differently?");
     },
     [runQuery],
   );
@@ -315,7 +315,7 @@ export function Chat({ seed }: { seed?: string } = {}) {
           <p className="mt-3 max-w-xl text-[15px] leading-snug text-mute sm:text-[16px]">
             Five-minute conversation. You get a ranked list of capacity drains, an
             AI-feasibility score for each, and a paste-ready skill or playbook for
-            the top one — so the time comes back this week, not "someday."
+            the top one, so the time comes back this week, not "someday."
           </p>
           <p className="mt-3 text-[12.5px] text-mute">
             Already know the shape of it?{" "}
@@ -715,7 +715,7 @@ function DecisionCard({
       {restReducers.length > 0 && (
         <section className="border-b border-line p-6 sm:p-7">
           <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-mute">
-            This week — {restReducers.length} more thing{restReducers.length === 1 ? "" : "s"} to ship
+            This week · {restReducers.length} more thing{restReducers.length === 1 ? "" : "s"} to ship
           </p>
           <ul className="mt-3 divide-y divide-line overflow-hidden rounded-[10px] border border-line bg-paper">
             {restReducers.map((r, i) => (
@@ -757,7 +757,7 @@ function DecisionCard({
           </svg>
           <span className="text-[15px] font-semibold text-ink">Show the math</span>
           <span className="text-[12.5px] text-mute">
-            — what we ruled out, why this won
+            what we ruled out, why this won
           </span>
         </summary>
         <div className="mt-4 space-y-4 border-t border-line pt-4">
@@ -794,7 +794,7 @@ function DecisionCard({
                 {decision.alternatives.map((a, i) => (
                   <li key={i} className="text-ink">
                     <span className="font-medium text-ink">{a.option}</span>
-                    <span> — {a.reason}</span>
+                    <span>: {a.reason}</span>
                   </li>
                 ))}
               </ul>

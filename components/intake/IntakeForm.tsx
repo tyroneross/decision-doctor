@@ -170,7 +170,7 @@ export function IntakeForm({ template }: { template: PublicTemplate }) {
       ))}
 
       {/* F-10: weight-elicitation branch toggle. Only render when the template
-          ships criteria. AHP is opt-in — the default LLM path covers the
+          ships criteria. AHP is opt-in. The default LLM path covers the
           large majority of users; AHP is for high-trust SED/VDD decisions. */}
       {template.criteria && template.criteria.length >= 3 && (
         <Card flat>
@@ -245,11 +245,11 @@ export function IntakeForm({ template }: { template: PublicTemplate }) {
           maxLength={200}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="One sticky note's worth of context — constraints, deadlines, a recent change…"
+          placeholder="One sticky note's worth of context: constraints, deadlines, a recent change…"
           className="mt-1 block w-full rounded-[10px] border border-line bg-paper px-3.5 py-2.5 text-[14px] leading-snug text-text placeholder:text-mute focus:border-ink focus:outline-none focus:ring-[3px] focus:ring-ink/15"
         />
         <p className="mt-1 text-[12px] text-mute">
-          {notes.length}/200 — short notes only; long free-text is rejected.
+          {notes.length}/200. Short notes only; long free-text is rejected.
         </p>
       </div>
 

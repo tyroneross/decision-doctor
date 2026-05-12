@@ -158,10 +158,10 @@ function scoreSingleCandidate(
       raw: painSeverityRaw,
       adjusted: painSeverityRaw,
       rationale: painSeverityRaw >= 0.7
-        ? "High-severity pain — strong motivation to solve."
+        ? "High-severity pain. Strong motivation to solve."
         : painSeverityRaw >= 0.4
-          ? "Moderate severity — worth addressing."
-          : "Lower severity — consider prioritizing other tasks first.",
+          ? "Moderate severity. Worth addressing."
+          : "Lower severity. Consider prioritizing other tasks first.",
     },
 
     // --- frequency: driven by user input ---
@@ -173,8 +173,8 @@ function scoreSingleCandidate(
         rationale: raw >= 0.7
           ? "Frequent occurrence amplifies the value of automation."
           : raw >= 0.4
-            ? "Moderate frequency — automation adds meaningful value."
-            : "Infrequent — automation ROI is lower but still useful for consistency.",
+            ? "Moderate frequency. Automation adds meaningful value."
+            : "Infrequent. Automation ROI is lower but still useful for consistency.",
       };
     })(),
 
@@ -185,10 +185,10 @@ function scoreSingleCandidate(
         raw,
         adjusted: raw,
         rationale: raw >= 0.7
-          ? "High time burden — AI assistance delivers immediate time savings."
+          ? "High time burden. AI assistance delivers immediate time savings."
           : raw >= 0.4
-            ? "Moderate time cost — AI can meaningfully reduce it."
-            : "Low time cost — AI helps but the savings per week will be modest.",
+            ? "Moderate time cost. AI can meaningfully reduce it."
+            : "Low time cost. AI helps but the savings per week will be modest.",
       };
     })(),
 
@@ -210,10 +210,10 @@ function scoreSingleCandidate(
         raw: clamped,
         adjusted: clamped,
         rationale: clamped >= 0.7
-          ? "High business impact — directly touches revenue, referrals, or patient experience."
+          ? "High business impact. Directly touches revenue, referrals, or patient experience."
           : clamped >= 0.45
-            ? "Moderate business impact — operational leverage that compounds over time."
-            : "Lower direct business impact — useful but not the highest-leverage task.",
+            ? "Moderate business impact. Operational leverage that compounds over time."
+            : "Lower direct business impact. Useful but not the highest-leverage task.",
       };
     })(),
 
@@ -228,10 +228,10 @@ function scoreSingleCandidate(
         raw,
         adjusted: raw,
         rationale: highFit
-          ? `AI excels at ${aiCapLower} — this task is a strong fit.`
+          ? `AI excels at ${aiCapLower}. This task is a strong fit.`
           : medFit
             ? `AI can handle ${aiCapLower} well, though output will need review.`
-            : `AI has partial fit for ${aiCapLower} — human-in-the-loop recommended.`,
+            : `AI has partial fit for ${aiCapLower}. Human-in-the-loop recommended.`,
       };
     })(),
 
@@ -256,7 +256,7 @@ function scoreSingleCandidate(
           ? "Higher risk: PHI, clinical content, or patient-facing output. Clinician review required."
           : raw >= 0.3
             ? "Moderate risk: review guardrails before deploying. No PHI in prompts."
-            : "Lower risk task — standard guardrails apply.",
+            : "Lower risk task. Standard guardrails apply.",
       };
     })(),
 
@@ -283,10 +283,10 @@ function scoreSingleCandidate(
         raw,
         adjusted: raw,
         rationale: raw >= 0.7
-          ? "Data is readily available — no special access needed."
+          ? "Data is readily available. No special access needed."
           : raw >= 0.4
             ? "Data is available but may require some preparation."
-            : "Data readiness is a barrier — EHR access or PHI de-identification needed.",
+            : "Data readiness is a barrier. EHR access or PHI de-identification needed.",
       };
     })(),
 
@@ -300,10 +300,10 @@ function scoreSingleCandidate(
         raw,
         adjusted,
         rationale: raw <= 0.2
-          ? "Very low friction — starts with a simple prompt, no tooling required."
+          ? "Very low friction. Starts with a simple prompt, no tooling required."
           : raw <= 0.45
-            ? "Moderate friction — a checklist or skill requires some setup time."
-            : "Higher friction — plugin or agent requires technical effort and integration work.",
+            ? "Moderate friction. A checklist or skill requires some setup time."
+            : "Higher friction. Plugin or agent requires technical effort and integration work.",
       };
     })(),
 
@@ -316,10 +316,10 @@ function scoreSingleCandidate(
         raw,
         adjusted,
         rationale: raw <= 0.2
-          ? "Minimal setup — paste a prompt and go."
+          ? "Minimal setup. Paste a prompt and go."
           : raw <= 0.5
-            ? "Moderate setup — a checklist or skill takes an hour to configure."
-            : "Significant setup — plugin or agent requires development and integration.",
+            ? "Moderate setup. A checklist or skill takes an hour to configure."
+            : "Significant setup. Plugin or agent requires development and integration.",
       };
     })(),
   };

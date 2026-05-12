@@ -317,7 +317,7 @@ const CITATION_INSTRUCTION_BLOCK = `
 ## Citation tokens
 When your response references a fact that came from a retrieved source, emit the token [[doc:<uuid>]] immediately after the cited fact. The UI renders these as citation chips. Rules:
 - Only emit [[doc:<uuid>]] if the source appears in the Retrieved Sources list provided in the user context below.
-- Use the exact UUID from that list — no truncation or invention.
+- Use the exact UUID from that list. No truncation or invention.
 - One token per factual claim per source.
 - If no retrieved source supports a fact, do not emit a token; state explicitly that you lack a grounded source.
 
@@ -328,10 +328,10 @@ const RECOMMENDATION_SYSTEM_PROMPT = `You are the recommendation engine for Aida
 
 Given a pain path and challenge description, produce a concrete AI task recommendation.
 
-OUTPUT (JSON object only — no prose, no fences):
+OUTPUT (JSON object only. No prose, no fences):
 {
-  "challengeSummary": "<1-2 sentence normalized restatement of the challenge — plain language, no jargon>",
-  "goal": "<1 sentence — what improvement the practitioner wants>",
+  "challengeSummary": "<1-2 sentence normalized restatement of the challenge. Plain language, no jargon.>",
+  "goal": "<1 sentence. What improvement the practitioner wants.>",
   "candidateTasks": [
     {
       "id": "<slug, lowercase-hyphenated>",
@@ -343,11 +343,11 @@ OUTPUT (JSON object only — no prose, no fences):
   ],
   "recommendedTask": "<title of the best candidate task>",
   "recommendedApproach": "prompt" | "checklist" | "sop" | "skill" | "plugin" | "agent" | "human_only" | "existing_tool",
-  "whyThisTask": "<2-3 sentences — why this task over the others, connected to the stated challenge>",
-  "starterSolution": "<paste-ready solution — either a prompt to use in ChatGPT/Claude, or step-by-step instructions, ≤500 words>",
-  "guardrails": ["<safety or quality guardrail — ≤5 items>"],
-  "tryThisWeek": ["<concrete action the practitioner can take this week — ≤3 items>"],
-  "successMetric": "<one measurable outcome to track — e.g. 'Reduce time spent on X by Y per week'>",
+  "whyThisTask": "<2-3 sentences. Why this task over the others, connected to the stated challenge.>",
+  "starterSolution": "<paste-ready solution. Either a prompt to use in ChatGPT/Claude, or step-by-step instructions, ≤500 words.>",
+  "guardrails": ["<safety or quality guardrail, ≤5 items>"],
+  "tryThisWeek": ["<concrete action the practitioner can take this week, ≤3 items>"],
+  "successMetric": "<one measurable outcome to track, e.g. 'Reduce time spent on X by Y per week'>",
   "confidence": <0-100 integer>
 }
 

@@ -91,12 +91,10 @@ export async function POST(req: Request) {
       // Also handles "checklist" seeds (builderKind='checklist') — prompt-bridge
       // accepts both PromptBuilderSeed and ChecklistBuilderSeed.
       const seedWithKind = { ...seed, builderKind: seed.builderKind ?? "prompt" };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       artifact = await generatePrompt(seedWithKind as any) as unknown as Record<string, unknown>;
       gateKind = "prompt";
     } else if (kind === "skill") {
       const seedWithKind = { ...seed, builderKind: "skill" };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       artifact = await generateSkill(seedWithKind as any) as unknown as Record<string, unknown>;
       gateKind = "skill";
     } else {
@@ -105,7 +103,6 @@ export async function POST(req: Request) {
         ...seed,
         builderKind: seed.builderKind ?? "plugin",
       };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       artifact = await generatePlugin(seedWithKind as any) as unknown as Record<string, unknown>;
       gateKind = "plugin";
     }
