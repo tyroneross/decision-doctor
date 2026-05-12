@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageSquare, FileText, Sparkles, ShieldCheck, Lock } from "lucide-react";
+import { MessageSquare, FileText, Sparkles, ShieldCheck, Lock, GraduationCap } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { SignOutButton } from "./sign-out";
 
@@ -56,6 +56,12 @@ const WORKSPACE: WorkspaceItem[] = [
     label: "Chat",
     icon: MessageSquare,
     match: (p) => p.startsWith("/app/chat"),
+  },
+  {
+    href: "/app/learn",
+    label: "Learn",
+    icon: GraduationCap,
+    match: (p) => p.startsWith("/app/learn"),
   },
   {
     href: "/app/history",
