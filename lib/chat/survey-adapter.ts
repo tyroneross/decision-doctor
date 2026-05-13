@@ -20,6 +20,11 @@ import { z } from "zod";
 import { callStage } from "@/lib/groq";
 import { TemplateIdSchema, PainPathIdSchema } from "@/shared/schema";
 import type { Survey, SurveySubmission } from "@/lib/engine/survey";
+import {
+  formatSpecialty,
+  specialtyContext,
+  type SpecialtyDetection,
+} from "@/lib/chat/specialty-detector";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -58,6 +63,13 @@ export interface AdaptSubmissionInput {
   userQuestion: string;
   survey: Survey;
   submission: SurveySubmission;
+  /**
+   * Inferred specialty (psychiatry / therapy / etc.). When provided, the
+   * adapter prompt anchors `challengeText` on the specialty's operational
+   * reality so recommendation-path outputs surface specialty-appropriate
+   * suggestions. Null / undefined → fall back to generic.
+   */
+  specialty?: SpecialtyDetection | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -333,10 +345,20 @@ export async function adaptSubmission(
 
 function buildUserPrompt(input: AdaptSubmissionInput): string {
   const answers = JSON.stringify(input.submission.answers, null, 2);
-  return [
+  const parts: string[] = [
     `USER_QUESTION: ${input.userQuestion}`,
     `SURVEY_TITLE: ${input.survey.title}`,
-    `ANSWERS:`,
-    answers,
-  ].join("\n");
+  ];
+  const specLabel = formatSpecialty(input.specialty);
+  const specCtx = specialtyContext(input.specialty);
+  if (specLabel && specCtx) {
+    parts.push(`PRACTITIONER_SPECIALTY: ${specLabel}`);
+    parts.push(`PRACTITIONER_CONTEXT:`);
+    parts.push(specCtx);
+    parts.push(
+      "On the recommendation path, surface the specialty in `challengeText` so downstream suggestions are discipline-appropriate. On the decision path, use the context to disambiguate enum mappings (e.g., a psychiatrist's 'depleted' energyLevel; a dietitian's package-based billing).",
+    );
+  }
+  parts.push(`ANSWERS:`, answers);
+  return parts.join("\n");
 }

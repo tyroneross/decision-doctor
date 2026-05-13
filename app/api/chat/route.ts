@@ -31,6 +31,7 @@ import {
 } from "@/lib/chat/flow-state";
 import { generateSurvey } from "@/lib/chat/survey-generator";
 import { adaptSubmission } from "@/lib/chat/survey-adapter";
+import { detectSpecialty } from "@/lib/chat/specialty-detector";
 import { SurveySchema, SurveySubmissionSchema } from "@/lib/engine/survey";
 import { runRecommendation } from "@/lib/engine/orchestrator";
 import type { RecommendationInput } from "@/lib/engine/types";
@@ -49,6 +50,15 @@ import {
 } from "@/shared/schema";
 
 export const runtime = "nodejs";
+
+/**
+ * B2 — Maximum number of single-field clarifier widgets the route will emit
+ * before auto-pivoting to a multi-field survey card. Persona testing showed
+ * the conversational clarifier loop could run 7+ turns without converging;
+ * 4 is enough to gather decision context, and the survey pivot delivers
+ * all remaining fields in one shot. Tunable; do not push above 6.
+ */
+const MAX_CLARIFIER_TURNS = 4;
 
 // Per-message metadata flags used for server-side FSM derivation.
 // Only the BOOLEAN PRESENCE matters — actual widget contents stay
@@ -145,6 +155,15 @@ export interface OfferHelpAffordance {
   kind: "offer-decision-help";
   suggestedPath: "decision" | "recommendation";
   rationale: string;
+  /**
+   * B3 — when true, the client should render the offer as a banner-style
+   * card (not a small chip). Set by the server when the offer attaches to
+   * the FIRST clarifier of a thread AND the template is already inferred,
+   * meaning we know exactly what survey to generate if the user accepts.
+   * In this state, the survey-driven path is strictly faster than the
+   * clarifier loop and the user should see the option clearly.
+   */
+  prominent?: boolean;
 }
 
 const AssistantPayloadSchema = z.discriminatedUnion("status", [
@@ -193,6 +212,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "bad-request" }, { status: 400 });
   }
 
+  // 2b. Specialty inference — single zero-LLM keyword scan over every
+  // user-typed string in this request (chat history + the engageSurvey /
+  // submitSurvey question text). Used to anchor survey-generator and
+  // survey-adapter prompts on the specialty's operational reality. Null
+  // when no pattern matches; the prompts fall back to generic behavior.
+  const specialty = detectSpecialty(
+    [
+      ...parsed.data.messages.filter((m) => m.role === "user").map((m) => m.content),
+      parsed.data.engageSurvey?.question ?? "",
+      parsed.data.submitSurvey?.userQuestion ?? "",
+    ].join("\n"),
+  );
+
   // 3. Rate limit (shared bucket with /api/decisions — chat-driven runs cost
   //    the same Groq budget). Guests share a single bucket via "guest:shared"
   //    so a stampede on the demo doesn't burn unbounded Groq credits.
@@ -235,6 +267,7 @@ export async function POST(req: Request) {
       userQuestion,
       survey,
       submission,
+      specialty,
     });
 
     if (adapted && adapted.kind === "decision") {
@@ -474,7 +507,18 @@ export async function POST(req: Request) {
       question: parsed.data.engageSurvey.question,
       suggestedPath: parsed.data.engageSurvey.suggestedPath,
       rationale: parsed.data.engageSurvey.rationale,
+      specialty,
     });
+    if (process.env.NODE_ENV !== "production" && specialty) {
+      console.info(
+        "[/api/chat] specialty inferred:",
+        JSON.stringify({
+          specialty: specialty.specialty,
+          subspecialty: specialty.subspecialty,
+          evidence: specialty.evidence,
+        }),
+      );
+    }
     if (survey) {
       if (process.env.NODE_ENV !== "production") {
         console.info(
@@ -658,13 +702,29 @@ export async function POST(req: Request) {
         }),
       );
     }
-    offerHelp = shouldOfferHelp(detection)
-      ? {
-          kind: "offer-decision-help",
-          suggestedPath: detection.suggestedPath!,
-          rationale: detection.rationale,
-        }
-      : undefined;
+    if (shouldOfferHelp(detection)) {
+      // B3 — promote to prominent banner when the route is about to emit
+      // its FIRST clarifier of the thread AND the template is already
+      // inferred. In that combo, the survey is a strictly faster path; the
+      // user should see it without hunting for a small chip.
+      const isFirstClarifier =
+        parsedAssistant.status === "clarifier" &&
+        parsed.data.messages.filter(
+          (m) => m.role === "assistant" && m.hasClarifier === true,
+        ).length === 0;
+      const promoteProminent =
+        isFirstClarifier &&
+        parsedAssistant.status === "clarifier" &&
+        !!parsedAssistant.inferredTemplateId;
+      offerHelp = {
+        kind: "offer-decision-help",
+        suggestedPath: detection.suggestedPath!,
+        rationale: detection.rationale,
+        ...(promoteProminent ? { prominent: true } : {}),
+      };
+    } else {
+      offerHelp = undefined;
+    }
   }
 
   // Phase A — continue the conversation
@@ -680,6 +740,52 @@ export async function POST(req: Request) {
   // clarifier widget. The frontend renders the widget; the user's submission
   // comes back as a normal user-message in the next request. No engine call.
   if (parsedAssistant.status === "clarifier") {
+    // B2 — clarifier-chain cap. After MAX_CLARIFIER_TURNS single-field
+    // widgets, auto-pivot to a survey card so the user can fill the
+    // remaining fields at once. Prevents the endless-clarifier failure
+    // mode observed in persona testing (7+ turns + LLM error + loop back
+    // to question 1). Only pivots when an inferredTemplateId is known —
+    // otherwise the survey wouldn't have a stable frame and we'd just
+    // generate a worse clarifier.
+    const priorClarifierTurns = parsed.data.messages.filter(
+      (m) => m.role === "assistant" && m.hasClarifier === true,
+    ).length;
+
+    if (
+      priorClarifierTurns >= MAX_CLARIFIER_TURNS &&
+      parsedAssistant.inferredTemplateId
+    ) {
+      const firstUserMessage =
+        parsed.data.messages.find((m) => m.role === "user")?.content ?? "";
+      if (firstUserMessage) {
+        const pivotSurvey = await generateSurvey({
+          question: firstUserMessage,
+          suggestedPath: "decision",
+          rationale: `Auto-pivot after ${priorClarifierTurns} clarifier turns; inferred template ${parsedAssistant.inferredTemplateId}.`,
+          specialty,
+        });
+        if (pivotSurvey) {
+          if (process.env.NODE_ENV !== "production") {
+            console.info(
+              "[/api/chat] clarifier-cap pivot to survey:",
+              JSON.stringify({
+                priorClarifierTurns,
+                templateId: parsedAssistant.inferredTemplateId,
+                surveyId: pivotSurvey.id,
+              }),
+            );
+          }
+          return NextResponse.json({
+            status: "survey",
+            reply:
+              "Let's wrap this up in one step — fill these in and I'll run the recommendation.",
+            survey: pivotSurvey,
+          });
+        }
+      }
+      // Fall through to normal clarifier if survey gen fails.
+    }
+
     return NextResponse.json({
       status: "clarifier",
       reply: parsedAssistant.reply,

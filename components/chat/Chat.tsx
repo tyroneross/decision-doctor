@@ -36,6 +36,7 @@ import {
 
 interface OfferHelpAffordance {
   kind: "offer-decision-help";
+  prominent?: boolean;
   suggestedPath: "decision" | "recommendation";
   rationale: string;
 }
@@ -1273,10 +1274,63 @@ function OfferHelpChip({
   onAccept: () => void;
   onDismiss: () => void;
 }) {
-  const ctaText =
-    affordance.suggestedPath === "recommendation"
+  const prominent = affordance.prominent === true;
+  // B3 — copy and surface depend on prominence. The prominent variant
+  // names the trade-off the user is making ("skip the questions") so the
+  // faster path is unmistakable; the chip variant is the legacy nudge.
+  const ctaText = prominent
+    ? affordance.suggestedPath === "recommendation"
+      ? "Skip the questions — get the recommendation in one form →"
+      : "Skip the questions — answer everything in one short form →"
+    : affordance.suggestedPath === "recommendation"
       ? "Want a quick recommendation? →"
       : "Want help deciding this? →";
+
+  if (prominent) {
+    return (
+      <div
+        role="group"
+        aria-label="Offer to skip ahead with a quick form"
+        className="dd-fade-up flex items-start gap-2 rounded-2xl border-2 border-ink/15 bg-paper px-4 py-3"
+      >
+        <button
+          type="button"
+          onClick={onAccept}
+          disabled={disabled}
+          className={
+            "flex-1 text-left text-[14px] font-semibold leading-snug transition-colors " +
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 " +
+            (disabled
+              ? "text-mute cursor-not-allowed"
+              : "text-ink hover:opacity-80")
+          }
+        >
+          {ctaText}
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss offer"
+          title="Dismiss"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-mute hover:bg-line/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-3.5 w-3.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            aria-hidden
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       role="group"

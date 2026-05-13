@@ -19,6 +19,11 @@ import "server-only";
 import crypto from "node:crypto";
 import { callStage } from "@/lib/groq";
 import { parseSurvey, type Survey } from "@/lib/engine/survey";
+import {
+  formatSpecialty,
+  specialtyContext,
+  type SpecialtyDetection,
+} from "@/lib/chat/specialty-detector";
 
 // ---------------------------------------------------------------------------
 // Input contract
@@ -31,6 +36,14 @@ export interface GenerateSurveyInput {
   suggestedPath: "decision" | "recommendation";
   /** Optional one-sentence rationale from the detector (for context). */
   rationale?: string;
+  /**
+   * Inferred practitioner specialty (psychiatry / therapy / primary-care /
+   * etc.) from the conversation. When provided, the generator anchors
+   * questions on that specialty's operational reality (named EHR, billing
+   * model, scheduling rhythm) instead of generic small-business framing.
+   * Null / undefined → fall back to generic.
+   */
+  specialty?: SpecialtyDetection | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +111,22 @@ You do NOT need to expose this vocabulary to the user. The user sees plain quest
 - No PHI in any field — never solicit patient names, dates of birth, diagnoses.
 - Compliance-aware: when a decision touches billing or care delivery, prompts can mention "verify with your compliance advisor" once at most.
 - Default geography: U.S. solo healthcare practice.
+
+## Specialty anchoring (CRITICAL when a specialty is provided)
+
+When the user prompt includes a \`PRACTITIONER_SPECIALTY:\` line, EVERY question MUST be anchored in that specialty's operational reality. Generic small-business framing (runway months, growth horizon, delegation comfort) is acceptable as background but MUST NOT crowd out specialty-specific questions.
+
+For each specialty, prefer questions about:
+- **Named EHR / scheduling tools** (SimplePractice, Osmind, Headway, Athenahealth, etc.) — do NOT ask "what tools do you use?" generically; offer the actual options.
+- **Billing model** (in-network panel mix, self-pay share, superbill-only, panel contracts).
+- **Patient flow** specific to the discipline (weekly intake volume, no-show rate, telehealth share, urgent-triage carve-outs, late-cancel policy).
+- **Compliance posture** (HIPAA-trained-VA sourcing, EPCS / PDMP for prescribers, mandated-reporter exposure, telehealth licensure boundaries).
+- **Scheduling rhythm** (session lengths, med-mgmt vs talk-therapy mix, package-based offerings).
+
+NEVER ask about:
+- EPCS / PDMP / controlled substances for non-prescribers (therapists, dietitians, PT/OT).
+- Meaningful use / MIPS for non-primary-care.
+- Insurance complexity for cash-only specialties unless the user has named a panel.
 
 ## Output rules
 
@@ -265,6 +294,18 @@ function buildUserPrompt(
   ];
   if (input.rationale) {
     parts.push(`Detector rationale: ${input.rationale}`);
+  }
+  const specLabel = formatSpecialty(input.specialty);
+  const specCtx = specialtyContext(input.specialty);
+  if (specLabel && specCtx) {
+    parts.push("");
+    parts.push(`PRACTITIONER_SPECIALTY: ${specLabel}`);
+    parts.push(`PRACTITIONER_CONTEXT:`);
+    parts.push(specCtx);
+    parts.push("");
+    parts.push(
+      "Anchor EVERY question on this specialty's operational reality (named EHR, billing model, scheduling rhythm, compliance posture). Do not fall back to generic small-business framing.",
+    );
   }
   parts.push(
     "Generate one survey that captures what the decision-science engine needs to recommend an answer.",
