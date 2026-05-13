@@ -296,6 +296,75 @@ export function NewRecommendationClient({
     );
   }
 
+  if (action.action === "route_to_decision") {
+    // S2.C1 — Decision-routing affordance. Surfaces when the controller
+    // detects a hiring-shaped, decision-shaped question (e.g., "should I hire
+    // an admin assistant?"). User can accept (route to decision template flow)
+    // or decline (continue here with the WHY-first fallback question).
+    const routeAction = action;
+    const templateLabels: Record<string, string> = {
+      "admin-hire": "hiring an admin or assistant",
+      capacity: "capacity and waitlist",
+      pricing: "pricing and rates",
+    };
+    const templateLabel =
+      templateLabels[routeAction.suggestedTemplate] ??
+      routeAction.suggestedTemplate;
+    const decisionHref = `/app/decisions/new?template=${encodeURIComponent(
+      routeAction.suggestedTemplate,
+    )}&seed=${encodeURIComponent(routeAction.state.challengeText.slice(0, 400))}`;
+
+    async function declineRouting() {
+      const nextState: RecommendationIntakeState = {
+        ...routeAction.state,
+        routingDeclined: true,
+      };
+      setAction(null);
+      setState(nextState);
+      await loadNext(nextState);
+    }
+
+    return (
+      <div className="mx-auto max-w-xl space-y-6 px-5 py-10">
+        <IntakeHeader
+          eyebrow="Looks like a decision"
+          title={`This looks like a yes/no decision about ${templateLabel}.`}
+          subtitle="Aida has a dedicated decision flow that frames hire vs automate vs defer with constraints and a fallback."
+        />
+
+        <div className="rounded-xl border border-line bg-paper p-4 space-y-3">
+          <p className="text-[14px] text-text leading-relaxed">
+            {routeAction.rationale}
+          </p>
+          <p className="text-[12px] text-mute">
+            If this is really a repeating workflow you want to streamline, you
+            can continue here instead and Aida will start with what&apos;s
+            driving the change.
+          </p>
+        </div>
+
+        {error && <ErrorText>{error}</ErrorText>}
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => void declineRouting()}
+            disabled={busy}
+            className="text-[13px] font-medium text-mute hover:text-ink underline-offset-2 hover:underline disabled:opacity-50"
+          >
+            No, keep this as a workflow
+          </button>
+          <Link
+            href={decisionHref}
+            className="inline-flex items-center rounded-[10px] border border-ink bg-ink px-4 py-2 text-[13px] font-medium text-paper transition-colors hover:bg-text"
+          >
+            Use the decision template →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (action.action === "infer") {
     return (
       <div className="mx-auto max-w-xl space-y-6 px-5 py-10">

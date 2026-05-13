@@ -2,12 +2,14 @@ import "server-only";
 
 import { z } from "zod";
 import {
+  DecisionTemplateHintSchema,
   PainPathIdSchema,
   RecommendationInputSchema,
   RecommendationIntakeActionSchema,
   RecommendationIntakeFillSchema,
   RecommendationIntakeQuestionSchema,
   RecommendationIntakeStateSchema,
+  type DecisionTemplateHint,
   type PainPathId,
   type RecommendationInput,
   type RecommendationIntakeAction,
@@ -18,9 +20,44 @@ import {
   type RecommendationIntakeState,
 } from "@/shared/schema";
 import { classifyPainPath } from "@/lib/engine/pain-path/classifier";
+import {
+  detectDecisionIntent,
+  type DecisionDetection,
+} from "@/lib/chat/decision-detector";
 
 const MAX_ASKED_QUESTIONS = 7;
 const ASK_THRESHOLD = 8;
+
+/**
+ * Hiring/delegation keyword shortlist. Harvested from branch-codex's
+ * decision-guide.ts admin-hire signal config — captures the surface forms
+ * of "should I hire X" questions before any LLM call.
+ *
+ * Two-stage gate: this keyword regex is the cheap pre-filter. When it fires
+ * positive, the controller calls detectDecisionIntent() (a ~200ms Groq call)
+ * to confirm the question is decision-shaped. When the regex misses, no Groq
+ * call is made.
+ */
+const HIRING_KEYWORD_PATTERN =
+  /\b(hire|hiring|hir(e|ing) an?|delegate|outsource|contract(or)?|virtual assistant|\bva\b|admin (assistant|hire|support)|biller|biller|associate|w-?2|1099)\b/i;
+
+const HIRING_DRIVER_OPTIONS = [
+  { value: "too_many_calls", label: "Too many calls" },
+  { value: "after_hours_messages", label: "After-hours messages" },
+  { value: "missed_follow_ups", label: "Missed follow-ups" },
+  { value: "no_vacation", label: "Can't take vacation" },
+  { value: "recent_mistake", label: "Recent mistake" },
+  { value: "other", label: "Other" },
+];
+
+/**
+ * Pure pre-filter: does the free-text challenge look like a hiring/delegation
+ * question? Cheap synchronous regex check; no I/O.
+ */
+export function isHiringShapedChallenge(text: string | undefined): boolean {
+  if (!text) return false;
+  return HIRING_KEYWORD_PATTERN.test(text);
+}
 
 export const RecommendationIntakeNextInputSchema = z.object({
   state: RecommendationIntakeStateSchema.optional(),
@@ -191,6 +228,54 @@ function buildUnknowns(state: RecommendationIntakeState): CandidateUnknown[] {
         label: "Which area does this affect most?",
         hint: "Choose the closest match. You can still describe edge cases later.",
         options: PAIN_PATH_OPTIONS,
+        fill,
+        blockingScore,
+      }),
+    });
+  }
+
+  // S2.C2 — WHY-first driver question for hiring-shaped challenges.
+  // Fires before frequency/time_burden so the user is asked "what's driving
+  // this?" before "how often does it come up?". Stored as a free-form
+  // assumption on `state.goal` so it doesn't need a new scoringInput field.
+  const hiringShaped =
+    isHiringShapedChallenge(state.challengeText) &&
+    (state.painPath === "admin" ||
+      state.painPath === "custom" ||
+      state.painPath === "capacity_growth");
+  if (
+    hiringShaped &&
+    !state.askedTopics.includes("hiring_driver") &&
+    !maybeAssumption(state, "hiring_driver")
+  ) {
+    // Synthetic path — applyPath() falls through to a no-op record on
+    // unrecognized paths, so the answer is captured in state.answers[]
+    // and state.filledPaths[] without mutating painPath/goal/scoringInput.
+    const fill = RecommendationIntakeFillSchema.parse({
+      path: "meta.hiringDriver",
+      kind: "string",
+      mergeStrategy: "replace",
+    });
+    const blockingScore = score(
+      "hiring_driver",
+      5,
+      4,
+      3,
+      "The driving cause shapes whether to hire, automate, or restructure — first-question quality matters more than frequency for hiring decisions.",
+    );
+    unknowns.push({
+      topic: "hiring_driver",
+      fill,
+      blockingScore,
+      question: chipsQuestion({
+        id: "hiring-driver",
+        topic: "hiring_driver",
+        prompt:
+          "What's driving the need? Pick the closest match.",
+        fieldId: "hiringDriver",
+        label: "What's driving this?",
+        hint: "We use this to frame the hire/automate/defer tradeoff before asking about frequency.",
+        options: HIRING_DRIVER_OPTIONS,
         fill,
         blockingScore,
       }),
@@ -474,11 +559,88 @@ function progress(state: RecommendationIntakeState, remaining: number) {
   };
 }
 
+/**
+ * Match hiring-shaped challenge text to a decision template hint.
+ * Returns null when no template applies. Today only admin-hire is wired; the
+ * shape is extensible (Path B — typed return) for capacity / pricing once
+ * their template intake flows ship.
+ */
+function suggestedTemplateForHiring(text: string): DecisionTemplateHint | null {
+  // Anchor terms come straight from branch-codex's admin-hire signal config
+  // — they're the textbook surface forms of "should I hire X" questions.
+  if (
+    /\b(admin (assistant|hire|support)|virtual assistant|\bva\b|biller|associate|contractor|delegate|outsource|hire (an? )?(admin|assistant|biller))\b/i.test(
+      text,
+    )
+  ) {
+    return "admin-hire";
+  }
+  return null;
+}
+
+/**
+ * Injectable detector. Tests pass a stub that returns a deterministic
+ * DecisionDetection; production passes the real Groq-backed detector.
+ */
+export type IntentDetector = (
+  text: string,
+) => Promise<DecisionDetection>;
+
+const DEFAULT_DETECTOR: IntentDetector = detectDecisionIntent;
+
 export async function nextStep(
   input: RecommendationIntakeNextInput,
+  options?: { detector?: IntentDetector },
 ): Promise<RecommendationIntakeAction> {
   let state = buildInitialState(RecommendationIntakeNextInputSchema.parse(input));
   state = await classifyIntoState(state);
+
+  // S2.C1 — Decision-intent routing for hiring-shaped challenges.
+  //
+  // Two-stage gate:
+  //   1. Cheap keyword regex (isHiringShapedChallenge) decides whether the
+  //      challenge text is worth confirming.
+  //   2. If yes AND no detection has been performed yet (questionCount === 0)
+  //      AND the user hasn't already declined routing, call the LLM detector.
+  //      When kind=decision + suggestedPath=decision + confidence≥0.7 AND a
+  //      template hint matches, emit route_to_decision.
+  //
+  // The client's "No, keep this as a workflow" affordance sets
+  // state.routingDeclined=true on its callback, so this branch is suppressed
+  // on the next call and the user continues into the WHY-first fallback.
+  if (
+    state.questionCount === 0 &&
+    !state.routingDeclined &&
+    isHiringShapedChallenge(state.challengeText)
+  ) {
+    const detector = options?.detector ?? DEFAULT_DETECTOR;
+    let detection: DecisionDetection | null = null;
+    try {
+      detection = await detector(state.challengeText);
+    } catch {
+      // Detector failures are non-fatal — fall through to normal intake.
+      detection = null;
+    }
+    if (
+      detection &&
+      detection.kind === "decision" &&
+      detection.suggestedPath === "decision" &&
+      detection.confidence >= 0.7
+    ) {
+      const hint = suggestedTemplateForHiring(state.challengeText);
+      if (hint) {
+        const parsedHint = DecisionTemplateHintSchema.parse(hint);
+        const action = {
+          action: "route_to_decision",
+          state,
+          suggestedTemplate: parsedHint,
+          confidence: detection.confidence,
+          rationale: detection.rationale.slice(0, 240),
+        } satisfies RecommendationIntakeAction;
+        return RecommendationIntakeActionSchema.parse(action);
+      }
+    }
+  }
 
   const unknowns = buildUnknowns(state);
   const askable = unknowns

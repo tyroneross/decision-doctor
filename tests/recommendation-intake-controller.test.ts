@@ -110,6 +110,7 @@ describe("recommendation adaptive intake controller", () => {
         askedTopics: [],
         filledPaths: ["painPath", "scoringInput.frequency"],
         questionCount: 0,
+        routingDeclined: false,
       },
     });
 

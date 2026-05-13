@@ -599,10 +599,28 @@ export const RecommendationIntakeStateSchema = z.object({
   askedTopics: z.array(z.string().min(1).max(80)).default([]),
   filledPaths: z.array(z.string().min(1).max(80)).default([]),
   questionCount: z.number().int().min(0).max(20).default(0),
+  /**
+   * Set to `true` when the user dismisses a `route_to_decision` affordance
+   * and chooses to continue with the pain-recommendation intake. Prevents the
+   * controller from re-emitting the same routing hint on subsequent calls.
+   */
+  routingDeclined: z.boolean().default(false),
 });
 export type RecommendationIntakeState = z.infer<
   typeof RecommendationIntakeStateSchema
 >;
+
+/**
+ * Suggested decision template when intake detects a decision-shaped question
+ * (e.g., "should I hire an admin assistant?"). Aligns with the decision template
+ * registry in lib/engine/templates/index.ts.
+ */
+export const DecisionTemplateHintSchema = z.enum([
+  "admin-hire",
+  "capacity",
+  "pricing",
+]);
+export type DecisionTemplateHint = z.infer<typeof DecisionTemplateHintSchema>;
 
 export const RecommendationIntakeActionSchema = z.discriminatedUnion("action", [
   z.object({
@@ -630,6 +648,25 @@ export const RecommendationIntakeActionSchema = z.discriminatedUnion("action", [
     state: RecommendationIntakeStateSchema,
     recommendationInput: RecommendationInputSchema,
     reason: z.string().min(1).max(240),
+  }),
+  /**
+   * Emitted when intake detects a decision-shaped question (e.g., "should I
+   * hire X"). The client SHOULD surface an affordance offering to route the
+   * user to the matching decision-template flow. When the user accepts, the
+   * client navigates to /app/decisions/new?template=<hint>&seed=<text>. When
+   * the user declines, the client posts back to /api/recommendations/intake/next
+   * with state.routingDeclined=true to continue the pain-recommendation pipeline.
+   *
+   * Pay-it-forward (Path B): adding a typed variant rather than a hint field
+   * unlocks future routing variants (e.g., route_to_chat, route_to_existing_session)
+   * without re-shaping every consumer.
+   */
+  z.object({
+    action: z.literal("route_to_decision"),
+    state: RecommendationIntakeStateSchema,
+    suggestedTemplate: DecisionTemplateHintSchema,
+    confidence: z.number().min(0).max(1),
+    rationale: z.string().min(1).max(240),
   }),
 ]);
 export type RecommendationIntakeAction = z.infer<
