@@ -433,10 +433,17 @@ export async function POST(req: Request) {
     });
   }
 
-  // Phase A — continue the conversation
-  if (parsedAssistant.status === "asking") {
-    // Resolve detection (kicked off in parallel earlier). Safe to await —
-    // the detector never throws and is typically faster than the Groq call.
+  // Phase-1 chat-as-decision-front-door — resolve the decision-intent
+  // detection that was kicked off in parallel with the Groq call. Both
+  // the "asking" and "clarifier" branches attach the offerHelp affordance
+  // when confidence ≥ MIN_CONFIDENCE so the user can opt into the
+  // structured-survey path regardless of which conversational mode the
+  // LLM chose for its reply.
+  let offerHelp: OfferHelpAffordance | undefined;
+  if (
+    parsedAssistant.status === "asking" ||
+    parsedAssistant.status === "clarifier"
+  ) {
     const detection = await detectionPromise;
     if (process.env.NODE_ENV !== "production") {
       console.info(
@@ -445,16 +452,21 @@ export async function POST(req: Request) {
           kind: detection.kind,
           confidence: detection.confidence,
           suggestedPath: detection.suggestedPath,
+          replyStatus: parsedAssistant.status,
         }),
       );
     }
-    const offerHelp: OfferHelpAffordance | undefined = shouldOfferHelp(detection)
+    offerHelp = shouldOfferHelp(detection)
       ? {
           kind: "offer-decision-help",
           suggestedPath: detection.suggestedPath!,
           rationale: detection.rationale,
         }
       : undefined;
+  }
+
+  // Phase A — continue the conversation
+  if (parsedAssistant.status === "asking") {
     return NextResponse.json({
       status: "asking",
       reply: parsedAssistant.reply,
@@ -471,6 +483,7 @@ export async function POST(req: Request) {
       reply: parsedAssistant.reply,
       widget: parsedAssistant.widget,
       inferredTemplateId: parsedAssistant.inferredTemplateId ?? null,
+      ...(offerHelp ? { offerHelp } : {}),
     });
   }
 

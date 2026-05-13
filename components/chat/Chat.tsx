@@ -247,6 +247,9 @@ export function Chat({ seed }: { seed?: string } = {}) {
               reply: string;
               widget: ClarifierWidget;
               inferredTemplateId?: "capacity" | "pricing" | "admin-hire" | null;
+              // Phase-1 fix: clarifier responses can also carry the
+              // decision-detector affordance.
+              offerHelp?: OfferHelpAffordance;
             }
           | {
               status: "survey";
@@ -304,7 +307,8 @@ export function Chat({ seed }: { seed?: string } = {}) {
                   inferredTemplateId: data.inferredTemplateId ?? null,
                 }
               : {}),
-            ...(data.status === "asking" && data.offerHelp
+            ...((data.status === "asking" || data.status === "clarifier") &&
+            data.offerHelp
               ? { offerHelp: data.offerHelp }
               : {}),
             ...(data.status === "survey" ? { survey: data.survey } : {}),
