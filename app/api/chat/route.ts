@@ -23,6 +23,7 @@ import {
   shouldOfferHelp,
   type DecisionDetection,
 } from "@/lib/chat/decision-detector";
+import { generateSurvey } from "@/lib/chat/survey-generator";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
 import { GUEST_USER_ID, GUEST_TENANT_ID } from "@/lib/guest-identity";
@@ -54,6 +55,18 @@ const RequestSchema = z.object({
    * runs in evals.
    */
   userOverrode: z.boolean().optional(),
+  /**
+   * Phase 2 — when the user clicks the offer-help affordance, the client
+   * sends this signal so the route generates a fresh adaptive survey
+   * instead of continuing the conversational clarifier loop.
+   */
+  engageSurvey: z
+    .object({
+      question: z.string().min(1).max(2000),
+      suggestedPath: z.enum(["decision", "recommendation"]),
+      rationale: z.string().max(400).optional(),
+    })
+    .optional(),
 });
 
 const FieldValueSchema = z.union([
@@ -140,6 +153,57 @@ export async function POST(req: Request) {
       },
       { status: 429 },
     );
+  }
+
+  // Phase-2 chat-as-decision-front-door — short-circuit when the user
+  // accepted the offer-help affordance. Generate a fresh adaptive survey
+  // tailored to their decision question and return it as
+  // `status: "survey"`. On generation failure, fall through to the normal
+  // conversational clarifier loop with a polite "let's keep talking"
+  // primer so the user is never left staring at a dead chip.
+  if (parsed.data.engageSurvey) {
+    // PHI guard on the engageSurvey.question — same standard as messages.
+    const phi = detectPHI(parsed.data.engageSurvey.question);
+    if (phi.hasPHI) {
+      return NextResponse.json(
+        {
+          phiBlocked: true,
+          reasons: phi.reasons,
+          message:
+            "Your question appears to include patient identifiers. Please rephrase without PHI and try again.",
+        },
+        { status: 400 },
+      );
+    }
+    const survey = await generateSurvey({
+      question: parsed.data.engageSurvey.question,
+      suggestedPath: parsed.data.engageSurvey.suggestedPath,
+      rationale: parsed.data.engageSurvey.rationale,
+    });
+    if (survey) {
+      if (process.env.NODE_ENV !== "production") {
+        console.info(
+          "[/api/chat] generated survey:",
+          JSON.stringify({
+            id: survey.id,
+            fields: survey.fields.length,
+            suggestedPath: survey.suggestedPath,
+          }),
+        );
+      }
+      return NextResponse.json({
+        status: "survey",
+        reply: survey.intro ?? "A few quick questions to make this decision well.",
+        survey,
+      });
+    }
+    // Generation failed — fall through. The normal clarifier loop below
+    // will pick up from the existing messages history.
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "[/api/chat] survey generation failed, falling back to clarifier loop",
+      );
+    }
   }
 
   // S1: PHI guard — scan every message content before invoking Groq.
