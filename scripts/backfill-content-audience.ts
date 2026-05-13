@@ -355,8 +355,24 @@ function accumulate(
 }
 
 async function applyPlan(pool: Pool, plan: PlanEntry[]): Promise<number> {
-  let inserts = 0;
+  // Replace-not-additive semantics: for each (content_type, content_id),
+  // delete any existing 'auto' audience rows NOT in the new audiences set,
+  // then upsert each new audience. Preserves 'human' overrides (never
+  // deleted) and 'seed' rows (treated as overrides too — backfill won't
+  // touch them).
+  let writes = 0;
   for (const e of plan) {
+    if (e.audiences.length === 0) continue;
+    // Delete stale 'auto' rows whose audience is no longer in the new set.
+    const audPlaceholders = e.audiences.map((_, i) => `$${i + 3}`).join(", ");
+    const delRes = await pool.query(
+      `DELETE FROM content_audience
+        WHERE content_type=$1 AND content_id=$2
+          AND source = 'auto'
+          AND audience NOT IN (${audPlaceholders})`,
+      [e.contentType, e.contentId, ...e.audiences],
+    );
+    writes += delRes.rowCount ?? 0;
     for (const a of e.audiences) {
       const res = await pool.query(
         `INSERT INTO content_audience (content_type, content_id, audience, source, rationale, confidence)
@@ -365,13 +381,14 @@ async function applyPlan(pool: Pool, plan: PlanEntry[]): Promise<number> {
          DO UPDATE SET
            rationale = EXCLUDED.rationale,
            confidence = EXCLUDED.confidence,
-           source = EXCLUDED.source`,
+           source = EXCLUDED.source
+         WHERE content_audience.source <> 'human'`,
         [e.contentType, e.contentId, a, e.reason, e.confidence],
       );
-      inserts += res.rowCount ?? 0;
+      writes += res.rowCount ?? 0;
     }
   }
-  return inserts;
+  return writes;
 }
 
 function renderSummary(
