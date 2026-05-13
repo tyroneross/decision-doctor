@@ -30,6 +30,11 @@ import { SavedSearchesStrip } from "@/components/library/SavedSearchesStrip";
 import { SavedResponseCard } from "@/components/library/SavedResponseCard";
 import { UseCaseCard } from "@/components/library/UseCaseCard";
 import { PromptCard } from "@/components/library/PromptCard";
+import { SearchScopeToggle } from "@/components/SearchScopeToggle";
+import {
+  SearchScopeProvider,
+  useSearchScope,
+} from "@/lib/search-scope/context";
 import type {
   LibraryUseCase,
   LibraryPrompt,
@@ -118,12 +123,23 @@ function promptsToHits(rows: LibraryPrompt[]): LibraryHit[] {
 
 // ---- Component --------------------------------------------------------------
 
-export function LibraryPageClient({
+export function LibraryPageClient(props: LibraryPageClientProps) {
+  // Outer wrapper provides SearchScope context so the inner body can use the
+  // toggle + read the active audience scope when building search URLs.
+  return (
+    <SearchScopeProvider isAuthed={props.isAuthed}>
+      <LibraryPageClientBody {...props} />
+    </SearchScopeProvider>
+  );
+}
+
+function LibraryPageClientBody({
   initialUseCases,
   initialPrompts,
   isAuthed,
   isGuest,
 }: LibraryPageClientProps) {
+  const { scope: audienceScope } = useSearchScope();
   // Search state.
   const [query, setQuery] = React.useState("");
   const [submittedQuery, setSubmittedQuery] = React.useState("");
@@ -172,6 +188,7 @@ export function LibraryPageClient({
     kinds: string[],
     paths: string[],
     mine: boolean,
+    scope: "focused" | "broad",
   ): string {
     const params = new URLSearchParams();
     params.set("q", q || " ");
@@ -186,6 +203,7 @@ export function LibraryPageClient({
       params.set("paths", paths.join(","));
     }
     params.set("onlyMine", String(mine));
+    params.set("audienceScope", scope);
     return `/api/library/search?${params.toString()}`;
   }
 
@@ -196,6 +214,7 @@ export function LibraryPageClient({
     kinds: string[],
     paths: string[],
     mine: boolean,
+    scope: "focused" | "broad",
   ) {
     if (
       !q.trim() &&
@@ -210,7 +229,7 @@ export function LibraryPageClient({
       ]);
       return;
     }
-    const url = buildSearchUrl(q, kinds, paths, mine);
+    const url = buildSearchUrl(q, kinds, paths, mine, scope);
     setLoading(true);
     try {
       const res = await fetch(url);
@@ -227,8 +246,19 @@ export function LibraryPageClient({
   function handleSubmit(value: string) {
     setSubmittedQuery(value);
     setQuery(value);
-    void fetchResults(value, kindFilter, pathFilter, onlyMine);
+    void fetchResults(value, kindFilter, pathFilter, onlyMine, audienceScope);
   }
+
+  // Refetch whenever the audience scope flips while a query is active.
+  // Initial SSR data still wins when no filters are set.
+  React.useEffect(() => {
+    if (!submittedQuery && kindFilter.includes("all") && pathFilter.includes("all") && !onlyMine) {
+      return;
+    }
+    void fetchResults(submittedQuery, kindFilter, pathFilter, onlyMine, audienceScope);
+    // Intentionally omit fetchResults from deps — it captures the latest closure values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audienceScope]);
 
   function scheduleRefetch(
     q: string,
@@ -237,8 +267,9 @@ export function LibraryPageClient({
     mine: boolean,
   ) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    const scopeAtSchedule = audienceScope;
     debounceRef.current = setTimeout(() => {
-      void fetchResults(q, kinds, paths, mine);
+      void fetchResults(q, kinds, paths, mine, scopeAtSchedule);
     }, 300);
   }
 
@@ -275,7 +306,7 @@ export function LibraryPageClient({
     setOnlyMine(item.onlyMine);
     setQuery(item.query);
     setSubmittedQuery(item.query);
-    void fetchResults(item.query, nextKinds, nextPaths, item.onlyMine);
+    void fetchResults(item.query, nextKinds, nextPaths, item.onlyMine, audienceScope);
   }
 
   async function handleRenameSavedSearch(id: string, name: string | null) {
@@ -484,14 +515,14 @@ export function LibraryPageClient({
         autoFocus={false}
       />
 
-      {/* Toggle + Save action — same row so both controls share visual
-          weight as search-context affordances. */}
+      {/* Toggle + Save action — same row so all search-context controls share visual weight. */}
       <div className="flex flex-wrap items-center gap-4">
         <UniversalSearchToggle
           isAuthed={isAuthed}
           value={onlyMine}
           onChange={handleOnlyMineChange}
         />
+        <SearchScopeToggle compact />
         <div className="flex-1" />
         <SaveSearchButton
           query={submittedQuery || query}
@@ -535,11 +566,12 @@ export function LibraryPageClient({
 
       {/* Results grid */}
       {!loading && results.length === 0 && (
-        <div className="py-12 text-center">
+        <div className="py-12 text-center flex flex-col items-center gap-3">
           <p className="text-[14px] text-mute">
             No matches in your library or the corpus. Try broader terms, or
             use the path filters above.
           </p>
+          <EmptyScopeFlipPrompt />
         </div>
       )}
 
@@ -567,5 +599,24 @@ export function LibraryPageClient({
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * Inline empty-state flip prompt — only renders when the current scope is
+ * Focused; clicking flips to Broad and the Library page's audienceScope
+ * effect re-fetches with the new scope.
+ */
+function EmptyScopeFlipPrompt() {
+  const { scope, setScope } = useSearchScope();
+  if (scope !== "focused") return null;
+  return (
+    <button
+      type="button"
+      onClick={() => void setScope("broad")}
+      className="text-[13px] text-ink font-medium underline underline-offset-2"
+    >
+      Nothing matched in adoption-tagged sources. Try Broad?
+    </button>
   );
 }

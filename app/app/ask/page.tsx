@@ -20,6 +20,11 @@ import { AnswerStream } from "@/components/qa/AnswerStream";
 import { CitationList, type QACitation } from "@/components/qa/CitationList";
 import { EmptyGrounding } from "@/components/qa/EmptyGrounding";
 import { SaveResponseButton } from "@/components/qa/SaveResponseButton";
+import { SearchScopeToggle } from "@/components/SearchScopeToggle";
+import {
+  SearchScopeProvider,
+  useSearchScope,
+} from "@/lib/search-scope/context";
 import type { Citation } from "@/components/chat/CitationChip";
 import { useSession } from "@/lib/auth-client";
 
@@ -70,16 +75,25 @@ function saveHistory(entries: QAEntry[]) {
 }
 
 export default function AskPage() {
+  // Outer wrapper resolves auth before the SearchScopeProvider mounts so the
+  // provider can hydrate from the right source (server vs localStorage).
+  const session = useSession();
+  const isAuthed = !!session.data?.user;
+  return (
+    <SearchScopeProvider isAuthed={isAuthed}>
+      <AskPageBody isAuthed={isAuthed} />
+    </SearchScopeProvider>
+  );
+}
+
+function AskPageBody({ isAuthed }: { isAuthed: boolean }) {
   const [history, setHistory] = React.useState<QAEntry[]>([]);
   const [stream, setStream] = React.useState<StreamState | null>(null);
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const abortRef = React.useRef<AbortController | null>(null);
   const autoSubmittedRef = React.useRef<string | null>(null);
 
-  // Auth-aware Save button. better-auth's useSession resolves async; treat
-  // pending state as not-authed (button shows sign-in hint) until it settles.
-  const session = useSession();
-  const isAuthed = !!session.data?.user;
+  const { scope: audienceScope, setScope } = useSearchScope();
 
   const handleSubmit = React.useCallback(async (question: string) => {
     // Abort any in-flight stream.
@@ -101,7 +115,7 @@ export default function AskPage() {
       const resp = await fetch("/api/ai-adoption-qa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, audienceScope }),
         signal: controller.signal,
       });
 
@@ -247,7 +261,7 @@ export default function AskPage() {
           : prev,
       );
     }
-  }, []);
+  }, [audienceScope]);
 
   // Load history from sessionStorage on mount.
   React.useEffect(() => {
@@ -280,16 +294,24 @@ export default function AskPage() {
           borderColor: "var(--line)",
         }}
       >
-        <div className="max-w-2xl mx-auto">
-          <h1
-            className="text-[16px] font-semibold leading-[22px]"
-            style={{ color: "var(--ink)" }}
-          >
-            Ask Aida
-          </h1>
-          <p className="text-[13px] leading-[18px]" style={{ color: "var(--mute)" }}>
-            AI tooling and adoption questions, grounded in your library and the corpus.
-          </p>
+        <div className="max-w-2xl mx-auto flex items-start justify-between gap-3">
+          <div>
+            <h1
+              className="text-[16px] font-semibold leading-[22px]"
+              style={{ color: "var(--ink)" }}
+            >
+              Ask Aida
+            </h1>
+            <p
+              className="text-[13px] leading-[18px]"
+              style={{ color: "var(--mute)" }}
+            >
+              AI tooling and adoption questions, grounded in your library and the corpus.
+            </p>
+          </div>
+          <div className="pt-1">
+            <SearchScopeToggle compact />
+          </div>
         </div>
       </div>
 
@@ -357,7 +379,33 @@ export default function AskPage() {
 
               {/* Empty grounding */}
               {!stream.isStreaming && stream.emptyGrounding && !stream.phiBlocked && !stream.error && (
-                <EmptyGrounding question={stream.question} />
+                <>
+                  <EmptyGrounding question={stream.question} />
+                  {audienceScope === "focused" ? (
+                    <div
+                      className="rounded-[12px] p-3 text-[13px] leading-[18px] flex items-center justify-between gap-3"
+                      style={{
+                        background: "var(--bg)",
+                        border: "1px solid var(--line)",
+                      }}
+                    >
+                      <span style={{ color: "var(--mute)" }}>
+                        Nothing matched in adoption-tagged sources. Try Broad?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void setScope("broad");
+                          void handleSubmit(stream.question);
+                        }}
+                        className="text-[13px] font-medium underline underline-offset-2"
+                        style={{ color: "var(--ink)" }}
+                      >
+                        Switch to Broad & retry
+                      </button>
+                    </div>
+                  ) : null}
+                </>
               )}
 
               {/* Streaming answer */}
