@@ -350,9 +350,14 @@ export function NewRecommendationClient({
     const templateLabel =
       templateLabels[routeAction.suggestedTemplate] ??
       routeAction.suggestedTemplate;
-    const decisionHref = `/app/decisions/new?template=${encodeURIComponent(
+    // The decision-template flow lives at /app/history/new/[templateId]; the
+    // [templateId] params (admin-hire | capacity | pricing) align 1:1 with
+    // DecisionTemplateHintSchema. We pass the original challenge text as a
+    // ?seed= hint so the template intake can preserve user context (consumer
+    // wiring is a followup — current page ignores unknown params safely).
+    const decisionHref = `/app/history/new/${encodeURIComponent(
       routeAction.suggestedTemplate,
-    )}&seed=${encodeURIComponent(routeAction.state.challengeText.slice(0, 400))}`;
+    )}?seed=${encodeURIComponent(routeAction.state.challengeText.slice(0, 400))}`;
 
     async function declineRouting() {
       const nextState: RecommendationIntakeState = {
