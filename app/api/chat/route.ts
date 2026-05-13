@@ -32,7 +32,7 @@ import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
 import { GUEST_USER_ID, GUEST_TENANT_ID } from "@/lib/guest-identity";
 import { runWithActor, withActor } from "@/lib/db/actor";
-import { decisions, auditEvents } from "@/lib/db/schema";
+import { decisions, recommendations, auditEvents } from "@/lib/db/schema";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { detectPHI } from "@/lib/phi-guard";
 import {
@@ -206,12 +206,13 @@ export async function POST(req: Request) {
 
     if (adapted && adapted.kind === "decision") {
       try {
-        const engineResult = await runDecision({
+        const engineInputDirect: DecisionInput = {
           templateId: adapted.templateId as TemplateId,
           source: { type: "user_form", capturedAt: new Date() },
           fields: adapted.fields as DecisionInput["fields"],
           context: { userId: actor.userId, tenantId: actor.tenantId },
-        });
+        };
+        const engineResult = await runDecision(engineInputDirect);
         if (process.env.NODE_ENV !== "production") {
           console.info(
             "[/api/chat] survey-adapter decision:",
@@ -222,11 +223,62 @@ export async function POST(req: Request) {
             }),
           );
         }
+        // Persist for authed users; guests stay ephemeral.
+        let decisionId: string | undefined;
+        if (!isGuest) {
+          try {
+            await runWithActor(
+              { userId: actor.userId, tenantId: actor.tenantId },
+              () =>
+                withActor(async (tx) => {
+                  const [row] = await tx
+                    .insert(decisions)
+                    .values({
+                      userId: actor.userId,
+                      tenantId: actor.tenantId,
+                      templateId: engineInputDirect.templateId,
+                      intake: engineInputDirect.fields,
+                      recommendation: engineResult.output.recommendation,
+                      alternatives: engineResult.output.alternatives,
+                      robustAlternative: engineResult.output.robustAlternative,
+                      methodTrace: engineResult.output.methodTrace,
+                      workloadReducers: engineResult.output.workloadReducers,
+                      destinations: engineResult.output.destinations,
+                      status: "complete",
+                    })
+                    .returning({ id: decisions.id });
+                  decisionId = row?.id;
+                  await tx.insert(auditEvents).values({
+                    userId: actor.userId,
+                    tenantId: actor.tenantId,
+                    action: "decision.create.via-chat-survey",
+                    targetId: decisionId,
+                    metadata: {
+                      surveyId: survey.id,
+                      templateId: adapted.templateId,
+                    },
+                  });
+                }),
+            );
+          } catch (persistErr) {
+            // Persistence is non-fatal — still return the recommendation.
+            if (process.env.NODE_ENV !== "production") {
+              console.warn(
+                "[/api/chat] decision persist failed (chat-survey):",
+                persistErr,
+              );
+            }
+          }
+        }
         return NextResponse.json({
           status: "ready",
           reply:
             "Here's what the numbers say. Take a look — you can refine and we'll re-run.",
-          decision: engineResult.output,
+          decision: {
+            decisionId: decisionId ?? "ephemeral",
+            decidedAt: new Date(),
+            ...engineResult.output,
+          },
           templateId: adapted.templateId,
         });
       } catch (err) {
@@ -258,11 +310,90 @@ export async function POST(req: Request) {
             }),
           );
         }
+        // Persist for authed users; guests stay ephemeral.
+        let recommendationId: string | undefined;
+        if (!isGuest) {
+          try {
+            await runWithActor(
+              { userId: actor.userId, tenantId: actor.tenantId },
+              () =>
+                withActor(async (tx) => {
+                  const [row] = await tx
+                    .insert(recommendations)
+                    .values({
+                      userId: actor.userId,
+                      tenantId: actor.tenantId,
+                      painPath: recResult.selectedPainPath,
+                      challengeSummary: recResult.challengeSummary,
+                      goal: recResult.goal,
+                      intake: {
+                        source: "chat-survey",
+                        surveyId: survey.id,
+                        answers: submission.answers,
+                      } as unknown as Record<string, unknown>,
+                      candidateTasks:
+                        recResult.candidateTasks as unknown as Record<
+                          string,
+                          unknown
+                        >[],
+                      recommendedTask: {
+                        title: recResult.recommendedTask,
+                        approach: recResult.recommendedApproach,
+                        why: recResult.whyThisTask,
+                      } as unknown as Record<string, unknown>,
+                      starterSolution: {
+                        text: recResult.starterSolution,
+                      } as unknown as Record<string, unknown>,
+                      guardrails:
+                        recResult.guardrails as unknown as Record<
+                          string,
+                          unknown
+                        >[],
+                      successMetric: recResult.successMetric,
+                      adoptionPathway:
+                        recResult.adoptionPathway as unknown as Record<
+                          string,
+                          unknown
+                        >[],
+                      methodTrace:
+                        recResult.methodTrace as unknown as Record<
+                          string,
+                          unknown
+                        >[],
+                      status: "planned",
+                      confidence: String(
+                        (recResult.confidence / 100).toFixed(2),
+                      ),
+                    })
+                    .returning({ id: recommendations.id });
+                  recommendationId = row?.id;
+                  await tx.insert(auditEvents).values({
+                    userId: actor.userId,
+                    tenantId: actor.tenantId,
+                    action: "recommendation.create.via-chat-survey",
+                    targetId: recommendationId,
+                    metadata: {
+                      surveyId: survey.id,
+                      painPath: adapted.painPath,
+                    },
+                  });
+                }),
+            );
+          } catch (persistErr) {
+            if (process.env.NODE_ENV !== "production") {
+              console.warn(
+                "[/api/chat] recommendation persist failed (chat-survey):",
+                persistErr,
+              );
+            }
+          }
+        }
         return NextResponse.json({
           status: "recommendation",
           reply:
             "Here's the recommendation tailored to your answers. Refine anything and we'll re-run.",
           recommendation: recResult,
+          recommendationId: recommendationId ?? "ephemeral",
         });
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
