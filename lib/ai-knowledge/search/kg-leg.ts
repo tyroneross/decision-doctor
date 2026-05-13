@@ -17,6 +17,8 @@
 import "server-only";
 import { sql } from "drizzle-orm";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import { audienceClauseFor } from "@/lib/audience/filter";
+import type { SearchScope } from "@/lib/db/schema";
 
 export interface KGHit {
   doc_id: string;
@@ -41,9 +43,16 @@ export async function kgSearch(
   tx: NeonDatabase,
   query: string,
   limit = 20,
+  scope: SearchScope = "focused",
 ): Promise<KGHit[]> {
   const tokens = tokenize(query);
   if (tokens.length === 0) return [];
+  // Track A: audience filter at the document-mention join. 'broad' no-op.
+  const aud = audienceClauseFor({
+    scope,
+    contentType: "corpus_document",
+    docIdColumn: sql.raw("m.document_id"),
+  });
   // Drizzle's tagged-template array binding emits a record tuple, not
   // text[] — we have to build the array literal explicitly via sql.join.
   // ARRAY[<tok1>, <tok2>, ...]::text[] is the equivalent form.
@@ -79,6 +88,7 @@ export async function kgSearch(
            SUM(m.mention_count * m.confidence)::float AS rank
       FROM ai_document_entity_mentions m
       JOIN expanded e ON e.id = m.entity_id
+     WHERE TRUE ${aud.where}
      GROUP BY m.document_id
      ORDER BY rank DESC
      LIMIT ${limit}

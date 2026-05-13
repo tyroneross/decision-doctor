@@ -23,6 +23,8 @@
 import "server-only";
 import { sql } from "drizzle-orm";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import { audienceClauseFor } from "@/lib/audience/filter";
+import type { SearchScope } from "@/lib/db/schema";
 
 export interface BM25Hit {
   doc_id: string;
@@ -45,9 +47,18 @@ export async function bm25Search(
   tx: NeonDatabase,
   query: string,
   limit = 20,
+  scope: SearchScope = "focused",
 ): Promise<BM25Hit[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
+
+  // Track A: early-leg audience filter. 'broad' is a no-op (empty SQL fragment).
+  // 'focused' adds an EXISTS clause restricting to content_audience-tagged rows.
+  const aud = audienceClauseFor({
+    scope,
+    contentType: "corpus_document",
+    docIdColumn: sql.raw("corpus_documents.id"),
+  });
 
   // V2 trust filter: only `full_text` and `source_summary` body_kinds are
   // eligible as candidates. NULL body_kind is treated as `full_text` for
@@ -66,6 +77,7 @@ export async function bm25Search(
          (metadata->'content_extract'->>'body_kind') IS NULL
          OR (metadata->'content_extract'->>'body_kind') IN ('full_text','source_summary')
        )
+       ${aud.where}
      ORDER BY rank DESC
      LIMIT ${limit}
   `);
@@ -88,6 +100,7 @@ export async function bm25Search(
          (metadata->'content_extract'->>'body_kind') IS NULL
          OR (metadata->'content_extract'->>'body_kind') IN ('full_text','source_summary')
        )
+       ${aud.where}
      ORDER BY rank DESC
      LIMIT ${limit}
   `);

@@ -19,6 +19,11 @@
 import "server-only";
 import { sql } from "drizzle-orm";
 import { runWithActor, withActor } from "@/lib/db/actor";
+import { audienceClauseFor } from "@/lib/audience/filter";
+import type {
+  SearchScope,
+  ContentAudienceContentType,
+} from "@/lib/db/schema";
 
 export interface LibraryLegHit {
   doc_id: string;
@@ -65,10 +70,22 @@ interface RawRow {
 async function searchOneTable(
   tx: Parameters<Parameters<typeof withActor>[0]>[0],
   tableName: string,
+  contentType: ContentAudienceContentType,
   query: string,
+  scope: SearchScope,
 ): Promise<RawRow[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
+
+  // Track A audience filter — content_id matches the dynamic table's id column.
+  // The doc_id alias used in SELECT is `id`, but the EXISTS sub-query in
+  // filter.ts must reference the outer row's id explicitly (sql.raw on
+  // `<table>.id` keeps the predicate unambiguous when joined later).
+  const aud = audienceClauseFor({
+    scope,
+    contentType,
+    docIdColumn: sql.raw(`${tableName}.id`),
+  });
 
   // Strict pass: websearch_to_tsquery (AND semantics)
   const strictResult = await tx.execute(sql`
@@ -76,6 +93,7 @@ async function searchOneTable(
            ts_rank_cd(search_tsv, websearch_to_tsquery('english', ${trimmed}), 32) AS rank
       FROM ${sql.raw(tableName)}
      WHERE search_tsv @@ websearch_to_tsquery('english', ${trimmed})
+       ${aud.where}
      ORDER BY rank DESC
      LIMIT 20
   `);
@@ -94,6 +112,7 @@ async function searchOneTable(
            ts_rank_cd(search_tsv, to_tsquery('english', ${orQuery}), 32) AS rank
       FROM ${sql.raw(tableName)}
      WHERE search_tsv @@ to_tsquery('english', ${orQuery})
+       ${aud.where}
      ORDER BY rank DESC
      LIMIT 20
   `);
@@ -125,17 +144,38 @@ async function searchOneTable(
 export async function librarySearch(
   query: string,
   ctx: SearchContext,
+  scope: SearchScope = "focused",
 ): Promise<LibraryLegHit[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
 
   const hits: LibraryLegHit[] = [];
 
-  const tables: Array<{ name: string; kind: string }> = [
-    { name: "library_use_cases", kind: "library:use_cases" },
-    { name: "library_prompts", kind: "library:prompts" },
-    { name: "library_skills", kind: "library:skills" },
-    { name: "library_plugins", kind: "library:plugins" },
+  const tables: Array<{
+    name: string;
+    kind: string;
+    contentType: ContentAudienceContentType;
+  }> = [
+    {
+      name: "library_use_cases",
+      kind: "library:use_cases",
+      contentType: "library_use_case",
+    },
+    {
+      name: "library_prompts",
+      kind: "library:prompts",
+      contentType: "library_prompt",
+    },
+    {
+      name: "library_skills",
+      kind: "library:skills",
+      contentType: "library_skill",
+    },
+    {
+      name: "library_plugins",
+      kind: "library:plugins",
+      contentType: "library_plugin",
+    },
   ];
 
   await runWithActor(
@@ -143,8 +183,8 @@ export async function librarySearch(
     async () =>
       withActor(async (tx) => {
         await Promise.all(
-          tables.map(async ({ name, kind }) => {
-            const rows = await searchOneTable(tx, name, trimmed);
+          tables.map(async ({ name, kind, contentType }) => {
+            const rows = await searchOneTable(tx, name, contentType, trimmed, scope);
             for (const r of rows) {
               hits.push({
                 doc_id: r.doc_id,

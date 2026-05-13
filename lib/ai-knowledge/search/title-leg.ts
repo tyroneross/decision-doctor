@@ -7,6 +7,8 @@
 import "server-only";
 import { sql } from "drizzle-orm";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import { audienceClauseFor } from "@/lib/audience/filter";
+import type { SearchScope } from "@/lib/db/schema";
 
 export interface TitleHit {
   doc_id: string;
@@ -17,10 +19,17 @@ export async function titleSearch(
   tx: NeonDatabase,
   query: string,
   limit = 20,
+  scope: SearchScope = "focused",
 ): Promise<TitleHit[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
   const like = `%${trimmed.toLowerCase()}%`;
+  // Track A audience filter at corpus_documents.id.
+  const aud = audienceClauseFor({
+    scope,
+    contentType: "corpus_document",
+    docIdColumn: sql.raw("corpus_documents.id"),
+  });
 
   const rows = await tx.execute(sql`
     WITH tsq AS (SELECT websearch_to_tsquery('english', ${trimmed}) AS q)
@@ -36,6 +45,7 @@ export async function titleSearch(
            )
        AND coalesce(metadata->'content_extract'->>'body_kind', 'full_text')
            NOT IN ('blocked', 'degraded')
+       ${aud.where}
      ORDER BY rank DESC
      LIMIT ${limit}
   `);

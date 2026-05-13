@@ -11,6 +11,8 @@
 import "server-only";
 import { sql } from "drizzle-orm";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import { audienceClauseFor } from "@/lib/audience/filter";
+import type { SearchScope } from "@/lib/db/schema";
 
 export interface VectorHit {
   doc_id: string;
@@ -32,14 +34,23 @@ export async function vectorSearch(
   tx: NeonDatabase,
   queryEmbedding: number[],
   limit = 20,
+  scope: SearchScope = "focused",
 ): Promise<VectorHit[]> {
   if (queryEmbedding.length === 0) return [];
   await tx.execute(sql`SET LOCAL hnsw.ef_search = 100`);
   const vec = "[" + queryEmbedding.join(",") + "]";
+  // Track A: filter at corpus_embeddings.document_id via EXISTS into
+  // content_audience. 'broad' yields an empty SQL fragment (no-op).
+  const aud = audienceClauseFor({
+    scope,
+    contentType: "corpus_document",
+    docIdColumn: sql.raw("corpus_embeddings.document_id"),
+  });
   const rows = await tx.execute(sql`
     SELECT document_id AS doc_id,
            MIN(embedding <=> ${vec}::vector) AS rank
       FROM corpus_embeddings
+     WHERE TRUE ${aud.where}
      GROUP BY document_id
      ORDER BY rank ASC
      LIMIT ${limit}
