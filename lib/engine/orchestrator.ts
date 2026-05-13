@@ -721,6 +721,10 @@ async function retrieveRecommendationLibraryHits(input: {
       includeCorpus: false,
       userId: input.userId,
       tenantId: input.tenantId,
+      // Track A: recommendation engine is mission-bound — it ALWAYS uses
+      // adoption-tagged content regardless of the user's per-session toggle.
+      // See plan §A3.
+      scope: "focused",
     });
     return hits
       .filter((hit) => hit.kind === "use_case" || hit.kind === "prompt")

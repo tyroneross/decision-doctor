@@ -44,6 +44,10 @@ export const runtime = "nodejs";
 const QuerySchema = z.object({
   q: z.string().min(1).max(500),
   scope: z.enum(["global", "my", "both"]).optional().default("both"),
+  // Track A — audience scope. Defaults to 'focused' (AI-adoption-tagged
+  // content only). The legacy `scope` query param (global/my/both) is
+  // retained for back-compat; this new param is orthogonal.
+  audienceScope: z.enum(["focused", "broad"]).optional().default("focused"),
   limit: z.coerce.number().int().min(1).max(50).optional().default(10),
 });
 
@@ -80,6 +84,10 @@ export async function GET(req: Request) {
   const parsed = QuerySchema.safeParse({
     q: searchParams.get("q"),
     scope: searchParams.get("scope") ?? undefined,
+    audienceScope:
+      searchParams.get("audienceScope") ??
+      searchParams.get("audience_scope") ??
+      undefined,
     limit: searchParams.get("limit") ?? undefined,
   });
   if (!parsed.success) {
@@ -88,7 +96,7 @@ export async function GET(req: Request) {
       { status: 400 },
     );
   }
-  const { q, limit } = parsed.data;
+  const { q, limit, audienceScope } = parsed.data;
 
   // Search is intentionally accessible to guests. The corpus is curated AI-
   // adoption content; users (signed-in or not) need to browse it to find
@@ -164,11 +172,11 @@ export async function GET(req: Request) {
   // S1: Library leg — runs its own runWithActor internally.
   const libStart = Date.now();
   const [bm25Hits, vectorHits, kgHits, titleHits, libraryHits] = await Promise.all([
-    runLeg("bm25", (tx) => bm25Search(tx, q, 20)).catch(() => []),
-    runLeg("vector", (tx) => vectorSearch(tx, embedding, 20)).catch(() => []),
-    runLeg("kg", (tx) => kgSearch(tx, q, 20)).catch(() => []),
-    runLeg("title", (tx) => titleSearch(tx, q, 20)).catch(() => []),
-    librarySearch(q, { actor: { userId, tenantId } })
+    runLeg("bm25", (tx) => bm25Search(tx, q, 20, audienceScope)).catch(() => []),
+    runLeg("vector", (tx) => vectorSearch(tx, embedding, 20, audienceScope)).catch(() => []),
+    runLeg("kg", (tx) => kgSearch(tx, q, 20, audienceScope)).catch(() => []),
+    runLeg("title", (tx) => titleSearch(tx, q, 20, audienceScope)).catch(() => []),
+    librarySearch(q, { actor: { userId, tenantId } }, audienceScope)
       .then((hits) => {
         legTiming.library = Date.now() - libStart;
         return hits;

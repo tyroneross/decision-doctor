@@ -45,6 +45,8 @@ const QuerySchema = z.object({
   kinds: z.string().optional(), // comma-separated LibraryKind[]
   paths: z.string().optional(), // comma-separated PainPath[]
   onlyMine: z.enum(["true", "false"]).optional().transform((v) => v === "true"),
+  // Track A: audience scope. Defaults to 'focused'. Forwarded to searchLibrary().
+  audienceScope: z.enum(["focused", "broad"]).optional().default("focused"),
   limit: z.coerce.number().int().min(1).max(50).optional().default(20),
 });
 
@@ -61,6 +63,10 @@ export async function GET(req: Request) {
     kinds: searchParams.get("kinds") ?? undefined,
     paths: searchParams.get("paths") ?? undefined,
     onlyMine: searchParams.get("onlyMine") ?? undefined,
+    audienceScope:
+      searchParams.get("audienceScope") ??
+      searchParams.get("audience_scope") ??
+      undefined,
     limit: searchParams.get("limit") ?? undefined,
   });
   if (!parsed.success) {
@@ -101,6 +107,7 @@ export async function GET(req: Request) {
     includeCorpus: !parsed.data.onlyMine,
     userId,
     tenantId,
+    scope: parsed.data.audienceScope,
   });
 
   return NextResponse.json({
@@ -108,5 +115,6 @@ export async function GET(req: Request) {
     total: hits.length,
     total_ms: Date.now() - t0,
     onlyMine: parsed.data.onlyMine ?? false,
+    audienceScope: parsed.data.audienceScope,
   });
 }

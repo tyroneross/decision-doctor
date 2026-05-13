@@ -29,11 +29,14 @@ import {
   type LibrarySavedSearch,
   type LibrarySavedResponse,
   type NewLibraryUseCase,
+  type SearchScope,
+  type ContentAudienceContentType,
 } from "@/lib/db/schema";
 import { runWithActor, withActor } from "@/lib/db/actor";
 import { and, desc, eq, or } from "drizzle-orm";
 import { type BodyKind, normalizeBodyKind } from "@/lib/corpus/body-kind";
 import { GUEST_TENANT_ID, GUEST_USER_ID } from "@/lib/guest-identity";
+import { audienceClauseFor } from "@/lib/audience/filter";
 
 // ---- Public type exports ----------------------------------------------------
 
@@ -437,8 +440,14 @@ export async function promoteToPlugin(
 async function searchTable(
   tx: Parameters<Parameters<typeof withActor>[0]>[0],
   tableName: string,
+  contentType: ContentAudienceContentType,
   query: string,
-  opts: { paths?: PainPath[]; onlyMine?: boolean; userId?: string },
+  opts: {
+    paths?: PainPath[];
+    onlyMine?: boolean;
+    userId?: string;
+    scope?: SearchScope;
+  },
 ): Promise<RawTsRow[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
@@ -450,6 +459,12 @@ async function searchTable(
   const scopeFilter = opts.onlyMine && opts.userId
     ? sql`AND scope = ${opts.userId}`
     : sql``;
+  // Track A audience filter.
+  const aud = audienceClauseFor({
+    scope: opts.scope ?? "focused",
+    contentType,
+    docIdColumn: sql.raw(`${tableName}.id`),
+  });
 
   // --- Strict pass: websearch_to_tsquery (AND semantics) ---
   const strictResult = await tx.execute(sql`
@@ -459,6 +474,7 @@ async function searchTable(
      WHERE search_tsv @@ websearch_to_tsquery('english', ${trimmed})
        ${pathFilter}
        ${scopeFilter}
+       ${aud.where}
      ORDER BY rank DESC
      LIMIT 20
   `);
@@ -480,6 +496,7 @@ async function searchTable(
      WHERE search_tsv @@ to_tsquery('english', ${orQuery})
        ${pathFilter}
        ${scopeFilter}
+       ${aud.where}
      ORDER BY rank DESC
      LIMIT 20
   `);
@@ -499,6 +516,13 @@ export interface SearchLibraryOpts {
   // Internal use: caller supplies actor context.
   userId?: string;
   tenantId?: string;
+  /**
+   * Track A — audience scope. Defaults to 'focused' (AI-adoption-tagged content
+   * only). 'broad' disables the audience filter for the library + corpus
+   * fan-outs. Recommendation engine and any other mission-pinned caller MUST
+   * pass 'focused' explicitly (or rely on the default).
+   */
+  scope?: SearchScope;
 }
 
 /**
@@ -538,6 +562,7 @@ export async function searchLibrary(
   const includeKb = activeKinds.includes("kb_article");
 
   const hits: LibraryHit[] = [];
+  const scope = opts.scope ?? "focused";
 
   await runWithActor({ userId, tenantId }, async () =>
     withActor(async (tx) => {
@@ -545,85 +570,102 @@ export async function searchLibrary(
         paths: opts.paths,
         onlyMine: opts.onlyMine,
         userId,
+        scope,
       };
 
       const searches: Promise<void>[] = [];
 
       if (activeKinds.includes("use_case")) {
         searches.push(
-          searchTable(tx, "library_use_cases", trimmed, tableSearchOpts).then(
-            (rows) => {
-              for (const r of rows) {
-                hits.push({
-                  kind: "use_case",
-                  id: r.id,
-                  title: r.title,
-                  snippet: r.body.slice(0, 300).replace(/\s+/g, " "),
-                  score: Number(r.rank),
-                  source_path: r.pain_path as PainPath,
-                  library_id: r.id,
-                });
-              }
-            },
-          ),
+          searchTable(
+            tx,
+            "library_use_cases",
+            "library_use_case",
+            trimmed,
+            tableSearchOpts,
+          ).then((rows) => {
+            for (const r of rows) {
+              hits.push({
+                kind: "use_case",
+                id: r.id,
+                title: r.title,
+                snippet: r.body.slice(0, 300).replace(/\s+/g, " "),
+                score: Number(r.rank),
+                source_path: r.pain_path as PainPath,
+                library_id: r.id,
+              });
+            }
+          }),
         );
       }
 
       if (activeKinds.includes("prompt")) {
         searches.push(
-          searchTable(tx, "library_prompts", trimmed, tableSearchOpts).then(
-            (rows) => {
-              for (const r of rows) {
-                hits.push({
-                  kind: "prompt",
-                  id: r.id,
-                  title: r.title,
-                  snippet: r.body.slice(0, 300).replace(/\s+/g, " "),
-                  score: Number(r.rank),
-                  source_path: r.pain_path as PainPath,
-                  library_id: r.id,
-                });
-              }
-            },
-          ),
+          searchTable(
+            tx,
+            "library_prompts",
+            "library_prompt",
+            trimmed,
+            tableSearchOpts,
+          ).then((rows) => {
+            for (const r of rows) {
+              hits.push({
+                kind: "prompt",
+                id: r.id,
+                title: r.title,
+                snippet: r.body.slice(0, 300).replace(/\s+/g, " "),
+                score: Number(r.rank),
+                source_path: r.pain_path as PainPath,
+                library_id: r.id,
+              });
+            }
+          }),
         );
       }
 
       if (activeKinds.includes("skill")) {
         searches.push(
-          searchTable(tx, "library_skills", trimmed, tableSearchOpts).then(
-            (rows) => {
-              for (const r of rows) {
-                hits.push({
-                  kind: "skill",
-                  id: r.id,
-                  title: r.title,
-                  snippet: r.body.slice(0, 300).replace(/\s+/g, " "),
-                  score: Number(r.rank),
-                  library_id: r.id,
-                });
-              }
-            },
-          ),
+          searchTable(
+            tx,
+            "library_skills",
+            "library_skill",
+            trimmed,
+            tableSearchOpts,
+          ).then((rows) => {
+            for (const r of rows) {
+              hits.push({
+                kind: "skill",
+                id: r.id,
+                title: r.title,
+                snippet: r.body.slice(0, 300).replace(/\s+/g, " "),
+                score: Number(r.rank),
+                library_id: r.id,
+              });
+            }
+          }),
         );
       }
 
       if (activeKinds.includes("plugin")) {
         searches.push(
-          searchTable(tx, "library_plugins", trimmed, tableSearchOpts).then(
-            (rows) => {
-              for (const r of rows) {
-                hits.push({
-                  kind: "plugin",
-                  id: r.id,
-                  title: r.title,
-                  snippet: r.body.slice(0, 300).replace(/\s+/g, " "),
-                  score: Number(r.rank),
-                  library_id: r.id,
-                });
-              }
-            },
-          ),
+          searchTable(
+            tx,
+            "library_plugins",
+            "library_plugin",
+            trimmed,
+            tableSearchOpts,
+          ).then((rows) => {
+            for (const r of rows) {
+              hits.push({
+                kind: "plugin",
+                id: r.id,
+                title: r.title,
+                snippet: r.body.slice(0, 300).replace(/\s+/g, " "),
+                score: Number(r.rank),
+                library_id: r.id,
+              });
+            }
+          }),
         );
       }
 
@@ -697,7 +739,7 @@ export async function searchLibrary(
       // The bm25Search + titleSearch corpus pipeline is the authoritative path.
       // We call the corpus search logic directly — not via HTTP — to keep this
       // importable in tests with mocked DB.
-      const corpusHits = await fetchCorpusHits(query, userId, tenantId);
+      const corpusHits = await fetchCorpusHits(query, userId, tenantId, scope);
       hits.push(...corpusHits);
     } catch (err) {
       // Corpus search is best-effort; degrade gracefully.
@@ -727,6 +769,7 @@ async function fetchCorpusHits(
   query: string,
   userId: string,
   tenantId: string,
+  scope: SearchScope = "focused",
 ): Promise<LibraryHit[]> {
   const { bm25Search } = await import("@/lib/ai-knowledge/search/bm25-leg");
   const { titleSearch } = await import("@/lib/ai-knowledge/search/title-leg");
@@ -735,8 +778,8 @@ async function fetchCorpusHits(
     withActor(async (tx) => {
       // Strict pass first. Title search keeps metadata-only articles discoverable
       // without treating their bodies as grounded answer material.
-      let corpusRows = await bm25Search(tx, query, 20);
-      const titleRows = await titleSearch(tx, query, 20);
+      let corpusRows = await bm25Search(tx, query, 20, scope);
+      const titleRows = await titleSearch(tx, query, 20, scope);
       const seenTitle = new Set(corpusRows.map((r) => r.doc_id));
       for (const row of titleRows) {
         if (!seenTitle.has(row.doc_id)) {
@@ -751,6 +794,11 @@ async function fetchCorpusHits(
         const orQuery = buildOrQuery(query);
         if (orQuery) {
           try {
+            const aud = audienceClauseFor({
+              scope,
+              contentType: "corpus_document",
+              docIdColumn: sql.raw("corpus_documents.id"),
+            });
             const fallback = await tx.execute(sql`
               SELECT id AS doc_id,
                      ts_rank_cd(search_tsv, to_tsquery('english', ${orQuery}), 32) AS rank
@@ -760,6 +808,7 @@ async function fetchCorpusHits(
                    (metadata->'content_extract'->>'body_kind') IS NULL
                    OR (metadata->'content_extract'->>'body_kind') IN ('full_text','source_summary')
                  )
+                 ${aud.where}
                ORDER BY rank DESC
                LIMIT 20
             `);

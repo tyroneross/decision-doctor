@@ -57,6 +57,8 @@ void CACHING; // reserved for future answer cache
 const RequestSchema = z.object({
   question: z.string().min(1).max(2000),
   mode: z.enum(["answer", "results-only"]).optional().default("answer"),
+  // Track A — audience scope forwarded to /api/search. Defaults to 'focused'.
+  audienceScope: z.enum(["focused", "broad"]).optional().default("focused"),
 });
 
 // Top-K hits to request from /api/search — wider candidates, top 5 for synthesis.
@@ -120,7 +122,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { question, mode } = parsed.data;
+  const { question, mode, audienceScope } = parsed.data;
 
   // --- 4. PHI guard (hard block before any LLM or search call) ---
   const phi = detectPHI(question);
@@ -168,7 +170,7 @@ export async function POST(req: NextRequest) {
   let searchHits: SearchHit[] = [];
   try {
     const searchUrl = new URL(
-      `/api/search?q=${encodeURIComponent(question)}&limit=${RETRIEVAL_LIMIT}`,
+      `/api/search?q=${encodeURIComponent(question)}&limit=${RETRIEVAL_LIMIT}&audienceScope=${audienceScope}`,
       req.url,
     );
 
