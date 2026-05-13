@@ -179,6 +179,11 @@ export function Chat({ seed }: { seed?: string } = {}) {
           suggestedPath: "decision" | "recommendation";
           rationale?: string;
         };
+        submitSurvey?: {
+          userQuestion: string;
+          survey: Survey;
+          submission: SurveySubmission;
+        };
       },
     ) => {
       const text = (overrideText ?? input).trim();
@@ -202,6 +207,9 @@ export function Chat({ seed }: { seed?: string } = {}) {
             ...(options?.userOverrode ? { userOverrode: true } : {}),
             ...(options?.engageSurvey
               ? { engageSurvey: options.engageSurvey }
+              : {}),
+            ...(options?.submitSurvey
+              ? { submitSurvey: options.submitSurvey }
               : {}),
           }),
         });
@@ -245,12 +253,45 @@ export function Chat({ seed }: { seed?: string } = {}) {
               decision: DecisionPayload;
               painPoints?: string[];
               templateId?: string;
+            }
+          | {
+              status: "recommendation";
+              reply: string;
+              recommendation: {
+                recommendedTask: string;
+                whyThisTask: string;
+                confidence: number;
+                successMetric?: string;
+                tryThisWeek?: string[];
+                guardrails?: string[];
+              };
             };
 
         setThread((t) => {
+          // For recommendation responses, the LLM-side "reply" is a short
+          // ack; render the full structured recommendation below it.
+          let content = data.reply;
+          if (data.status === "recommendation") {
+            const r = data.recommendation;
+            const parts = [
+              `**${r.recommendedTask}**`,
+              `_${r.whyThisTask}_`,
+              `Confidence: ${r.confidence}%`,
+            ];
+            if (r.tryThisWeek && r.tryThisWeek.length > 0) {
+              parts.push(
+                "\nTry this week:\n" +
+                  r.tryThisWeek.map((t) => `- ${t}`).join("\n"),
+              );
+            }
+            if (r.successMetric) {
+              parts.push(`\nSuccess metric: ${r.successMetric}`);
+            }
+            content = parts.join("\n\n");
+          }
           const newMessage: ChatMessage = {
             role: "assistant",
-            content: data.reply,
+            content,
             ...(data.status === "clarifier"
               ? {
                   clarifier: data.widget,
@@ -395,16 +436,24 @@ export function Chat({ seed }: { seed?: string } = {}) {
     });
   }, []);
 
-  // Phase-2 — submit the survey: format the answers as a human-readable
-  // user message + freeze the card so the user can re-read but not re-edit.
-  // The submission round-trips through the existing chat loop so the engine
-  // gets a normal user-message it can intake from.
+  // Phase-2/3 — submit the survey: format the answers as a human-readable
+  // user message (so the thread stays readable) AND attach the structured
+  // submitSurvey payload (so the route can run the engine directly via
+  // the survey-adapter, skipping the conversational re-intake). On
+  // adapter failure, the route falls through and the formatted user
+  // message still drives the existing intake.
   const submitSurvey = useCallback(
     (sourceMessageIndex: number, submission: SurveySubmission) => {
       const src = thread.messages[sourceMessageIndex];
       const survey =
         src && src.role === "assistant" ? src.survey : undefined;
       if (!survey) return;
+      // Find the user's original decision question (most recent user
+      // message before the survey card was emitted).
+      const userQuestion =
+        [...thread.messages.slice(0, sourceMessageIndex)]
+          .reverse()
+          .find((m) => m.role === "user")?.content ?? "";
       setThread((t) => {
         const next = [...t.messages];
         const at = next[sourceMessageIndex];
@@ -413,7 +462,11 @@ export function Chat({ seed }: { seed?: string } = {}) {
         }
         return { ...t, messages: next };
       });
-      runQuery(formatSubmissionAsMessage(survey, submission));
+      runQuery(formatSubmissionAsMessage(survey, submission), {
+        submitSurvey: userQuestion
+          ? { userQuestion, survey, submission }
+          : undefined,
+      });
     },
     [runQuery, thread.messages],
   );

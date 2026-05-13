@@ -24,6 +24,10 @@ import {
   type DecisionDetection,
 } from "@/lib/chat/decision-detector";
 import { generateSurvey } from "@/lib/chat/survey-generator";
+import { adaptSubmission } from "@/lib/chat/survey-adapter";
+import { SurveySchema, SurveySubmissionSchema } from "@/lib/engine/survey";
+import { runRecommendation } from "@/lib/engine/orchestrator";
+import type { RecommendationInput } from "@/lib/engine/types";
 import { getSessionActor } from "@/lib/auth-session";
 import { isGuestRequest } from "@/lib/auth-guest";
 import { GUEST_USER_ID, GUEST_TENANT_ID } from "@/lib/guest-identity";
@@ -65,6 +69,22 @@ const RequestSchema = z.object({
       question: z.string().min(1).max(2000),
       suggestedPath: z.enum(["decision", "recommendation"]),
       rationale: z.string().max(400).optional(),
+    })
+    .optional(),
+  /**
+   * Phase 3 — when the user submits a Survey, the client sends the
+   * original survey + their answers + their original question. The
+   * route maps the answers into a typed engine input via the
+   * survey-adapter and runs runDecision()/runRecommendation() directly,
+   * skipping the conversational intake. On adapter failure, the route
+   * falls back to the conversational loop with the formatted answers
+   * already in the message history.
+   */
+  submitSurvey: z
+    .object({
+      userQuestion: z.string().min(1).max(2000),
+      survey: SurveySchema,
+      submission: SurveySubmissionSchema,
     })
     .optional(),
 });
@@ -153,6 +173,117 @@ export async function POST(req: Request) {
       },
       { status: 429 },
     );
+  }
+
+  // Phase-3 chat-as-decision-front-door — short-circuit when the user
+  // submitted a Survey. Map the answers onto a typed engine input via
+  // the survey-adapter and run runDecision()/runRecommendation()
+  // directly. On adapter failure, fall through to the conversational
+  // intake loop with the formatted answers already in the history.
+  if (parsed.data.submitSurvey) {
+    const { userQuestion, survey, submission } = parsed.data.submitSurvey;
+
+    // PHI guard on the user question (defense in depth — same standard
+    // as engageSurvey).
+    const phi = detectPHI(userQuestion);
+    if (phi.hasPHI) {
+      return NextResponse.json(
+        {
+          phiBlocked: true,
+          reasons: phi.reasons,
+          message:
+            "Your question appears to include patient identifiers. Please rephrase without PHI and try again.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const adapted = await adaptSubmission({
+      userQuestion,
+      survey,
+      submission,
+    });
+
+    if (adapted && adapted.kind === "decision") {
+      try {
+        const engineResult = await runDecision({
+          templateId: adapted.templateId as TemplateId,
+          source: { type: "user_form", capturedAt: new Date() },
+          fields: adapted.fields as DecisionInput["fields"],
+          context: { userId: actor.userId, tenantId: actor.tenantId },
+        });
+        if (process.env.NODE_ENV !== "production") {
+          console.info(
+            "[/api/chat] survey-adapter decision:",
+            JSON.stringify({
+              templateId: adapted.templateId,
+              option: engineResult.output.recommendation.option,
+              confidence: engineResult.output.recommendation.confidence,
+            }),
+          );
+        }
+        return NextResponse.json({
+          status: "ready",
+          reply:
+            "Here's what the numbers say. Take a look — you can refine and we'll re-run.",
+          decision: engineResult.output,
+          templateId: adapted.templateId,
+        });
+      } catch (err) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(
+            "[/api/chat] runDecision failed after survey-adapter:",
+            err,
+          );
+        }
+        // fall through to intake
+      }
+    } else if (adapted && adapted.kind === "recommendation") {
+      try {
+        const recInput: RecommendationInput = {
+          painPath: adapted.painPath,
+          challengeText: adapted.challengeText,
+          goal: adapted.goal,
+          scoringInput: adapted.scoringInput,
+          userId: actor.userId,
+          tenantId: actor.tenantId,
+        };
+        const recResult = await runRecommendation(recInput);
+        if (process.env.NODE_ENV !== "production") {
+          console.info(
+            "[/api/chat] survey-adapter recommendation:",
+            JSON.stringify({
+              painPath: adapted.painPath,
+              recommendedTask: recResult.recommendedTask,
+            }),
+          );
+        }
+        return NextResponse.json({
+          status: "recommendation",
+          reply:
+            "Here's the recommendation tailored to your answers. Refine anything and we'll re-run.",
+          recommendation: recResult,
+        });
+      } catch (err) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(
+            "[/api/chat] runRecommendation failed after survey-adapter:",
+            err,
+          );
+        }
+        // fall through to intake
+      }
+    }
+    // Unmappable submission or engine failure — fall through to the normal
+    // conversational intake. The message log already contains the
+    // formatted answers (the client sends both submitSurvey AND appends
+    // the human-readable user message), so the intake LLM has full
+    // context.
+    if (process.env.NODE_ENV !== "production") {
+      console.info(
+        "[/api/chat] survey-adapter unmappable; falling back to intake",
+      );
+    }
   }
 
   // Phase-2 chat-as-decision-front-door — short-circuit when the user
