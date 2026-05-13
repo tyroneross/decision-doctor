@@ -20,6 +20,12 @@ import { InChatStepper } from "@/components/chat/widgets/InChatStepper";
 import { InChatRangePicker } from "@/components/chat/widgets/InChatRangePicker";
 import { InChatChips } from "@/components/chat/widgets/InChatChips";
 import { FormFallbackLink } from "@/components/chat/widgets/FormFallbackLink";
+import { SurveyCard } from "@/components/chat/widgets/SurveyCard";
+import {
+  formatSubmissionAsMessage,
+  type Survey,
+  type SurveySubmission,
+} from "@/lib/engine/survey";
 
 // ─── Types (mirror /api/chat response shape) ────────────────────────────
 
@@ -50,6 +56,11 @@ interface ChatMessage {
   /** Set when the user has acted on (or dismissed) the offer so the chip
    *  doesn't re-render on revisit. */
   offerHelpResolved?: boolean;
+  /** Phase-2 — survey rendered inline below the assistant message when
+   *  the user accepted the offer-help affordance. */
+  survey?: Survey;
+  /** Marks the survey on this message as submitted so the card freezes. */
+  surveyResolved?: boolean;
 }
 
 interface DecisionPayload {
@@ -159,7 +170,17 @@ export function Chat({ seed }: { seed?: string } = {}) {
   // closest-fit pipeline anyway. The methodTrace records this so evals can
   // tell user-overridden from policy-aligned runs.
   const runQuery = useCallback(
-    async (overrideText?: string, options?: { userOverrode?: boolean }) => {
+    async (
+      overrideText?: string,
+      options?: {
+        userOverrode?: boolean;
+        engageSurvey?: {
+          question: string;
+          suggestedPath: "decision" | "recommendation";
+          rationale?: string;
+        };
+      },
+    ) => {
       const text = (overrideText ?? input).trim();
       if (!text || busy) return;
       setErr(null);
@@ -179,6 +200,9 @@ export function Chat({ seed }: { seed?: string } = {}) {
           body: JSON.stringify({
             messages: next,
             ...(options?.userOverrode ? { userOverrode: true } : {}),
+            ...(options?.engageSurvey
+              ? { engageSurvey: options.engageSurvey }
+              : {}),
           }),
         });
 
@@ -211,6 +235,11 @@ export function Chat({ seed }: { seed?: string } = {}) {
               inferredTemplateId?: "capacity" | "pricing" | "admin-hire" | null;
             }
           | {
+              status: "survey";
+              reply: string;
+              survey: Survey;
+            }
+          | {
               status: "ready";
               reply: string;
               decision: DecisionPayload;
@@ -231,6 +260,7 @@ export function Chat({ seed }: { seed?: string } = {}) {
             ...(data.status === "asking" && data.offerHelp
               ? { offerHelp: data.offerHelp }
               : {}),
+            ...(data.status === "survey" ? { survey: data.survey } : {}),
           };
           return {
             ...t,
@@ -315,12 +345,20 @@ export function Chat({ seed }: { seed?: string } = {}) {
   // existing intake flow. The actual survey generation ships in Phase 2.
   const acceptOfferHelp = useCallback(
     (sourceMessageIndex: number) => {
-      // Read the suggested path BEFORE setState (avoid the closure trap).
+      // Read the suggested path + the user's most recent question BEFORE
+      // setState (closure trap avoidance).
       const src = thread.messages[sourceMessageIndex];
+      const offer =
+        src && src.role === "assistant" ? src.offerHelp : undefined;
       const suggested: "decision" | "recommendation" =
-        src && src.role === "assistant" && src.offerHelp
-          ? src.offerHelp.suggestedPath
-          : "decision";
+        offer?.suggestedPath ?? "decision";
+      // The user's decision question is the most recent user message
+      // BEFORE this assistant message.
+      const question =
+        [...thread.messages.slice(0, sourceMessageIndex)]
+          .reverse()
+          .find((m) => m.role === "user")?.content ?? "";
+
       setThread((t) => {
         const next = [...t.messages];
         const at = next[sourceMessageIndex];
@@ -331,9 +369,17 @@ export function Chat({ seed }: { seed?: string } = {}) {
       });
       const followUp =
         suggested === "recommendation"
-          ? "Yes — walk me through getting a recommendation for this."
+          ? "Yes — walk me through getting a recommendation."
           : "Yes — walk me through deciding this.";
-      runQuery(followUp);
+      runQuery(followUp, {
+        engageSurvey: question
+          ? {
+              question,
+              suggestedPath: suggested,
+              rationale: offer?.rationale,
+            }
+          : undefined,
+      });
     },
     [runQuery, thread.messages],
   );
@@ -348,6 +394,29 @@ export function Chat({ seed }: { seed?: string } = {}) {
       return { ...t, messages: next };
     });
   }, []);
+
+  // Phase-2 — submit the survey: format the answers as a human-readable
+  // user message + freeze the card so the user can re-read but not re-edit.
+  // The submission round-trips through the existing chat loop so the engine
+  // gets a normal user-message it can intake from.
+  const submitSurvey = useCallback(
+    (sourceMessageIndex: number, submission: SurveySubmission) => {
+      const src = thread.messages[sourceMessageIndex];
+      const survey =
+        src && src.role === "assistant" ? src.survey : undefined;
+      if (!survey) return;
+      setThread((t) => {
+        const next = [...t.messages];
+        const at = next[sourceMessageIndex];
+        if (at && at.role === "assistant") {
+          next[sourceMessageIndex] = { ...at, surveyResolved: true };
+        }
+        return { ...t, messages: next };
+      });
+      runQuery(formatSubmissionAsMessage(survey, submission));
+    },
+    [runQuery, thread.messages],
+  );
 
   // Seed handling: when arriving via /app/chat?seed=<text>, auto-submit once
   // on the opening assistant message. Ref guard prevents re-fire on remount
@@ -467,6 +536,21 @@ export function Chat({ seed }: { seed?: string } = {}) {
                     disabled={busy}
                     onAccept={() => acceptOfferHelp(i)}
                     onDismiss={() => dismissOfferHelp(i)}
+                  />
+                </div>
+              )}
+
+            {/* Phase-2 — adaptive survey card. Renders below the assistant
+                message when the route emits status:"survey". Freezes once
+                submitted (mirrors the clarifier pattern). */}
+            {m.role === "assistant" &&
+              m.survey &&
+              !m.surveyResolved && (
+                <div className="mt-2 w-full max-w-[85%]">
+                  <SurveyCard
+                    survey={m.survey}
+                    disabled={busy}
+                    onSubmit={(sub) => submitSurvey(i, sub)}
                   />
                 </div>
               )}
