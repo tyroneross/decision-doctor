@@ -61,6 +61,12 @@ interface ChatMessage {
   survey?: Survey;
   /** Marks the survey on this message as submitted so the card freezes. */
   surveyResolved?: boolean;
+  /** Phase-4 — when the engine produced a result from a saved survey,
+   *  this carries the survey + the original question so the user can
+   *  promote the flow to a reusable skill. */
+  savedFromSurvey?: { survey: Survey; originalQuestion: string };
+  /** Set when the user has saved (or dismissed) the skill-save offer. */
+  saveSkillResolved?: boolean;
 }
 
 interface DecisionPayload {
@@ -302,6 +308,18 @@ export function Chat({ seed }: { seed?: string } = {}) {
               ? { offerHelp: data.offerHelp }
               : {}),
             ...(data.status === "survey" ? { survey: data.survey } : {}),
+            // Phase-4 — when the engine result came from a submitted
+            // survey, surface the "Save as skill" affordance on the
+            // resulting assistant bubble.
+            ...((data.status === "ready" || data.status === "recommendation") &&
+            options?.submitSurvey
+              ? {
+                  savedFromSurvey: {
+                    survey: options.submitSurvey.survey,
+                    originalQuestion: options.submitSurvey.userQuestion,
+                  },
+                }
+              : {}),
           };
           return {
             ...t,
@@ -431,6 +449,70 @@ export function Chat({ seed }: { seed?: string } = {}) {
       const src = next[sourceMessageIndex];
       if (src && src.role === "assistant") {
         next[sourceMessageIndex] = { ...src, offerHelpResolved: true };
+      }
+      return { ...t, messages: next };
+    });
+  }, []);
+
+  // Phase-4 — save the chat-generated survey as a reusable skill. The
+  // user can re-run the same decision flow next time from /app/skills.
+  // Inline button by default; expand option for name + custom
+  // instructions before saving. State per-message so multiple saves in
+  // the same thread don't collide.
+  const saveSurveyAsSkill = useCallback(
+    async (
+      sourceMessageIndex: number,
+      payload: { name?: string; customInstructions?: string },
+    ): Promise<{ ok: true } | { ok: false; error: string }> => {
+      const src = thread.messages[sourceMessageIndex];
+      const data = src && src.role === "assistant" ? src.savedFromSurvey : undefined;
+      if (!data) return { ok: false, error: "Nothing to save on this message." };
+      try {
+        const res = await fetch("/api/chat/save-skill", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            name: payload.name,
+            customInstructions: payload.customInstructions,
+            survey: data.survey,
+            originalQuestion: data.originalQuestion,
+          }),
+        });
+        const json = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          message?: string;
+        };
+        if (!res.ok) {
+          return {
+            ok: false,
+            error: json.message || json.error || `Save failed (${res.status})`,
+          };
+        }
+        setThread((t) => {
+          const nextMsgs = [...t.messages];
+          const at = nextMsgs[sourceMessageIndex];
+          if (at && at.role === "assistant") {
+            nextMsgs[sourceMessageIndex] = { ...at, saveSkillResolved: true };
+          }
+          return { ...t, messages: nextMsgs };
+        });
+        return { ok: true };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : "Save failed",
+        };
+      }
+    },
+    [thread.messages],
+  );
+
+  const dismissSaveSkill = useCallback((sourceMessageIndex: number) => {
+    setThread((t) => {
+      const next = [...t.messages];
+      const src = next[sourceMessageIndex];
+      if (src && src.role === "assistant") {
+        next[sourceMessageIndex] = { ...src, saveSkillResolved: true };
       }
       return { ...t, messages: next };
     });
@@ -604,6 +686,22 @@ export function Chat({ seed }: { seed?: string } = {}) {
                     survey={m.survey}
                     disabled={busy}
                     onSubmit={(sub) => submitSurvey(i, sub)}
+                  />
+                </div>
+              )}
+
+            {/* Phase-4 — save the decision flow as a reusable skill.
+                Inline by default with an expand for name + custom
+                instructions before saving. Hidden once saved or
+                dismissed. */}
+            {m.role === "assistant" &&
+              m.savedFromSurvey &&
+              !m.saveSkillResolved && (
+                <div className="mt-2 max-w-[85%]">
+                  <SaveAsSkillAffordance
+                    defaultName={m.savedFromSurvey.survey.title}
+                    onSave={(payload) => saveSurveyAsSkill(i, payload)}
+                    onDismiss={() => dismissSaveSkill(i)}
                   />
                 </div>
               )}
@@ -1169,6 +1267,169 @@ function OfferHelpChip({
           <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
       </button>
+    </div>
+  );
+}
+
+// ─── SaveAsSkillAffordance ─────────────────────────────────────────────
+//
+// Phase-4 chat-as-decision-front-door. Renders below an assistant message
+// whose decision/recommendation came from a submitted Survey. Two visual
+// states:
+//
+//   1. Compact chip — "Save as skill →" + × dismiss. Click → expand.
+//   2. Expanded panel — name input + optional custom instructions +
+//      Save / Cancel.
+//
+// On save success, the parent flips saveSkillResolved=true and the
+// affordance unmounts. On failure, the panel shows the error inline so
+// the user can retry without losing their input.
+function SaveAsSkillAffordance({
+  defaultName,
+  onSave,
+  onDismiss,
+}: {
+  defaultName: string;
+  onSave: (payload: {
+    name?: string;
+    customInstructions?: string;
+  }) => Promise<{ ok: true } | { ok: false; error: string }>;
+  onDismiss: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [name, setName] = useState(defaultName);
+  const [customInstructions, setCustomInstructions] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!expanded) {
+    return (
+      <div
+        role="group"
+        aria-label="Save this decision flow as a skill"
+        className="dd-fade-up inline-flex items-center gap-1 rounded-full border border-line bg-paper px-1 py-0.5"
+      >
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="inline-flex items-center rounded-full px-3 py-1 text-[12.5px] font-semibold text-ink transition-colors hover:bg-line/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+        >
+          Save as skill →
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss save offer"
+          title="Dismiss"
+          className="inline-flex h-6 w-6 items-center justify-center rounded-full text-mute hover:bg-line/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-3 w-3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            aria-hidden
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    const result = await onSave({
+      name: name.trim() || undefined,
+      customInstructions: customInstructions.trim() || undefined,
+    });
+    setSaving(false);
+    if (!result.ok) {
+      setError(result.error);
+    }
+    // On success the parent flips saveSkillResolved and we unmount.
+  }
+
+  return (
+    <div className="dd-fade-up rounded-2xl border border-line bg-paper p-4">
+      <p className="text-[13px] font-semibold text-ink">
+        Save this decision flow
+      </p>
+      <p className="mt-0.5 text-[12px] text-mute">
+        Run the same survey + engine next time without re-typing.
+      </p>
+
+      <div className="mt-3 space-y-3">
+        <div>
+          <label
+            htmlFor="save-skill-name"
+            className="block text-[12.5px] font-medium text-ink"
+          >
+            Name
+          </label>
+          <input
+            id="save-skill-name"
+            type="text"
+            value={name}
+            disabled={saving}
+            maxLength={200}
+            onChange={(e) => setName(e.target.value)}
+            className="mt-1 w-full rounded-md border border-line bg-paper px-3 py-2 text-[14px] text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="save-skill-instructions"
+            className="block text-[12.5px] font-medium text-ink"
+          >
+            Custom instructions{" "}
+            <span className="font-normal text-mute">(optional)</span>
+          </label>
+          <textarea
+            id="save-skill-instructions"
+            value={customInstructions}
+            disabled={saving}
+            maxLength={2000}
+            rows={3}
+            placeholder="Anything specific you want this skill to remember next time? (e.g., focus on retention over income)"
+            onChange={(e) => setCustomInstructions(e.target.value)}
+            className="mt-1 w-full rounded-md border border-line bg-paper px-3 py-2 text-[13px] text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 disabled:opacity-50"
+          />
+        </div>
+      </div>
+
+      {error && (
+        <p
+          role="alert"
+          className="mt-3 text-[12.5px]"
+          style={{ color: "var(--error, currentColor)" }}
+        >
+          {error}
+        </p>
+      )}
+
+      <div className="mt-4 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={onDismiss}
+          disabled={saving}
+          className="inline-flex h-9 items-center rounded-[10px] px-3 text-[13px] font-medium text-mute hover:text-ink disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || name.trim().length === 0}
+          className="inline-flex h-9 items-center rounded-[10px] border border-ink bg-ink px-3 text-[13px] font-semibold text-paper shadow-card transition-colors hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ink/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? "Saving…" : "Save skill"}
+        </button>
+      </div>
     </div>
   );
 }
