@@ -288,6 +288,69 @@ const SMB_EVAL_QUERIES: SmbEvalQuery[] = [
     q: "structured approach to evaluating AI tools before procurement",
     relevant: ["Intelligence Age", "GPT-5.5 System Card"],
   },
+
+  // ── 7. ai-adoption-solo-healthcare (10 queries) ──────────────────────────────
+  // Track A — adoption-tagged content for solo healthcare practitioners. Anchors
+  // are library use_cases / prompts curated in scripts/library-seed/*. Each query
+  // SHOULD hit at least one library row when EVAL_SCOPE=focused. Corpus signal
+  // is supplementary (KB / Anthropic news may complement). Names like "prior
+  // auth letter" are the highest-signal anchors.
+  {
+    category: "ai-adoption-solo-healthcare",
+    q: "writing prior authorization letters for insurance approvals",
+    relevant: ["prior auth", "appeal letter"],
+    // Library admin pack has prior-auth use cases + prompts.
+  },
+  {
+    category: "ai-adoption-solo-healthcare",
+    q: "structured referral templates for primary care to specialist",
+    relevant: ["referral", "Referral"],
+  },
+  {
+    category: "ai-adoption-solo-healthcare",
+    q: "AI for capacity planning in a solo psychiatry practice",
+    relevant: ["capacity", "Capacity"],
+  },
+  {
+    category: "ai-adoption-solo-healthcare",
+    q: "automating patient follow-up reminders for therapy practice",
+    relevant: ["follow-up", "Follow"],
+  },
+  {
+    category: "ai-adoption-solo-healthcare",
+    q: "summarizing intake forms for new patient appointments",
+    relevant: ["intake", "Intake"],
+  },
+  {
+    category: "ai-adoption-solo-healthcare",
+    q: "drafting denial appeal letter for prescribing decision",
+    relevant: ["appeal", "Appeal"],
+  },
+  {
+    category: "ai-adoption-solo-healthcare",
+    q: "research synthesis for a clinical decision a solo provider faces",
+    relevant: ["research", "Research"],
+  },
+  {
+    category: "ai-adoption-solo-healthcare",
+    q: "psychiatry workflows that benefit from AI assistance",
+    relevant: ["psychiatry", "Psychiatry"],
+  },
+  {
+    category: "ai-adoption-solo-healthcare",
+    q: "automating chart-prep before a busy clinic day",
+    relevant: ["chart", "prep"],
+    expected_coverage: "gap",
+    // Library content may not yet cover chart-prep specifically. Tagged as gap
+    // so the query still runs but is excluded from recall math until coverage
+    // lands. Drop the gap flag when library:seed adds a matching use case.
+  },
+  {
+    category: "ai-adoption-solo-healthcare",
+    q: "templated patient education content for newly-diagnosed conditions",
+    relevant: ["education", "Education", "patient"],
+    expected_coverage: "gap",
+  },
 ];
 
 interface DocLookup {
@@ -379,6 +442,12 @@ interface PipelineResult {
   degraded_reason: string | null;
 }
 
+// Track A: audience scope for the eval run. EVAL_SCOPE env var ('focused' |
+// 'broad'). Default 'focused' mirrors the product default + ensures the new
+// ai-adoption-solo-healthcare category sees its library anchors.
+const EVAL_SCOPE: "focused" | "broad" =
+  process.env.EVAL_SCOPE === "broad" ? "broad" : "focused";
+
 async function runPipeline(
   query: string,
   limit = 10,
@@ -388,15 +457,15 @@ async function runPipeline(
   const [bm25Hits, vectorHits, kgHits] = await Promise.all([
     runWithActor(
       { userId: testUserId, tenantId: testTenantId },
-      async () => withActor((tx) => bm25Search(tx, query, 20)),
+      async () => withActor((tx) => bm25Search(tx, query, 20, EVAL_SCOPE)),
     ).catch(() => []),
     runWithActor(
       { userId: testUserId, tenantId: testTenantId },
-      async () => withActor((tx) => vectorSearch(tx, embedding, 20)),
+      async () => withActor((tx) => vectorSearch(tx, embedding, 20, EVAL_SCOPE)),
     ).catch(() => []),
     runWithActor(
       { userId: testUserId, tenantId: testTenantId },
-      async () => withActor((tx) => kgSearch(tx, query, 20)),
+      async () => withActor((tx) => kgSearch(tx, query, 20, EVAL_SCOPE)),
     ).catch(() => []),
   ]);
   const fused = rrfFuse({
