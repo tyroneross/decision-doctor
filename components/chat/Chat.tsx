@@ -26,7 +26,11 @@ import {
   type Survey,
   type SurveySubmission,
 } from "@/lib/engine/survey";
-import { deriveFlowState, type MessageForFlow } from "@/lib/chat/flow-state";
+import {
+  deriveFlowState,
+  canSubmitFreeText,
+  type MessageForFlow,
+} from "@/lib/chat/flow-state";
 
 // ─── Types (mirror /api/chat response shape) ────────────────────────────
 
@@ -213,11 +217,29 @@ export function Chat({ seed }: { seed?: string } = {}) {
         const clientFlowState = deriveFlowState(
           thread.messages as readonly MessageForFlow[],
         ).state;
+        // Strip the rendered message payload to the wire shape: just
+        // role/content + the boolean affordance flags the server uses to
+        // re-derive FSM state. Widget contents themselves stay
+        // client-side (the server doesn't need to inspect them).
+        const wireMessages = next.map((m) => ({
+          role: m.role,
+          content: m.content,
+          ...(m.role === "assistant" && m.clarifier
+            ? { hasClarifier: true }
+            : {}),
+          ...(m.role === "assistant" && m.survey ? { hasSurvey: true } : {}),
+          ...(m.role === "assistant" && m.savedFromSurvey
+            ? { hasSaveOffer: true }
+            : {}),
+          ...(m.clarifierResolved ? { clarifierResolved: true } : {}),
+          ...(m.surveyResolved ? { surveyResolved: true } : {}),
+          ...(m.saveSkillResolved ? { saveSkillResolved: true } : {}),
+        }));
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            messages: next,
+            messages: wireMessages,
             clientFlowState,
             ...(options?.userOverrode ? { userOverrode: true } : {}),
             ...(options?.engageSurvey
@@ -411,6 +433,14 @@ export function Chat({ seed }: { seed?: string } = {}) {
   const firstClarifierIndex = thread.messages.findIndex(
     (m) => m.role === "assistant" && m.clarifier,
   );
+
+  // Compute the chat-flow FSM context once per render. The pendingX indices
+  // tell us which specific message owns the live clarifier / survey / save
+  // affordance — that replaces per-message boolean chains during render.
+  const flowCtx = deriveFlowState(
+    thread.messages as readonly MessageForFlow[],
+  );
+  const inputDisabled = busy || !canSubmitFreeText(flowCtx.state);
 
   // Phase-1 chat-as-decision-front-door — accept the offer-help chip:
   // mark the affordance resolved + send a user message that primes the
@@ -652,23 +682,27 @@ export function Chat({ seed }: { seed?: string } = {}) {
               {m.content}
             </div>
 
-            {/* C6b — render the clarifier widget below the assistant text.
-                Hidden once resolved; freezes after submission so users can
-                see what they answered without being able to re-edit. */}
-            {m.role === "assistant" && m.clarifier && !m.clarifierResolved && (
-              <div className="w-full max-w-[85%]">
-                <ClarifierRenderer
-                  widget={m.clarifier}
-                  disabled={busy}
-                  onSubmit={(sub) => submitClarifier(i, sub)}
-                  onUnsure={() => skipClarifier(i)}
-                />
-                <FormFallbackLink
-                  inferredTemplateId={m.inferredTemplateId}
-                  isFirstClarifier={i === firstClarifierIndex}
-                />
-              </div>
-            )}
+            {/* C6b — clarifier widget renders ONLY on the message the
+                FSM identifies as the pending-clarifier owner. Walking
+                through the FSM (vs reading m.clarifier && !m.clarifierResolved)
+                guarantees mutual exclusion: at most one clarifier renders
+                per thread at any time. */}
+            {i === flowCtx.pendingClarifierMessageIndex &&
+              m.role === "assistant" &&
+              m.clarifier && (
+                <div className="w-full max-w-[85%]">
+                  <ClarifierRenderer
+                    widget={m.clarifier}
+                    disabled={busy}
+                    onSubmit={(sub) => submitClarifier(i, sub)}
+                    onUnsure={() => skipClarifier(i)}
+                  />
+                  <FormFallbackLink
+                    inferredTemplateId={m.inferredTemplateId}
+                    isFirstClarifier={i === firstClarifierIndex}
+                  />
+                </div>
+              )}
 
             {/* Phase-1 chat-as-decision-front-door — inline affordance chip
                 offering to engage the decision flow when the user's latest
@@ -688,12 +722,11 @@ export function Chat({ seed }: { seed?: string } = {}) {
                 </div>
               )}
 
-            {/* Phase-2 — adaptive survey card. Renders below the assistant
-                message when the route emits status:"survey". Freezes once
-                submitted (mirrors the clarifier pattern). */}
-            {m.role === "assistant" &&
-              m.survey &&
-              !m.surveyResolved && (
+            {/* Phase-2 — adaptive survey card. FSM-gated to the message
+                the derivation identifies as the pending-survey owner. */}
+            {i === flowCtx.pendingSurveyMessageIndex &&
+              m.role === "assistant" &&
+              m.survey && (
                 <div className="mt-2 w-full max-w-[85%]">
                   <SurveyCard
                     survey={m.survey}
@@ -703,13 +736,11 @@ export function Chat({ seed }: { seed?: string } = {}) {
                 </div>
               )}
 
-            {/* Phase-4 — save the decision flow as a reusable skill.
-                Inline by default with an expand for name + custom
-                instructions before saving. Hidden once saved or
-                dismissed. */}
-            {m.role === "assistant" &&
-              m.savedFromSurvey &&
-              !m.saveSkillResolved && (
+            {/* Phase-4 — save-as-skill affordance. FSM-gated to the
+                message that owns the live save offer. */}
+            {i === flowCtx.pendingSaveMessageIndex &&
+              m.role === "assistant" &&
+              m.savedFromSurvey && (
                 <div className="mt-2 max-w-[85%]">
                   <SaveAsSkillAffordance
                     defaultName={m.savedFromSurvey.survey.title}
@@ -846,15 +877,21 @@ export function Chat({ seed }: { seed?: string } = {}) {
         </p>
       )}
 
-      {/* COMPOSER — PillSearchBar primitive (28px radius, 1.5px ink border) */}
+      {/* COMPOSER — PillSearchBar primitive. Disabled while a survey
+          card is open so the user can't free-type around the card.
+          (canSubmitFreeText(state) returns false only when state === "survey".) */}
       <div className="sticky bottom-0 mt-3">
         <NoPhiNotice />
         <PillSearchBar
           value={input}
           onChange={setInput}
           onSubmit={(v) => runQuery(v)}
-          placeholder="Tell me where the hours go…"
-          disabled={busy}
+          placeholder={
+            flowCtx.state === "survey"
+              ? "Answer the survey above to continue…"
+              : "Tell me where the hours go…"
+          }
+          disabled={inputDisabled}
           ariaLabel="message"
           multiline
           maxRows={8}

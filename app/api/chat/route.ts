@@ -23,7 +23,12 @@ import {
   shouldOfferHelp,
   type DecisionDetection,
 } from "@/lib/chat/decision-detector";
-import { shouldFireDetector, type FlowState } from "@/lib/chat/flow-state";
+import {
+  shouldFireDetector,
+  deriveFlowState,
+  type FlowState,
+  type MessageForFlow,
+} from "@/lib/chat/flow-state";
 import { generateSurvey } from "@/lib/chat/survey-generator";
 import { adaptSubmission } from "@/lib/chat/survey-adapter";
 import { SurveySchema, SurveySubmissionSchema } from "@/lib/engine/survey";
@@ -45,9 +50,23 @@ import {
 
 export const runtime = "nodejs";
 
+// Per-message metadata flags used for server-side FSM derivation.
+// Only the BOOLEAN PRESENCE matters — actual widget contents stay
+// client-side. These let the route compute deriveFlowState() over the
+// message log and cross-check against the client's hint.
 const MessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string().max(4000),
+  /** Assistant emitted a clarifier widget on this message. */
+  hasClarifier: z.boolean().optional(),
+  /** Assistant emitted a survey card on this message. */
+  hasSurvey: z.boolean().optional(),
+  /** Assistant emitted an engine result with save-skill affordance. */
+  hasSaveOffer: z.boolean().optional(),
+  /** User has resolved the clarifier/survey/save on this message. */
+  clarifierResolved: z.boolean().optional(),
+  surveyResolved: z.boolean().optional(),
+  saveSkillResolved: z.boolean().optional(),
 });
 
 const RequestSchema = z.object({
@@ -527,18 +546,47 @@ export async function POST(req: Request) {
 
   // Phase-1 chat-as-decision-front-door — kick off decision-intent detection
   // on the most recent user message IN PARALLEL with the Groq response
-  // synthesis, BUT only when the FSM says we're in `idle`. Once a flow
-  // is in progress (conversational / survey / resolved) the user's next
-  // message is an answer-in-flow, not a new decision question — skipping
-  // detection cuts ~1 Groq call per turn.
+  // synthesis, BUT only when the FSM says we're in `idle`.
   //
-  // Client provides `clientFlowState` because the server doesn't see
-  // message-level affordance metadata. Absent → assume idle (matches
-  // older-client behavior of firing every turn).
+  // Defense in depth: derive the FSM state SERVER-SIDE from per-message
+  // metadata flags the client sends, then cross-check against the client's
+  // hint. On disagreement we trust the server (don't take client gating
+  // decisions on faith) and log the divergence so we can investigate.
   const latestUserMessage =
     [...parsed.data.messages].reverse().find((m) => m.role === "user")
       ?.content ?? "";
-  const flowState: FlowState = parsed.data.clientFlowState ?? "idle";
+  const messagesForFlow: MessageForFlow[] = parsed.data.messages.map((m) => ({
+    role: m.role,
+    clarifier: m.hasClarifier ? true : undefined,
+    clarifierResolved: m.clarifierResolved,
+    survey: m.hasSurvey ? true : undefined,
+    surveyResolved: m.surveyResolved,
+    savedFromSurvey: m.hasSaveOffer ? true : undefined,
+    saveSkillResolved: m.saveSkillResolved,
+  }));
+  // For Phase-3 / Phase-4 inbound signals: the user is mid-flight on a
+  // survey or just received an engine output. Treat as conservative
+  // server signals so we don't fire detector on submitSurvey/engageSurvey
+  // round-trips.
+  const serverDerivedState: FlowState = parsed.data.submitSurvey
+    ? "survey"
+    : parsed.data.engageSurvey
+      ? "idle" // user just accepted; new flow starting; detector NOT useful (we already know the answer)
+      : deriveFlowState(messagesForFlow).state;
+  const flowState: FlowState = serverDerivedState;
+  if (
+    parsed.data.clientFlowState &&
+    parsed.data.clientFlowState !== serverDerivedState &&
+    process.env.NODE_ENV !== "production"
+  ) {
+    console.warn(
+      "[/api/chat] flow-state disagreement:",
+      JSON.stringify({
+        client: parsed.data.clientFlowState,
+        server: serverDerivedState,
+      }),
+    );
+  }
   const detectionEligible = latestUserMessage && shouldFireDetector(flowState);
   const NO_DETECTION: DecisionDetection = {
     kind: "not-decision" as const,
