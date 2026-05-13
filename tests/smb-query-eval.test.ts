@@ -32,6 +32,7 @@ import { embedQuery } from "@/lib/ai-knowledge/embed/openai";
 import { bm25Search } from "@/lib/ai-knowledge/search/bm25-leg";
 import { vectorSearch } from "@/lib/ai-knowledge/search/vector-leg";
 import { kgSearch } from "@/lib/ai-knowledge/search/kg-leg";
+import { librarySearch } from "@/lib/ai-knowledge/search/library-leg";
 import { rrfFuse, type LegHit } from "@/lib/ai-knowledge/search/rrf-fusion";
 import { rerank } from "@/lib/ai-knowledge/rerank/bge-client";
 import { gpt4oRerank } from "@/lib/ai-knowledge/rerank/gpt4o-fallback";
@@ -67,289 +68,358 @@ interface SmbEvalQuery {
 // ---------------------------------------------------------------------------
 
 const SMB_EVAL_QUERIES: SmbEvalQuery[] = [
-  // ── 1. compare-tools (6 queries) ─────────────────────────────────────────
-  // SMBs compare Claude, GPT, and other models for specific professional tasks.
+  // LLM-curated by scripts/curate-smb-eval.ts (2026-05-12).
+  // For each query, candidates were pulled via BM25 OR-quorum on corpus +
+  // ILIKE on library/kb titles, then Groq picked the genuinely-relevant
+  // titles. Empty picks → expected_coverage: 'gap' (not counted in recall).
+
+
+  // ── 1. compare-tools ─────────────────────────────────────────────────────
   {
     category: "compare-tools",
     q: "Claude vs ChatGPT for writing medical documentation",
-    relevant: ["Introducing Claude"],
-    // Corpus has Anthropic product docs + GPT-5.5 announcement. Generic product
-    // comparison docs that rank models by task are sparse — likely partial match.
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the provided titles directly compare Claude and ChatGPT for medical documentation
   },
   {
     category: "compare-tools",
     q: "which AI model is best for legal contract review",
-    relevant: ["Introducing Claude Opus"],
-    // Claude Opus announcement covers reasoning depth. GPT-5.5 System Card covers
-    // safety benchmarks. Expect partial recall; both are in corpus.
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the provided titles specifically address selecting an AI model for legal contract review.
   },
   {
     category: "compare-tools",
     q: "GPT-5 vs Claude Opus for complex reasoning tasks",
-    relevant: ["GPT-5.5 System Card", "Introducing Claude Opus"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. No candidate directly compares GPT-5 and Claude Opus on complex reasoning tasks
   },
   {
     category: "compare-tools",
     q: "comparing AI coding assistants for software development teams",
-    relevant: ["Codex", "What is Codex"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the candidate titles directly compare AI coding assistants for software development teams; t
   },
   {
     category: "compare-tools",
     q: "Gemini vs Claude for enterprise customer support automation",
-    relevant: ["Introducing Claude"],
-    // Gemini coverage in corpus is limited (Google AI blog has general posts, not
-    // head-to-head comparisons). Mark as gap for Gemini-specific docs.
+    relevant: [],
     expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. none of the titles directly compare Gemini and Claude for enterprise customer support automation
   },
   {
     category: "compare-tools",
     q: "Mistral vs GPT-4 for French language business applications",
-    relevant: ["Mistral"],
-    // Mistral blog is a source. If corpus has Mistral release posts, this fires.
-    // If Mistral blog docs haven't ingested topic-matching content, this is a gap.
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the candidate titles directly compare Mistral and GPT-4 for French language business applica
   },
 
-  // ── 2. prompt-writing (6 queries) ────────────────────────────────────────
-  // Practitioners asking HOW to write prompts for specific professional tasks.
+  // ── 2. prompt-writing ────────────────────────────────────────────────────
   {
     category: "prompt-writing",
     q: "how to write a prompt for generating SOAP notes from patient conversation",
-    relevant: ["Anthropic", "Claude"],
-    // Anthropic docs cover prompt engineering. Medical-specific SOAP prompt
-    // guides unlikely to be in corpus — flagging as gap.
+    relevant: [],
     expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles provide guidance on prompt engineering and authoring best practices, directly helping a
   },
   {
     category: "prompt-writing",
     q: "best practices for prompting Claude to summarize research papers",
-    relevant: ["Claude"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. Directly covers best practices for prompting Claude, which matches the query about prompting Claude 
   },
   {
     category: "prompt-writing",
     q: "chain of thought prompting for multi-step business analysis",
-    relevant: ["Abductive Reasoning", "CA-SQL"],
-    // Academic papers on reasoning + SQL cover chain-of-thought methodology.
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles discuss prompting best practices, engineering, extended (chain‑of‑thought) reasoning, a
   },
   {
     category: "prompt-writing",
     q: "few-shot examples for invoice data extraction prompts",
-    relevant: ["Claude"],
-    // Prompt engineering docs likely cover few-shot patterns.
-    // Invoice-specific extraction guides unlikely in current corpus.
+    relevant: [],
     expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles directly cover prompting techniques and skill creation, which are most likely to provid
   },
   {
     category: "prompt-writing",
     q: "system prompt design for consistent AI customer service tone",
-    relevant: ["Claude"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles directly address prompt design principles and building AI agents for customer service, 
   },
   {
     category: "prompt-writing",
     q: "structured output prompts for JSON extraction from unstructured text",
-    relevant: ["WebSockets in the Responses API", "Claude"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles directly address how to craft prompts that produce structured JSON output from unstruct
   },
 
-  // ── 3. skill-design (5 queries) ──────────────────────────────────────────
-  // Designing AI skills (reusable capabilities) for specific professional workflows.
+  // ── 3. skill-design ──────────────────────────────────────────────────────
   {
     category: "skill-design",
     q: "how to design a skill for patient intake triage summaries",
-    relevant: ["Claude"],
-    // Medical triage skill design is unlikely in current corpus.
-    expected_coverage: "gap",
+    relevant: [
+      "Designing, Refining, and Maintaining Agent Skills at Perplexity",
+      "Skill authoring best practices",
+      "Get started with Agent Skills in the API",
+      "Build with Agent Skills - Model Context Protocol",
+    ],
+    // LLM-curated: These titles directly cover how to create and manage agent skills, providing best‑practice guidance 
   },
   {
     category: "skill-design",
     q: "designing reusable AI skills for HR onboarding workflows",
-    relevant: ["Claude", "Agents"],
-    // HR onboarding AI skill design — likely a gap.
+    relevant: [],
     expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles directly cover designing, authoring, and reusing agent/AI skills, which is core to crea
   },
   {
     category: "skill-design",
     q: "AI skill architecture for multi-step financial report generation",
-    relevant: ["Agents for financial services", "MAVEN"],
+    relevant: [
+      "Designing, Refining, and Maintaining Agent Skills at Perplexity",
+      "Skill authoring best practices",
+      "CodeAgents + Structure: A Better Way to Execute Actions",
+      "Skills for enterprise",
+      "Agent Skills",
+    ],
+    // LLM-curated: These titles cover designing, authoring, and structuring agent skills and enterprise skill use, whic
   },
   {
     category: "skill-design",
     q: "building a skill that extracts action items from meeting transcripts",
-    relevant: ["Claude", "agentic"],
-    // Meeting transcript action-item extraction skills — likely a gap.
+    relevant: [],
     expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles cover how to author agent skills and provide a concrete use‑case for extracting action 
   },
   {
     category: "skill-design",
     q: "skill design patterns for structured knowledge base queries",
-    relevant: ["CA-SQL", "Abductive Reasoning"],
-    // CA-SQL and reasoning papers cover structured query skill patterns.
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles directly discuss skill design, authoring, and structured output patterns relevant to bu
   },
 
-  // ── 4. plugin-design (6 queries) ─────────────────────────────────────────
-  // Building integrations and plugins that extend AI capabilities for specific tools.
+  // ── 4. plugin-design ─────────────────────────────────────────────────────
   {
     category: "plugin-design",
     q: "build a Claude plugin to read and summarize lab results from EHR",
-    relevant: ["Claude", "agentic", "MCP"],
-    // MCP spec is in corpus. EHR-specific plugin guides unlikely.
-    expected_coverage: "gap",
+    relevant: [
+      "Skill authoring best practices",
+      "Claude API skill",
+      "Tutorial: Build a tool-using agent",
+      "Programmatic tool calling",
+      "Agent Skills",
+    ],
+    // LLM-curated: These titles cover how to author Claude skills/plugins, use programmatic tool calling, and build too
   },
   {
     category: "plugin-design",
     q: "how to create a plugin that connects Claude to Salesforce CRM data",
-    relevant: ["MCP", "Claude"],
-    // MCP spec covers plugin/tool integration patterns. Salesforce-specific: gap.
-    expected_coverage: "gap",
+    relevant: [
+      "Claude API skill",
+      "Programmatic tool calling",
+      "Tutorial: Build a tool-using agent",
+      "Agent Skills",
+    ],
+    // LLM-curated: These titles cover creating Claude plugins/skills and using tool calling, which directly guide build
   },
   {
     category: "plugin-design",
     q: "MCP server setup for connecting AI agents to internal databases",
-    relevant: ["MCP"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles directly address building or configuring an MCP server and connecting components, match
   },
   {
     category: "plugin-design",
     q: "building an agentic plugin for automated Slack notifications",
-    relevant: ["agentic", "Claude"],
-    // Slack-specific integrations unlikely in corpus.
+    relevant: [],
     expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles cover building agents and workspace integrations, which are directly relevant to creati
   },
   {
     category: "plugin-design",
     q: "Claude tool use API for function calling with external APIs",
-    relevant: ["Claude", "WebSockets in the Responses API"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles directly cover how to define, call, and implement Claude tools via the API for external
   },
   {
     category: "plugin-design",
     q: "designing a retrieval plugin for company document search",
-    relevant: ["CA-SQL", "Claude", "agentic"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles directly cover designing search APIs, retrieval-augmented models, embedding techniques,
   },
 
-  // ── 5. workflow-automation (5 queries) ───────────────────────────────────
-  // Automating repetitive business processes with AI.
+  // ── 5. workflow-automation ───────────────────────────────────────────────
   {
     category: "workflow-automation",
     q: "automate insurance pre-authorization letters with AI",
-    relevant: ["Claude", "agentic"],
-    // Insurance pre-auth automation — medical SMB use case. Likely a gap.
-    expected_coverage: "gap",
+    relevant: [
+      "Draft a prior authorization support letter",
+      "Prior Authorization Support Letter Draft",
+    ],
+    // LLM-curated: These library use case and prompt directly address creating AI‑generated insurance pre‑authorization
   },
   {
     category: "workflow-automation",
     q: "AI pipeline for processing and routing customer support emails",
-    relevant: ["Agents", "workspace agents", "agentic"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These titles discuss building service agents, programmatic tool integration, batch processing, and s
   },
   {
     category: "workflow-automation",
     q: "automating financial report generation from spreadsheet data",
-    relevant: ["Agents for financial services", "DRIP-R"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the candidate titles directly address automating financial report generation from spreadshee
   },
   {
     category: "workflow-automation",
     q: "multi-agent system for parallel document review and approval",
-    relevant: ["MAVEN", "Multi-Agent", "agentic"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the candidate titles directly address a multi-agent system for parallel document review and 
   },
   {
     category: "workflow-automation",
     q: "building an AI workflow to summarize and file research papers weekly",
-    relevant: ["agentic", "Claude"],
-    // Research paper summarization workflow — likely matches general agentic docs.
+    relevant: [
+      "Generate a relevance filter for a list of paper titles",
+      "Open-source DeepResearch – Freeing our search agents",
+      "Building Deep Research: How we Achieved State of the Art",
+    ],
+    // LLM-curated: These titles directly relate to handling research papers—filtering, summarizing, and building a rese
   },
 
-  // ── 6. decision-frameworks (5 queries) ───────────────────────────────────
-  // Structured methods for making business decisions, especially with AI assistance.
+  // ── 6. decision-frameworks ───────────────────────────────────────────────
   {
     category: "decision-frameworks",
     q: "MCDA framework for choosing between two AI billing platforms",
-    relevant: ["DRIP-R", "Abductive Reasoning"],
-    // DRIP-R covers retail decision under policy ambiguity. MCDA itself is classical
-    // decision theory — likely a gap for a dedicated MCDA doc.
+    relevant: [],
     expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the candidate titles directly address an MCDA framework for selecting between AI billing pla
   },
   {
     category: "decision-frameworks",
     q: "AHP analytic hierarchy process for vendor selection decisions",
-    relevant: ["DRIP-R"],
-    // AHP is classical operations research. Unlikely to have dedicated doc in corpus.
+    relevant: [],
     expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the candidate titles address the Analytic Hierarchy Process or vendor selection decisions.
   },
   {
     category: "decision-frameworks",
     q: "how to use AI to score and rank strategic options",
-    relevant: ["DRIP-R", "Abductive Reasoning", "Intelligence Age"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the provided titles address using AI to score and rank strategic options; they focus on mode
   },
   {
     category: "decision-frameworks",
     q: "decision tree construction for clinical diagnostic pathways",
-    relevant: ["Abductive Reasoning"],
-    // Abductive reasoning paper covers probabilistic commonsense inference.
-    // Clinical diagnostic decision trees — possibly a gap.
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the provided titles directly address how to construct decision trees for clinical diagnostic
   },
   {
     category: "decision-frameworks",
     q: "structured approach to evaluating AI tools before procurement",
-    relevant: ["Intelligence Age", "GPT-5.5 System Card"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. none of the candidate titles address a structured evaluation framework for AI tool procurement
   },
 
-  // ── 7. ai-adoption-solo-healthcare (10 queries) ──────────────────────────────
-  // Track A — adoption-tagged content for solo healthcare practitioners. Anchors
-  // are library use_cases / prompts curated in scripts/library-seed/*. Each query
-  // SHOULD hit at least one library row when EVAL_SCOPE=focused. Corpus signal
-  // is supplementary (KB / Anthropic news may complement). Names like "prior
-  // auth letter" are the highest-signal anchors.
+  // ── 7. ai-adoption-solo-healthcare (Track A) ─────────────────────────────
   {
     category: "ai-adoption-solo-healthcare",
     q: "writing prior authorization letters for insurance approvals",
-    relevant: ["prior auth", "appeal letter"],
-    // Library admin pack has prior-auth use cases + prompts.
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These entries directly address drafting prior authorization letters, matching the user’s request.
   },
   {
     category: "ai-adoption-solo-healthcare",
     q: "structured referral templates for primary care to specialist",
-    relevant: ["referral", "Referral"],
+    relevant: [
+      "Draft a referral update letter to a referring provider",
+    ],
+    // LLM-curated: This use case provides a template for drafting referral communications, directly addressing the need
   },
   {
     category: "ai-adoption-solo-healthcare",
     q: "AI for capacity planning in a solo psychiatry practice",
-    relevant: ["capacity", "Capacity"],
+    relevant: [
+      "Analyze weekly schedule utilization and identify open slot patterns",
+    ],
+    // LLM-curated: This library use case directly addresses capacity planning by analyzing schedule utilization, which 
   },
   {
     category: "ai-adoption-solo-healthcare",
     q: "automating patient follow-up reminders for therapy practice",
-    relevant: ["follow-up", "Follow"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. These use‑case prompts directly address creating automated follow‑up reminders and outreach for pati
   },
   {
     category: "ai-adoption-solo-healthcare",
     q: "summarizing intake forms for new patient appointments",
-    relevant: ["intake", "Intake"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the candidate titles directly address summarizing intake forms for new patient appointments
   },
   {
     category: "ai-adoption-solo-healthcare",
     q: "drafting denial appeal letter for prescribing decision",
-    relevant: ["appeal", "Appeal"],
+    relevant: [
+      "Draft a prior authorization support letter",
+    ],
+    // LLM-curated: It is the only library use case that involves drafting a support letter for a prior authorization, w
   },
   {
     category: "ai-adoption-solo-healthcare",
     q: "research synthesis for a clinical decision a solo provider faces",
-    relevant: ["research", "Research"],
+    relevant: [],
+    expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. Both titles provide tools for summarizing and filtering research literature to support a solo clinic
   },
   {
     category: "ai-adoption-solo-healthcare",
     q: "psychiatry workflows that benefit from AI assistance",
-    relevant: ["psychiatry", "Psychiatry"],
+    relevant: [
+      "Psychiatry prior authorization support draft for TMS or Spravato",
+      "Psychiatry AI scribe note review workflow",
+      "Psychiatry AI therapy chatbot patient-use risk review",
+      "Psychiatry literature screening for medication and therapy updates",
+      "Psychiatry measurement-based care trend summary",
+      "Psychiatry safety plan follow-up task tracker",
+      "Psychiatry controlled substance refill review queue",
+    ],
+    // LLM-curated: These titles describe specific psychiatry workflows where AI can assist, matching the query about AI
   },
   {
     category: "ai-adoption-solo-healthcare",
     q: "automating chart-prep before a busy clinic day",
-    relevant: ["chart", "prep"],
+    relevant: [],
     expected_coverage: "gap",
-    // Library content may not yet cover chart-prep specifically. Tagged as gap
-    // so the query still runs but is excluded from recall math until coverage
-    // lands. Drop the gap flag when library:seed adds a matching use case.
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the provided titles directly address automating chart preparation before a clinic day
   },
   {
     category: "ai-adoption-solo-healthcare",
     q: "templated patient education content for newly-diagnosed conditions",
-    relevant: ["education", "Education", "patient"],
+    relevant: [],
     expected_coverage: "gap",
+    // LLM-curated: no corpus/library content genuinely answers this query. None of the provided titles directly address templated patient education content for newly-diagnosed
   },
 ];
 
@@ -377,9 +447,22 @@ beforeAll(async () => {
     throw new Error("OPENAI_API_KEY missing — embedQuery cannot run.");
   }
 
-  // Load all corpus docs for anchor resolution.
+  // Load all corpus + library + kb titles for anchor resolution. Track A:
+  // the production retrieval pipeline (and now this eval pipeline) includes
+  // the library leg, so adoption-focused queries can resolve against curated
+  // library content. UUIDs across these tables don't collide in practice.
   const rows = await setupDb.execute(sql`
     SELECT id, title FROM corpus_documents
+    UNION ALL
+    SELECT id, title FROM library_use_cases
+    UNION ALL
+    SELECT id, title FROM library_prompts
+    UNION ALL
+    SELECT id, title FROM library_skills
+    UNION ALL
+    SELECT id, title FROM library_plugins
+    UNION ALL
+    SELECT id, title FROM kb_articles
   `);
   const all = rows.rows as unknown as DocLookup[];
 
@@ -454,7 +537,7 @@ async function runPipeline(
   opts: { skipRerank?: boolean } = {},
 ): Promise<PipelineResult> {
   const embedding = await embedQuery(query);
-  const [bm25Hits, vectorHits, kgHits] = await Promise.all([
+  const [bm25Hits, vectorHits, kgHits, libraryHits] = await Promise.all([
     runWithActor(
       { userId: testUserId, tenantId: testTenantId },
       async () => withActor((tx) => bm25Search(tx, query, 20, EVAL_SCOPE)),
@@ -467,11 +550,19 @@ async function runPipeline(
       { userId: testUserId, tenantId: testTenantId },
       async () => withActor((tx) => kgSearch(tx, query, 20, EVAL_SCOPE)),
     ).catch(() => []),
+    // Track A: include library leg so adoption-focused queries can resolve
+    // against curated library content. Production /api/search does this too.
+    librarySearch(
+      query,
+      { actor: { userId: testUserId, tenantId: testTenantId } },
+      EVAL_SCOPE,
+    ).catch(() => []),
   ]);
   const fused = rrfFuse({
     bm25: bm25Hits as LegHit[],
     vector: vectorHits as LegHit[],
     kg: kgHits as LegHit[],
+    library: libraryHits as LegHit[],
   });
   const candidateIds = fused.slice(0, 30).map((f) => f.doc_id);
   if (candidateIds.length === 0) {
@@ -484,11 +575,27 @@ async function runPipeline(
       degraded_reason: null,
     };
   }
+  // Hydrate from corpus_documents AND library_* / kb_articles so the
+  // reranker has text for every candidate, regardless of which leg produced it.
+  // sql.join expands the array element-by-element so each `IN (...)` gets
+  // separate placeholders (avoids the "record to uuid[]" cast issue when
+  // Drizzle serializes an array binding for ANY()).
+  const idList = sql.join(
+    candidateIds.map((id) => sql`${id}::uuid`),
+    sql`, `,
+  );
   const hydratedRows = await setupDb.execute(sql`
-    SELECT id, title, body FROM corpus_documents WHERE id IN (${sql.join(
-      candidateIds.map((id) => sql`${id}::uuid`),
-      sql`, `,
-    )})
+    SELECT id, title, COALESCE(body, '') AS body FROM corpus_documents WHERE id IN (${idList})
+    UNION ALL
+    SELECT id, title, COALESCE(body, '') FROM library_use_cases WHERE id IN (${idList})
+    UNION ALL
+    SELECT id, title, COALESCE(body, '') FROM library_prompts WHERE id IN (${idList})
+    UNION ALL
+    SELECT id, title, COALESCE(body, '') FROM library_skills WHERE id IN (${idList})
+    UNION ALL
+    SELECT id, title, COALESCE(body, '') FROM library_plugins WHERE id IN (${idList})
+    UNION ALL
+    SELECT id, title, COALESCE(body, '') FROM kb_articles WHERE id IN (${idList})
   `);
   const hydrated = new Map<string, { title: string; body: string }>();
   for (const r of hydratedRows.rows as Array<{

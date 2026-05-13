@@ -1,0 +1,346 @@
+[
+  {
+    "category": "compare-tools",
+    "q": "Claude vs ChatGPT for writing medical documentation",
+    "picks": [],
+    "rationale": "None of the provided titles directly compare Claude and ChatGPT for medical documentation",
+    "candidate_count": 50
+  },
+  {
+    "category": "compare-tools",
+    "q": "which AI model is best for legal contract review",
+    "picks": [],
+    "rationale": "None of the provided titles specifically address selecting an AI model for legal contract review.",
+    "candidate_count": 50
+  },
+  {
+    "category": "compare-tools",
+    "q": "GPT-5 vs Claude Opus for complex reasoning tasks",
+    "picks": [],
+    "rationale": "No candidate directly compares GPT-5 and Claude Opus on complex reasoning tasks",
+    "candidate_count": 50
+  },
+  {
+    "category": "compare-tools",
+    "q": "comparing AI coding assistants for software development teams",
+    "picks": [],
+    "rationale": "None of the candidate titles directly compare AI coding assistants for software development teams; they are product announcements or unrelated studies.",
+    "candidate_count": 50
+  },
+  {
+    "category": "compare-tools",
+    "q": "Gemini vs Claude for enterprise customer support automation",
+    "picks": [],
+    "rationale": "none of the titles directly compare Gemini and Claude for enterprise customer support automation",
+    "candidate_count": 50
+  },
+  {
+    "category": "compare-tools",
+    "q": "Mistral vs GPT-4 for French language business applications",
+    "picks": [],
+    "rationale": "None of the candidate titles directly compare Mistral and GPT-4 for French language business applications.",
+    "candidate_count": 50
+  },
+  {
+    "category": "prompt-writing",
+    "q": "how to write a prompt for generating SOAP notes from patient conversation",
+    "picks": [],
+    "rationale": "These titles provide guidance on prompt engineering and authoring best practices, directly helping a clinician craft a prompt to generate SOAP notes from a patient conversation.",
+    "candidate_count": 50
+  },
+  {
+    "category": "prompt-writing",
+    "q": "best practices for prompting Claude to summarize research papers",
+    "picks": [],
+    "rationale": "Directly covers best practices for prompting Claude, which matches the query about prompting Claude to summarize research papers.",
+    "candidate_count": 50
+  },
+  {
+    "category": "prompt-writing",
+    "q": "chain of thought prompting for multi-step business analysis",
+    "picks": [],
+    "rationale": "These titles discuss prompting best practices, engineering, extended (chain‑of‑thought) reasoning, and multi‑step reasoning benchmarks, all relevant to chain‑of‑thought prompting for business analysis.",
+    "candidate_count": 50
+  },
+  {
+    "category": "prompt-writing",
+    "q": "few-shot examples for invoice data extraction prompts",
+    "picks": [],
+    "rationale": "These titles directly cover prompting techniques and skill creation, which are most likely to provide few-shot examples for invoice data extraction prompts.",
+    "candidate_count": 50
+  },
+  {
+    "category": "prompt-writing",
+    "q": "system prompt design for consistent AI customer service tone",
+    "picks": [],
+    "rationale": "These titles directly address prompt design principles and building AI agents for customer service, matching the query about system prompts for a consistent tone.",
+    "candidate_count": 50
+  },
+  {
+    "category": "prompt-writing",
+    "q": "structured output prompts for JSON extraction from unstructured text",
+    "picks": [],
+    "rationale": "These titles directly address how to craft prompts that produce structured JSON output from unstructured text.",
+    "candidate_count": 50
+  },
+  {
+    "category": "skill-design",
+    "q": "how to design a skill for patient intake triage summaries",
+    "picks": [
+      "Designing, Refining, and Maintaining Agent Skills at Perplexity",
+      "Skill authoring best practices",
+      "Get started with Agent Skills in the API",
+      "Build with Agent Skills - Model Context Protocol"
+    ],
+    "rationale": "These titles directly cover how to create and manage agent skills, providing best‑practice guidance and API start‑up steps relevant to building a patient intake triage summary skill.",
+    "candidate_count": 50
+  },
+  {
+    "category": "skill-design",
+    "q": "designing reusable AI skills for HR onboarding workflows",
+    "picks": [],
+    "rationale": "These titles directly cover designing, authoring, and reusing agent/AI skills, which is core to creating reusable HR onboarding workflows.",
+    "candidate_count": 50
+  },
+  {
+    "category": "skill-design",
+    "q": "AI skill architecture for multi-step financial report generation",
+    "picks": [
+      "Designing, Refining, and Maintaining Agent Skills at Perplexity",
+      "Skill authoring best practices",
+      "CodeAgents + Structure: A Better Way to Execute Actions",
+      "Skills for enterprise",
+      "Agent Skills"
+    ],
+    "rationale": "These titles cover designing, authoring, and structuring agent skills and enterprise skill use, which directly relate to building a multi-step AI skill architecture for financial report generation.",
+    "candidate_count": 50
+  },
+  {
+    "category": "skill-design",
+    "q": "building a skill that extracts action items from meeting transcripts",
+    "picks": [],
+    "rationale": "These titles cover how to author agent skills and provide a concrete use‑case for extracting action items from meeting transcripts.",
+    "candidate_count": 50
+  },
+  {
+    "category": "skill-design",
+    "q": "skill design patterns for structured knowledge base queries",
+    "picks": [],
+    "rationale": "These titles directly discuss skill design, authoring, and structured output patterns relevant to building knowledge‑base query skills.",
+    "candidate_count": 50
+  },
+  {
+    "category": "plugin-design",
+    "q": "build a Claude plugin to read and summarize lab results from EHR",
+    "picks": [
+      "Skill authoring best practices",
+      "Claude API skill",
+      "Tutorial: Build a tool-using agent",
+      "Programmatic tool calling",
+      "Agent Skills"
+    ],
+    "rationale": "These titles cover how to author Claude skills/plugins, use programmatic tool calling, and build tool-using agents, which directly help create a plugin to read and summarize lab results from an EHR.",
+    "candidate_count": 50
+  },
+  {
+    "category": "plugin-design",
+    "q": "how to create a plugin that connects Claude to Salesforce CRM data",
+    "picks": [
+      "Claude API skill",
+      "Programmatic tool calling",
+      "Tutorial: Build a tool-using agent",
+      "Agent Skills"
+    ],
+    "rationale": "These titles cover creating Claude plugins/skills and using tool calling, which directly guide building a Salesforce integration.",
+    "candidate_count": 50
+  },
+  {
+    "category": "plugin-design",
+    "q": "MCP server setup for connecting AI agents to internal databases",
+    "picks": [],
+    "rationale": "These titles directly address building or configuring an MCP server and connecting components, matching the query about MCP server setup for AI agents and internal databases.",
+    "candidate_count": 50
+  },
+  {
+    "category": "plugin-design",
+    "q": "building an agentic plugin for automated Slack notifications",
+    "picks": [],
+    "rationale": "These titles cover building agents and workspace integrations, which are directly relevant to creating an agentic plugin for automated Slack notifications.",
+    "candidate_count": 50
+  },
+  {
+    "category": "plugin-design",
+    "q": "Claude tool use API for function calling with external APIs",
+    "picks": [],
+    "rationale": "These titles directly cover how to define, call, and implement Claude tools via the API for external function calls.",
+    "candidate_count": 50
+  },
+  {
+    "category": "plugin-design",
+    "q": "designing a retrieval plugin for company document search",
+    "picks": [],
+    "rationale": "These titles directly cover designing search APIs, retrieval-augmented models, embedding techniques, and skill authoring, all key for building a company document retrieval plugin.",
+    "candidate_count": 50
+  },
+  {
+    "category": "workflow-automation",
+    "q": "automate insurance pre-authorization letters with AI",
+    "picks": [
+      "Draft a prior authorization support letter",
+      "Prior Authorization Support Letter Draft"
+    ],
+    "rationale": "These library use case and prompt directly address creating AI‑generated insurance pre‑authorization letters.",
+    "candidate_count": 50
+  },
+  {
+    "category": "workflow-automation",
+    "q": "AI pipeline for processing and routing customer support emails",
+    "picks": [],
+    "rationale": "These titles discuss building service agents, programmatic tool integration, batch processing, and skill authoring—key components for an AI pipeline that processes and routes customer support emails.",
+    "candidate_count": 50
+  },
+  {
+    "category": "workflow-automation",
+    "q": "automating financial report generation from spreadsheet data",
+    "picks": [],
+    "rationale": "None of the candidate titles directly address automating financial report generation from spreadsheet data.",
+    "candidate_count": 50
+  },
+  {
+    "category": "workflow-automation",
+    "q": "multi-agent system for parallel document review and approval",
+    "picks": [],
+    "rationale": "None of the candidate titles directly address a multi-agent system for parallel document review and approval",
+    "candidate_count": 50
+  },
+  {
+    "category": "workflow-automation",
+    "q": "building an AI workflow to summarize and file research papers weekly",
+    "picks": [
+      "Generate a relevance filter for a list of paper titles",
+      "Open-source DeepResearch – Freeing our search agents",
+      "Building Deep Research: How we Achieved State of the Art"
+    ],
+    "rationale": "These titles directly relate to handling research papers—filtering, summarizing, and building a research-focused AI workflow.",
+    "candidate_count": 50
+  },
+  {
+    "category": "decision-frameworks",
+    "q": "MCDA framework for choosing between two AI billing platforms",
+    "picks": [],
+    "rationale": "None of the candidate titles directly address an MCDA framework for selecting between AI billing platforms",
+    "candidate_count": 50
+  },
+  {
+    "category": "decision-frameworks",
+    "q": "AHP analytic hierarchy process for vendor selection decisions",
+    "picks": [],
+    "rationale": "None of the candidate titles address the Analytic Hierarchy Process or vendor selection decisions.",
+    "candidate_count": 50
+  },
+  {
+    "category": "decision-frameworks",
+    "q": "how to use AI to score and rank strategic options",
+    "picks": [],
+    "rationale": "None of the provided titles address using AI to score and rank strategic options; they focus on model protocols, embeddings, or healthcare-specific use cases.",
+    "candidate_count": 50
+  },
+  {
+    "category": "decision-frameworks",
+    "q": "decision tree construction for clinical diagnostic pathways",
+    "picks": [],
+    "rationale": "None of the provided titles directly address how to construct decision trees for clinical diagnostic pathways.",
+    "candidate_count": 50
+  },
+  {
+    "category": "decision-frameworks",
+    "q": "structured approach to evaluating AI tools before procurement",
+    "picks": [],
+    "rationale": "none of the candidate titles address a structured evaluation framework for AI tool procurement",
+    "candidate_count": 50
+  },
+  {
+    "category": "ai-adoption-solo-healthcare",
+    "q": "writing prior authorization letters for insurance approvals",
+    "picks": [],
+    "rationale": "These entries directly address drafting prior authorization letters, matching the user’s request.",
+    "candidate_count": 50
+  },
+  {
+    "category": "ai-adoption-solo-healthcare",
+    "q": "structured referral templates for primary care to specialist",
+    "picks": [
+      "Draft a referral update letter to a referring provider"
+    ],
+    "rationale": "This use case provides a template for drafting referral communications, directly addressing the need for structured referral templates from primary care to specialists.",
+    "candidate_count": 50
+  },
+  {
+    "category": "ai-adoption-solo-healthcare",
+    "q": "AI for capacity planning in a solo psychiatry practice",
+    "picks": [
+      "Analyze weekly schedule utilization and identify open slot patterns"
+    ],
+    "rationale": "This library use case directly addresses capacity planning by analyzing schedule utilization, which matches the solo psychiatry practice query.",
+    "candidate_count": 50
+  },
+  {
+    "category": "ai-adoption-solo-healthcare",
+    "q": "automating patient follow-up reminders for therapy practice",
+    "picks": [],
+    "rationale": "These use‑case prompts directly address creating automated follow‑up reminders and outreach for patients in a therapy practice.",
+    "candidate_count": 50
+  },
+  {
+    "category": "ai-adoption-solo-healthcare",
+    "q": "summarizing intake forms for new patient appointments",
+    "picks": [],
+    "rationale": "None of the candidate titles directly address summarizing intake forms for new patient appointments",
+    "candidate_count": 50
+  },
+  {
+    "category": "ai-adoption-solo-healthcare",
+    "q": "drafting denial appeal letter for prescribing decision",
+    "picks": [
+      "Draft a prior authorization support letter"
+    ],
+    "rationale": "It is the only library use case that involves drafting a support letter for a prior authorization, which is the closest match to creating a denial appeal letter for a prescribing decision.",
+    "candidate_count": 50
+  },
+  {
+    "category": "ai-adoption-solo-healthcare",
+    "q": "research synthesis for a clinical decision a solo provider faces",
+    "picks": [],
+    "rationale": "Both titles provide tools for summarizing and filtering research literature to support a solo clinician's decision-making",
+    "candidate_count": 50
+  },
+  {
+    "category": "ai-adoption-solo-healthcare",
+    "q": "psychiatry workflows that benefit from AI assistance",
+    "picks": [
+      "Psychiatry prior authorization support draft for TMS or Spravato",
+      "Psychiatry AI scribe note review workflow",
+      "Psychiatry AI therapy chatbot patient-use risk review",
+      "Psychiatry literature screening for medication and therapy updates",
+      "Psychiatry measurement-based care trend summary",
+      "Psychiatry safety plan follow-up task tracker",
+      "Psychiatry controlled substance refill review queue"
+    ],
+    "rationale": "These titles describe specific psychiatry workflows where AI can assist, matching the query about AI‑beneficial psychiatry processes.",
+    "candidate_count": 50
+  },
+  {
+    "category": "ai-adoption-solo-healthcare",
+    "q": "automating chart-prep before a busy clinic day",
+    "picks": [],
+    "rationale": "None of the provided titles directly address automating chart preparation before a clinic day",
+    "candidate_count": 50
+  },
+  {
+    "category": "ai-adoption-solo-healthcare",
+    "q": "templated patient education content for newly-diagnosed conditions",
+    "picks": [],
+    "rationale": "None of the provided titles directly address templated patient education content for newly-diagnosed conditions",
+    "candidate_count": 50
+  }
+]
