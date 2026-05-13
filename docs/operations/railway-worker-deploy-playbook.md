@@ -115,10 +115,10 @@ Railway has two auth scopes:
 | **API token** | `RAILWAY_API_TOKEN` | Whole account | Project creation, team mgmt, MCP server natural-language operations |
 | User session | (cookie via `railway login`) | Whole account | Interactive CLI use, Railway dashboard browsing |
 
-**For deploys: project token is enough.** Generate one at Railway dashboard → Project → Settings → Tokens. Store it in `git ignore/dd-secrets.rtf` (gitignored). Extract at runtime:
+**For deploys: project token is enough.** Generate one at Railway dashboard → Project → Settings → Tokens. Store it in `.secrets/dd-secrets.rtf` (gitignored). Extract at runtime:
 
 ```bash
-TOKEN=$(textutil -convert txt -stdout "git ignore/dd-secrets.rtf" 2>/dev/null \
+TOKEN=$(textutil -convert txt -stdout ".secrets/dd-secrets.rtf" 2>/dev/null \
   | grep -iE "railway.token|dd-railway" \
   | grep -oE '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}' \
   | head -1)
@@ -131,7 +131,7 @@ export RAILWAY_TOKEN=$TOKEN
 
 ## Step-by-step recipe (copy-paste)
 
-For a new worker service in this project (or a sibling project). Assumes `git ignore/dd-secrets.rtf` contains a project token line like `Dd-railway-token <UUID>`.
+For a new worker service in this project (or a sibling project). Assumes `.secrets/dd-secrets.rtf` contains a project token line like `Dd-railway-token <UUID>`.
 
 ### One-time setup
 
@@ -189,7 +189,7 @@ git push
 
 ```bash
 # Extract the project token (once per shell)
-TOKEN=$(textutil -convert txt -stdout "../git ignore/dd-secrets.rtf" 2>/dev/null \
+TOKEN=$(textutil -convert txt -stdout "../.secrets/dd-secrets.rtf" 2>/dev/null \
   | grep -iE "railway.token|dd-railway" \
   | grep -oE '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}' \
   | head -1)

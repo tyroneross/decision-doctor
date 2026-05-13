@@ -16,8 +16,10 @@ dist/
 *.rtf
 dd-secrets*
 
-# Local-only PRD/design refs/secrets staging — DO NOT COMMIT
-git ignore/
+# Local-only env-var / secret staging — DO NOT COMMIT
+# Holds dd-secrets.rtf + any other ad-hoc credential files.
+# Renamed from legacy folder name "git ignore/" on 2026-05-13.
+.secrets/
 Reference files/
 
 # --- Logs ---

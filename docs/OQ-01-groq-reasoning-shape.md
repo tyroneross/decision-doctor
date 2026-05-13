@@ -76,4 +76,4 @@ Deterministic, derives from method_trace, satisfies fact-checker requirement (no
 
 ## Source
 
-Live curl 2026-05-10 from `decision-doctor-cc` host. Raw response saved to `.git ignore/oq-01-raw-response.json` (gitignored). T1 confirmed.
+Live curl 2026-05-10 from `decision-doctor-cc` host. Raw response saved to `..secrets/oq-01-raw-response.json` (gitignored). T1 confirmed.

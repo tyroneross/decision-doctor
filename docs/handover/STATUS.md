@@ -6,7 +6,7 @@ Updated by Claude Code (Opus 4.7, 1M context). Working directory: `/Users/tyrone
 
 | Step | Status | Notes |
 |---|---|---|
-| 1.1 .gitignore hardening + PRD → docs/PRD.md | ✅ | `git ignore/`, `Reference files/`, `*.rtf` ignored. Pre-commit + pre-push hooks installed (`.githooks/`) blocking real-secret patterns. |
+| 1.1 .gitignore hardening + PRD → docs/PRD.md | ✅ | `.secrets/`, `Reference files/`, `*.rtf` ignored. Pre-commit + pre-push hooks installed (`.githooks/`) blocking real-secret patterns. |
 | 1.2 git init + remote + main | ✅ | Repo `tyroneross/decision-doctor` (PUBLIC) on branch `main`. 2 commits ahead of "Initial commit". Sibling experiments (`-cc2`, `-codex`) can fork from this baseline by branching off `main`. |
 | 1.3 pnpm install + .env.local | ✅ | All env vars populated. Peer-dep warnings on better-auth (wants drizzle-orm@0.45 / zod@4) deferred — auth not yet implemented; resolve in Phase 2 F-06. |
 | 1.4 Neon connectivity + schema + RLS | ✅ | 4 tables (users, tenants, decisions, audit_events). RLS enabled + FORCE on user-data tables; 4 policies live (`decisions_tenant_isolation`, `tenants_owner_only`, `audit_insert`, `audit_select`). Verify command: `node scripts/db-verify.mjs`. |
@@ -80,7 +80,7 @@ The `main` branch on `tyroneross/decision-doctor` is the verified baseline:
 - `git clone https://github.com/tyroneross/decision-doctor.git decision-doctor-cc2 && cd decision-doctor-cc2 && git checkout -b cc2`
 - `git clone https://github.com/tyroneross/decision-doctor.git decision-doctor-codex && cd decision-doctor-codex && git checkout -b codex`
 
-Both will need `.env.local` from `git ignore/dd-secrets.rtf` populated the same way. Run `pnpm install`, `node scripts/apply-migrations.mjs` (or skip if sharing Neon DB), then start their own build flow.
+Both will need `.env.local` from `.secrets/dd-secrets.rtf` populated the same way. Run `pnpm install`, `node scripts/apply-migrations.mjs` (or skip if sharing Neon DB), then start their own build flow.
 
 ⚠️ **DB sharing caveat:** All three experiments currently point at the same Neon DB (`ep-weathered-flower-apwmza9k`). RLS isolates per-user data, but schema migrations from one branch will be visible to others. If divergent schemas needed, provision a second Neon project per experiment.
 

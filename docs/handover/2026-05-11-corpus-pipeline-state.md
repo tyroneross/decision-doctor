@@ -50,7 +50,7 @@ All 5 KG tables (`ai_*`) have RLS by `scope = 'global' OR scope = current_settin
 
 ### Auth
 
-- **Railway:** project token in `git ignore/dd-secrets.rtf` (gitignored). Extract pattern documented in `docs/operations/railway-worker-deploy-playbook.md`. NO `railway login` needed; project token is sufficient for all deploy ops.
+- **Railway:** project token in `.secrets/dd-secrets.rtf` (gitignored). Extract pattern documented in `docs/operations/railway-worker-deploy-playbook.md`. NO `railway login` needed; project token is sufficient for all deploy ops.
 - **OpenAI API key:** synced to `.env.local` + `workers/.env` + Railway env (from same RTF).
 
 ---

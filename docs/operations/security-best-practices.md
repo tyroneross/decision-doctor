@@ -189,7 +189,7 @@ Upgrade/transitively override affected packages after checking Better Auth / Nex
 
 ## Positive Checks
 
-- No tracked `.env.local`, `workers/.env`, or `git ignore/dd-secrets.rtf`.
+- No tracked `.env.local`, `workers/.env`, or `.secrets/dd-secrets.rtf`.
 - `.gitignore` covers env files, `.next`, `.DS_Store`, `*.tsbuildinfo`, and the local secret-staging directory.
 - Current tracked secret scan found only placeholders and fake test keys.
 - Git history high-signal scan found only placeholders/fake test keys.

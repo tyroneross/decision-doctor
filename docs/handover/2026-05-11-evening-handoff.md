@@ -238,7 +238,7 @@ cd ~/dev/git-folder/decision-doctor-cc && pnpm test -- f31-hybrid-search
 
 ## Secrets
 
-`/Users/tyroneross/dev/git-folder/decision-doctor-cc/git ignore/dd-secrets.rtf` (gitignored). Contains: Railway project token (`RAILWAY_TOKEN`), OpenAI API key, Groq API key, project IDs. Never echo into transcripts; never commit. The Railway CLI works with `RAILWAY_TOKEN=… railway <command> --service <name>` (no `railway login` needed).
+`/Users/tyroneross/dev/git-folder/decision-doctor-cc/.secrets/dd-secrets.rtf` (gitignored). Contains: Railway project token (`RAILWAY_TOKEN`), OpenAI API key, Groq API key, project IDs. Never echo into transcripts; never commit. The Railway CLI works with `RAILWAY_TOKEN=… railway <command> --service <name>` (no `railway login` needed).
 
 ---
 
