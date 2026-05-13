@@ -23,6 +23,7 @@ import {
   shouldOfferHelp,
   type DecisionDetection,
 } from "@/lib/chat/decision-detector";
+import { shouldFireDetector, type FlowState } from "@/lib/chat/flow-state";
 import { generateSurvey } from "@/lib/chat/survey-generator";
 import { adaptSubmission } from "@/lib/chat/survey-adapter";
 import { SurveySchema, SurveySubmissionSchema } from "@/lib/engine/survey";
@@ -59,6 +60,19 @@ const RequestSchema = z.object({
    * runs in evals.
    */
   userOverrode: z.boolean().optional(),
+  /**
+   * Chat-flow FSM hint from the client. When provided, the route uses it
+   * to gate the decision-intent detector — saves ~1 Groq call per turn
+   * when the thread is already in a clarifier/survey/resolved flow. The
+   * server doesn't see message-level affordance metadata, so the client
+   * is the authoritative source for flow state.
+   *
+   * If absent (older client or unknown state), the route falls back to
+   * the previous behavior: fire the detector on every turn.
+   */
+  clientFlowState: z
+    .enum(["idle", "conversational", "survey", "resolved"])
+    .optional(),
   /**
    * Phase 2 — when the user clicks the offer-help affordance, the client
    * sends this signal so the route generates a fresh adaptive survey
@@ -513,19 +527,28 @@ export async function POST(req: Request) {
 
   // Phase-1 chat-as-decision-front-door — kick off decision-intent detection
   // on the most recent user message IN PARALLEL with the Groq response
-  // synthesis. The detector never throws and adds no latency on the critical
-  // path because we await both with Promise.allSettled below.
+  // synthesis, BUT only when the FSM says we're in `idle`. Once a flow
+  // is in progress (conversational / survey / resolved) the user's next
+  // message is an answer-in-flow, not a new decision question — skipping
+  // detection cuts ~1 Groq call per turn.
+  //
+  // Client provides `clientFlowState` because the server doesn't see
+  // message-level affordance metadata. Absent → assume idle (matches
+  // older-client behavior of firing every turn).
   const latestUserMessage =
     [...parsed.data.messages].reverse().find((m) => m.role === "user")
       ?.content ?? "";
-  const detectionPromise: Promise<DecisionDetection> = latestUserMessage
+  const flowState: FlowState = parsed.data.clientFlowState ?? "idle";
+  const detectionEligible = latestUserMessage && shouldFireDetector(flowState);
+  const NO_DETECTION: DecisionDetection = {
+    kind: "not-decision" as const,
+    confidence: 0,
+    suggestedPath: null,
+    rationale: detectionEligible ? "" : `skipped — flow state is ${flowState}`,
+  };
+  const detectionPromise: Promise<DecisionDetection> = detectionEligible
     ? detectDecisionIntent(latestUserMessage)
-    : Promise.resolve({
-        kind: "not-decision" as const,
-        confidence: 0,
-        suggestedPath: null,
-        rationale: "no user message",
-      });
+    : Promise.resolve(NO_DETECTION);
 
   // 4. Ask Groq for next message OR ready directive.
   let raw = "{}";

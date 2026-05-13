@@ -26,6 +26,7 @@ import {
   type Survey,
   type SurveySubmission,
 } from "@/lib/engine/survey";
+import { deriveFlowState, type MessageForFlow } from "@/lib/chat/flow-state";
 
 // ─── Types (mirror /api/chat response shape) ────────────────────────────
 
@@ -205,11 +206,19 @@ export function Chat({ seed }: { seed?: string } = {}) {
       setThread((t) => ({ ...t, messages: next, decision: undefined }));
 
       try {
+        // Compute the chat-flow FSM state from the thread BEFORE the new
+        // user message landed — that's the state the server should reason
+        // about when deciding whether to re-detect intent. Walking the
+        // existing thread.messages (not `next`) gives the correct gate.
+        const clientFlowState = deriveFlowState(
+          thread.messages as readonly MessageForFlow[],
+        ).state;
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             messages: next,
+            clientFlowState,
             ...(options?.userOverrode ? { userOverrode: true } : {}),
             ...(options?.engageSurvey
               ? { engageSurvey: options.engageSurvey }
