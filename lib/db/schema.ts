@@ -15,6 +15,7 @@ import {
   jsonb,
   index,
   integer,
+  real,
   uniqueIndex,
   customType,
 } from "drizzle-orm/pg-core";
@@ -92,6 +93,12 @@ export const contentAudience = pgTable(
     source: text("source")
       .$type<"seed" | "auto" | "human">()
       .notNull(),
+    // 0015 — rationale + confidence added for per-article LLM classification.
+    // Library / kb / plugin / skill rows keep rationale = curated string and
+    // confidence = 1.0. corpus_document rows carry the LLM verdict text +
+    // model-emitted confidence.
+    rationale: text("rationale"),
+    confidence: real("confidence"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
