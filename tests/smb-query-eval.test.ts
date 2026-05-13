@@ -558,12 +558,25 @@ async function runPipeline(
       EVAL_SCOPE,
     ).catch(() => []),
   ]);
-  const fused = rrfFuse({
-    bm25: bm25Hits as LegHit[],
-    vector: vectorHits as LegHit[],
-    kg: kgHits as LegHit[],
-    library: libraryHits as LegHit[],
-  });
+  // Per-leg RRF weighting (Track A).
+  //   - Focused: library leg gets weight 3.0 so curated adoption content
+  //     surfaces past corpus dense-consensus. Mirrors production /api/search
+  //     boostCuratedLibraryHits (which triples each top-10 library hit).
+  //   - Broad: library weight 1.0 (equal RRF) so corpus product docs remain
+  //     reachable when the user asked for the whole AI research surface.
+  // Per-leg weight is the architectural lever; the production triple-hits
+  // hack should eventually be replaced by this same mechanism.
+  const libraryWeight = EVAL_SCOPE === "focused" ? 3.0 : 1.0;
+  const fused = rrfFuse(
+    {
+      bm25: bm25Hits as LegHit[],
+      vector: vectorHits as LegHit[],
+      kg: kgHits as LegHit[],
+      library: libraryHits as LegHit[],
+    },
+    { weights: { library: libraryWeight } },
+  );
+
   const candidateIds = fused.slice(0, 30).map((f) => f.doc_id);
   if (candidateIds.length === 0) {
     return { doc_ids: [], degraded: false, degraded_reason: null };
