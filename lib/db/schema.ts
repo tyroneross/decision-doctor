@@ -51,9 +51,79 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  // Audience-scope toggle persisted server-side (TrackA / drizzle/0014).
+  // 'focused' = AI-adoption content only (default — product mission).
+  // 'broad'   = all AI research + adoption.
+  // CHECK constraint lives in the SQL migration; Drizzle has no enum helper
+  // that mirrors a Postgres CHECK, so the constraint stays SQL-side and we
+  // surface it as a TS union below.
+  searchScopeDefault: text("search_scope_default")
+    .$type<"focused" | "broad">()
+    .notNull()
+    .default("focused"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// --- Audience scope (TrackA / drizzle/0014) ---
+// Junction table tagging each curated content row with an audience.
+// One row per (content_type, content_id, audience). UNIQUE prevents double-tag.
+// CHECK constraints on content_type / audience / source live in the SQL migration.
+export const contentAudience = pgTable(
+  "content_audience",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    contentType: text("content_type")
+      .$type<
+        | "corpus_document"
+        | "library_use_case"
+        | "library_prompt"
+        | "library_skill"
+        | "library_plugin"
+        | "kb_article"
+        | "plugin"
+        | "skill"
+      >()
+      .notNull(),
+    contentId: uuid("content_id").notNull(),
+    audience: text("audience")
+      .$type<"ai-adoption-solo" | "ai-research-general">()
+      .notNull(),
+    source: text("source")
+      .$type<"seed" | "auto" | "human">()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    lookupIdx: index("idx_content_audience_lookup").on(
+      t.contentType,
+      t.audience,
+      t.contentId,
+    ),
+    triplet: uniqueIndex("idx_content_audience_triplet_uniq").on(
+      t.contentType,
+      t.contentId,
+      t.audience,
+    ),
+  }),
+);
+
+export type SearchScope = "focused" | "broad";
+export type ContentAudience = "ai-adoption-solo" | "ai-research-general";
+export type ContentAudienceContentType =
+  | "corpus_document"
+  | "library_use_case"
+  | "library_prompt"
+  | "library_skill"
+  | "library_plugin"
+  | "kb_article"
+  | "plugin"
+  | "skill";
+export type ContentAudienceSource = "seed" | "auto" | "human";
+export type ContentAudienceRow = typeof contentAudience.$inferSelect;
+export type NewContentAudienceRow = typeof contentAudience.$inferInsert;
 
 export const accounts = pgTable("accounts", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),

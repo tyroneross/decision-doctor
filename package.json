@@ -21,7 +21,9 @@
     "library:reset": "tsx scripts/seed-library.ts --reset",
     "kb:seed": "tsx scripts/seed-kb.ts",
     "kb:seed:dry": "tsx scripts/seed-kb.ts --dry-run",
-    "plugins:seed": "tsx scripts/seed-plugins.ts"
+    "plugins:seed": "tsx scripts/seed-plugins.ts",
+    "audience:backfill": "tsx scripts/backfill-content-audience.ts",
+    "audience:backfill:dry": "tsx scripts/backfill-content-audience.ts --dry-run"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",
