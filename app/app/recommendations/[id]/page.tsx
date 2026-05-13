@@ -53,16 +53,16 @@ export default async function RecommendationDetailPage({ params }: Props) {
     } else if (res.status === 401 || res.status === 403) {
       redirect("/sign-in");
     } else if (!res.ok) {
-      fetchError = `Engine route returned ${res.status}. E3 may still be in flight.`;
+      fetchError = `Couldn't load this recommendation (status ${res.status}). Try again in a moment.`;
     } else {
       const data = await res.json() as { recommendation: AiTaskRecommendation };
       recommendation = data.recommendation;
     }
   } catch {
-    fetchError = "The recommendation engine route isn't deployed yet.";
+    fetchError = "Couldn't reach the recommendation engine. Try again in a moment.";
   }
 
-  // Engine not deployed or error state — render graceful placeholder.
+  // Error state — render graceful placeholder.
   if (fetchError || !recommendation) {
     return (
       <main className="mx-auto max-w-3xl px-5 py-12">
@@ -89,10 +89,6 @@ export default async function RecommendationDetailPage({ params }: Props) {
         </h1>
         <p className="mt-2 text-[14px]" style={{ color: "var(--mute)" }}>
           {fetchError ?? "This recommendation could not be loaded."}
-        </p>
-        <p className="mt-1 text-[13px]" style={{ color: "var(--mute)" }}>
-          TODO: Iteration E3 — /api/recommendations/[id] route not yet deployed.
-          Once E3 ships, this page will fetch and render the full recommendation.
         </p>
         <div className="mt-6 flex gap-3">
           <Link

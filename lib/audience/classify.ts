@@ -211,27 +211,81 @@ export interface ArticleClassifyResult extends ClassifyResult {
 
 const ARTICLE_CLASSIFIER_SYSTEM_PROMPT = `You classify AI-related articles by audience.
 
-Two audiences exist:
-- "ai-adoption-solo": content that helps a solo practitioner (especially in healthcare) ADOPT AI in their workflow. Practical guides, use cases, prompts, tools, checklists, deployment notes, workflow automation, how-to content, vendor announcements aimed at users.
-- "ai-research-general": content about AI as a field. Research papers, benchmarks, model releases, training methodology, theoretical work, scaling laws, capability evaluations, academic publications.
+The two audiences are NARROWLY defined. Do not stretch them.
 
-A single article can be in BOTH audiences (vendor announcements, model docs that show practical usage, etc.). Use both tags when genuinely dual-use; do not default to both as a hedge.
+ai-adoption-solo
+  Reader: a solo or small-team knowledge worker (especially a healthcare
+  clinician — psychiatrist, therapist, primary-care doctor) who wants to USE
+  AI tools in their day-to-day practice. They are NOT an ML engineer, not a
+  researcher, not a platform team, not an infrastructure operator. They will
+  not train, fine-tune, deploy, or build models.
+  Content that fits:
+    - Prompts and prompt templates for a clinician's workflow
+    - Use-case write-ups ("how I use AI for prior auth letters")
+    - Vendor product announcements aimed at END USERS (e.g. ChatGPT for
+      Healthcare, a Claude consumer feature)
+    - Practice-management AI tools (intake summarization, note review,
+      referral templates)
+    - Vendor docs about how to USE a model (prompting guides, capability
+      docs, what-the-product-does pages)
+    - Clinical AI guidance, regulatory/compliance notes for solo practice
+    - Healthcare-specific AI adoption news (an AI scribe launches, etc.)
+
+ai-research-general
+  Reader: an AI/ML practitioner, researcher, or engineer who builds, trains,
+  evaluates, deploys, or studies AI systems.
+  Content that fits:
+    - Research papers and arxiv preprints
+    - Model release announcements with technical details (architecture,
+      training data, scaling laws, benchmarks)
+    - Training methodology, fine-tuning, RLHF, distillation
+    - Inference infrastructure: GPU optimization, vLLM, TRL, latency
+      throughput, distributed serving, embedding optimization
+    - Model architecture: MoE, hybrid heads, quantization, mamba/SSMs
+    - Capability evaluations, benchmark results, leaderboards
+    - Academic news and faculty announcements
+    - AI policy and governance research
+
+Dual-tag (both audiences) ONLY when the SAME article materially serves BOTH
+readers. Not as a hedge. Typical genuine dual-tag examples:
+  - A flagship model launch announcement that has a "what you can do with
+    it" section AND technical specs
+  - A vendor blog explaining a new feature with both use-case examples AND
+    architecture detail aimed at developers
+
+DO NOT dual-tag when the content is purely ML engineering even if a
+practitioner could theoretically read it. "How to make inference faster" is
+research; "How a doctor can use ChatGPT to summarize notes" is adoption.
 
 Output STRICT JSON only, no prose, no markdown fences:
 
 {
   "audiences": ["ai-adoption-solo"] | ["ai-research-general"] | ["ai-adoption-solo", "ai-research-general"],
   "confidence": 0.0-1.0,
-  "rationale": "one sentence, <=160 chars, explaining the tag(s)"
+  "rationale": "one sentence, <=160 chars, naming what makes it that audience"
 }
 
 Confidence calibration:
-- 0.9-1.0: the audience is unambiguous from the title alone.
-- 0.7-0.9: title or first paragraph makes it clear.
+- 0.9-1.0: unambiguous from the title alone.
+- 0.7-0.9: title + first paragraph makes it clear.
 - 0.5-0.7: requires reading the body to decide.
-- <0.5: the article is genuinely ambiguous or off-topic; mark accordingly so a human can review.
+- <0.5: genuinely ambiguous OR not clearly AI-related; pick the more
+  plausible audience and lower confidence so a human can review.
 
-Do not refuse. If the article is not clearly AI-related, pick the more plausible audience and lower confidence to <0.5.`;
+Edge cases:
+- ML training infrastructure (vLLM, TRL, DeepSeek deployment, Sagemaker
+  Hyperpod, sparse embeddings, GPU memory) → ai-research-general ONLY.
+  These are for engineers, not clinicians.
+- Model architecture papers (Falcon-H1, MoE, quantization) →
+  ai-research-general ONLY.
+- Scaling laws and efficiency research → ai-research-general ONLY.
+- A vendor product page about "Claude for Creative Work" or "Claude in
+  Bedrock" → ai-adoption-solo (it tells a user what the product does).
+- Codex docs for end users (how to USE Codex) → ai-adoption-solo.
+- Codex training methodology or RLHF details → ai-research-general.
+
+Do not refuse. If the article is not clearly AI-related at all, pick the
+more plausible audience and lower confidence to <0.5.`;
 
 interface LlmVerdict {
   audiences: Audience[];

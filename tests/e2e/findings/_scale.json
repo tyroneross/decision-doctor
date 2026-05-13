@@ -1,29 +1,29 @@
 {
-  "generatedAt": "2026-05-12T06:36:30.470Z",
+  "generatedAt": "2026-05-13T03:58:30.620Z",
   "wave10": {
     "n": 10,
-    "wallMs": 5436,
+    "wallMs": 5548,
     "successCount": 10,
     "errorCount": 0,
     "errorRate": 0,
-    "p50ms": 5039,
-    "p95ms": 5435,
-    "p99ms": 5435,
-    "minMs": 4657,
-    "maxMs": 5435,
+    "p50ms": 5264,
+    "p95ms": 5548,
+    "p99ms": 5548,
+    "minMs": 4404,
+    "maxMs": 5548,
     "sampleErrors": []
   },
   "wave25": {
     "n": 25,
-    "wallMs": 7629,
+    "wallMs": 6800,
     "successCount": 25,
     "errorCount": 0,
     "errorRate": 0,
-    "p50ms": 5409,
-    "p95ms": 6728,
-    "p99ms": 7629,
-    "minMs": 4336,
-    "maxMs": 7629,
+    "p50ms": 5646,
+    "p95ms": 6649,
+    "p99ms": 6800,
+    "minMs": 4439,
+    "maxMs": 6800,
     "sampleErrors": []
   }
 }

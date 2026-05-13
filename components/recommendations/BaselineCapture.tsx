@@ -16,9 +16,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 
-// TODO: Iteration P1 — POST to /api/recommendations/<id>/baseline when the
-//       route ships. Until then, saves to localStorage under
-//       "dd:baseline:<recommendationId>".
+// Baseline is captured to localStorage under "dd:baseline:<recommendationId>".
+// Server-side persistence ships with the baseline endpoint
+// (POST /api/recommendations/<id>/baseline) — until then the data lives only
+// on this device. The UI copy reflects that honestly.
 
 const FREQUENCY_OPTIONS = [
   { value: "daily", label: "Daily" },
@@ -119,10 +120,11 @@ export function BaselineCapture({
         style={{ borderColor: "var(--line)", backgroundColor: "var(--paper)" }}
       >
         <p className="text-[14px] font-medium" style={{ color: "var(--ink)" }}>
-          Baseline captured
+          Baseline saved on this device
         </p>
         <p className="mt-0.5 text-[13px]" style={{ color: "var(--mute)" }}>
-          We&rsquo;ll remind you to check in after you&rsquo;ve tried the recommendation.
+          Stored locally for now. We&rsquo;ll sync it to your account once the
+          baseline endpoint ships.
         </p>
       </div>
     );
@@ -148,8 +150,7 @@ export function BaselineCapture({
       workaround,
     };
 
-    // TODO: Iteration P1 — replace localStorage with POST to
-    //       /api/recommendations/<recommendationId>/baseline.
+    // Local-only until the baseline endpoint ships.
     saveDraft(recommendationId, draft);
     setSaved(true);
     onSaved?.();

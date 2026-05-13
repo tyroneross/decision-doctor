@@ -9,13 +9,13 @@
     "recommendation": "add visits OR hold steady; capping/waitlist is wrong (no demand signal yet)",
     "confidenceRange": "40-65 (genuine uncertainty; P3 doesn't yet have demand data)"
   },
-  "latencyMs": 5563,
+  "latencyMs": 4267,
   "error": null,
   "output": {
     "recommendation": {
-      "option": "Build a structured waitlist + tiered intake",
-      "confidence": 53,
-      "rationale": "Because a structured waitlist with intake tiers improves access while keeping revenue growth modest, supports sustainable workload, and lets you adjust capacity flexibly, it aligns best with your values of revenue growth, sustainability, and flexibility."
+      "option": "Add 4–8 weekly clinical hours",
+      "confidence": 54,
+      "rationale": "Adding 4–8 weekly clinical hours directly boosts revenue and patient acquisition while preserving the flexibility you value, though it carries higher burnout risk, which aligns with your energized, growth‑focused stance."
     },
     "alternatives": [
       {
@@ -40,17 +40,17 @@
         "output": {
           "values": [
             "revenue growth",
-            "sustainability",
-            "flexibility"
+            "flexibility",
+            "patient acquisition"
           ],
           "adjustedWeights": {
-            "revenue": 0.3348214285714286,
-            "sustainability": 0.375,
-            "access": 0.15625,
-            "flexibility": 0.13392857142857142
+            "revenue": 0.3980099502487562,
+            "sustainability": 0.24378109452736313,
+            "access": 0.14925373134328357,
+            "flexibility": 0.20895522388059698
           },
-          "rationale": "New solo practice with no waitlist prioritizes income and long‑term stamina, while keeping options flexible.",
-          "reasoning": "We need to analyze intake and adjust weights. Template criteria: revenue, sustainability, access, flexibility. Intake: weeklyClinicalHours 30, currentWeeklyPatients 20, waitlistLength 0, avgRevenuePerVisitUSD 180, energyLevel \"energized\", practiceStage \"new\", horizonMonths 12.\n\nUser is a solo practitioner, new practice, energized, no waitlist, moderate hours (30). Likely wants growth but also sustainability. Since no waitlist, patient access less critical. Flexibility maybe moderate. Revenue important for new practice. Sustainability also important but energy high, maybe less weight increase. So adjust: revenue increase weight (e.g., 1.5), sustainability maybe 1.2, access decrease (0.7), flexibility maybe 1.0 (no change). Provide values: maybe \"revenue growth\", \"patient access\", \"burnout protection\". But values limited 1-3 short statements. Choose \"revenue growth\", \"sustainability\", \"flexibility\". Or \"revenue impact\". Provide 2-3 values. Let's pick \"revenue growth\", \"sustainability\", \"flexibility\". Provide weightAdjustments accordingly.\n\nRationale: New practice with no waitlist focuses on income and long-term stamina, while flexibility stays neutral.\n\nCheck JSON: keys must be strings. Provide weightAdjustments mapping ids to numbers.\n\nLet's produce:\n\n{\n \"values\":[\"revenue growth\",\"sustainability\",\"flexibility\"],\n \"weightAdjustments\":{\"revenue\":1.5,\"sustainability\":1.2,\"access\":0.7,\"flexibility\":1.0},\n \"rationale\":\"New solo practice with no waitlist prioritizes income and long‑term stamina, while keeping options flexible.\"\n}\n\nCheck numbers within [0.5,2.0]. Yes.\n\nJSON compact."
+          "rationale": "New, energized practice with no waitlist prioritizes income growth and adaptability over immediate patient access or burnout protection.",
+          "reasoning": "We need to produce JSON with values (1-3 short value statements) and weightAdjustments mapping criterion ids to numbers between 0.5 and 2.0, plus rationale sentence.\n\nWe have intake: weeklyClinicalHours 30, currentWeeklyPatients 20, waitlistLength 0, avgRevenuePerVisitUSD 180, energyLevel \"energized\", practiceStage \"new\", horizonMonths 12.\n\nInterpretation: New practice, energized, no waitlist, moderate hours. Likely focus on revenue growth and patient access maybe less urgent because no waitlist. Sustainability less critical because energized, but still important. Flexibility maybe moderate.\n\nWe need to adjust weights relative to defaults: revenue default 0.25, sustainability 0.35, access 0.25, flexibility 0.15.\n\nGiven no waitlist, patient access less priority. Revenue important for new practice to grow. Energy high, so sustainability less urgent. Flexibility maybe important for new practice to pivot.\n\nThus weight adjustments: revenue increase (e.g., 1.6), sustainability decrease (0.7), access decrease (0.6), flexibility increase (1.4). Must be between 0.5 and 2.0.\n\nValues: \"revenue growth\", \"patient acquisition\", \"flexibility\". Or \"cash flow\", \"growth\", \"adaptability\". Up to 3.\n\nLet's pick: [\"revenue growth\",\"flexibility\",\"patient acquisition\"] each ≤6 words.\n\nRationale: User is a new, energized practitioner with no waitlist, so focus on building income and staying adaptable, while patient access is less urgent.\n\nNow produce JSON compact."
         }
       },
       {
@@ -80,10 +80,10 @@
         "name": "weights",
         "output": {
           "weights": {
-            "revenue": 0.3348214285714286,
-            "sustainability": 0.375,
-            "access": 0.15625,
-            "flexibility": 0.13392857142857142
+            "revenue": 0.3980099502487563,
+            "sustainability": 0.24378109452736318,
+            "access": 0.1492537313432836,
+            "flexibility": 0.20895522388059704
           },
           "notes": "Weights normalized across 4 criteria."
         }
@@ -110,25 +110,25 @@
             {
               "aId": "expand-hours",
               "bId": "hold-steady",
-              "concordance": 0.4910714285714286,
+              "concordance": 0.5472636815920399,
               "discordance": 0.39999999999999997
             },
             {
               "aId": "expand-hours",
               "bId": "build-waitlist",
-              "concordance": 0.4910714285714286,
+              "concordance": 0.5472636815920399,
               "discordance": 0.45
             },
             {
               "aId": "expand-hours",
               "bId": "reduce-hours",
-              "concordance": 0.4910714285714286,
+              "concordance": 0.5472636815920399,
               "discordance": 0.6499999999999999
             },
             {
               "aId": "hold-steady",
               "bId": "expand-hours",
-              "concordance": 0.5089285714285714,
+              "concordance": 0.45273631840796025,
               "discordance": 0.44999999999999996
             },
             {
@@ -140,13 +140,13 @@
             {
               "aId": "hold-steady",
               "bId": "reduce-hours",
-              "concordance": 0.4910714285714286,
+              "concordance": 0.5472636815920399,
               "discordance": 0.25
             },
             {
               "aId": "build-waitlist",
               "bId": "expand-hours",
-              "concordance": 0.5089285714285714,
+              "concordance": 0.45273631840796025,
               "discordance": 0.35
             },
             {
@@ -158,25 +158,25 @@
             {
               "aId": "build-waitlist",
               "bId": "reduce-hours",
-              "concordance": 0.4910714285714286,
+              "concordance": 0.5472636815920399,
               "discordance": 0.19999999999999996
             },
             {
               "aId": "reduce-hours",
               "bId": "expand-hours",
-              "concordance": 0.5089285714285714,
+              "concordance": 0.45273631840796025,
               "discordance": 0.65
             },
             {
               "aId": "reduce-hours",
               "bId": "hold-steady",
-              "concordance": 0.5089285714285714,
+              "concordance": 0.45273631840796025,
               "discordance": 0.25
             },
             {
               "aId": "reduce-hours",
               "bId": "build-waitlist",
-              "concordance": 0.5089285714285714,
+              "concordance": 0.45273631840796025,
               "discordance": 0.49999999999999994
             }
           ]
@@ -188,24 +188,24 @@
         "output": {
           "ranked": [
             {
-              "id": "build-waitlist",
-              "label": "Build a structured waitlist + tiered intake",
-              "closeness": 0.589
-            },
-            {
               "id": "expand-hours",
               "label": "Add 4–8 weekly clinical hours",
-              "closeness": 0.5215
+              "closeness": 0.6282
+            },
+            {
+              "id": "build-waitlist",
+              "label": "Build a structured waitlist + tiered intake",
+              "closeness": 0.5436
             },
             {
               "id": "reduce-hours",
               "label": "Reduce 4–8 weekly clinical hours",
-              "closeness": 0.4785
+              "closeness": 0.3718
             }
           ],
-          "confidence": 53,
+          "confidence": 54,
           "robustCandidateId": "build-waitlist",
-          "reasoning": "We need to produce JSON with rationale and 3 workloadReducers. Chosen option: Build a structured waitlist + tiered intake. Values: revenue growth, sustainability, flexibility. Confidence 53 (moderate). Need rationale: 1-2 sentences explaining why this option ranked first, referencing values. Should be confident but qualified.\n\nNow create 3 reducers: need different types: prompt, playbook, skill. One must be AI-driven workflow to reclaim clinical time spent on non-clinical work. Likely a prompt that drafts patient communications for waitlist tiers. Another could be a playbook for setting up the waitlist system (task_setup). Another could be a skill for generating weekly intake tier reports (skill). Ensure automationLevel user_executes, permission_tier: prompt is T0, playbook maybe T0 as it's just steps, skill T1.\n\nSchema:\n\n{\n  \"type\": \"prompt\" | \"playbook\" | \"skill\",\n  \"title\": \"<10-word title>\",\n  \"description\": \"<one-sentence what-and-why>\",\n  \"artifact\": {\n    \"promptText\": \"...\",\n    \"playbookSteps\": [...],\n    \"skillName\": \"...\"\n  },\n  \"automationLevel\": \"user_executes\",\n  \"coverage\": \"full_task\" | \"partial_task\" | \"task_setup\",\n  \"permission_tier\": \"T0\" | \"T1\"\n}\n\nEach artifact must contain only the appropriate field.\n\nNow design:\n\n1. Prompt: \"Waitlist tier communication draft\". Title: \"Draft tiered waitlist messages\". Description: \"Generate personalized patient messages for each intake tier to save time.\" artifact.promptText: include user context: \"I run a new primary care practice with 30 clinical hours/week, 20 patients, and want to implement a structured waitlist with tiered intake. Create four concise email templates: Tier 1 (immediate opening), Tier 2 (2‑week wait), Tier 3 (4‑week wait), Tier 4 (informational). Each template should include greeting, brief explanation, next steps, and a call to action. Output as plain text with headings.\" Ensure output spec.\n\nCoverage: partial_task? This is generating messages, which is part of communication. Could be \"partial_task\". permission_tier T0.\n\n2. Playbook: \"Set up tiered waitlist system\". Title: \"Implement structured waitlist\". Description: \"Step-by-step guide to configure tiers, criteria, and tracking in your practice management tool.\" artifact.playbookSteps: list 4-5 steps. Coverage: task_setup. permission_tier T0.\n\n3. Skill: \"Weekly waitlist tier report\". Title: \"Generate weekly waitlist summary\". Description: \"Run a local script to pull patient statuses and summarize counts per tier for quick review, supporting sustainability and flexibility.\" artifact.skillName: \"waitlist-tier-summary\". coverage: full_task? It's a recurring reporting task, maybe \"full_task\". permission_tier T1.\n\nMake sure each type unique.\n\nNow produce JSON compact (no whitespace beyond needed). Ensure fields correct.\n\nLet's craft.\n\nRationale: \"Because a structured waitlist with intake tiers improves access while keeping revenue growth modest, supports sustainable workload, and lets you adjust capacity flexibly, it aligns best with your values of revenue growth, sustainability, and flexibility.\"\n\nNow JSON.\n\n"
+          "reasoning": "We need to produce JSON with rationale and 3 workloadReducers. The chosen option: \"Add 4–8 weekly clinical hours\". Values: revenue growth, flexibility, patient acquisition. Confidence 54 (moderate). Need rationale 1-2 sentences referencing values.\n\nWe need 3 reducers of different types: prompt, playbook, skill. Must include at least one AI-driven workflow to reclaim clinical time on non-clinical work. Likely a prompt that drafts patient communication for new slots, or summarizing intake.\n\nWe need automationLevel user_executes for all. coverage can be full_task, partial_task, task_setup. permission_tier: prompt T0, playbook T0? Actually playbook is just steps, no tool, so T0. skill T1.\n\nMake sure artifact fields correct.\n\nLet's craft:\n\nReducer 1: type prompt, title \"Draft new slot announcement\", description \"Generate a concise patient outreach email announcing additional appointment slots to attract new patients and fill capacity.\" artifact.promptText includes user intake context: \"I run a new primary care practice with 30 clinical hours/week, 20 patients, aiming to add 4-8 weekly clinical hours, and I lose ~X hours to scheduling admin. Draft a brief email to my patient list announcing the new slots, highlighting flexible scheduling and encouraging referrals. Output: email body.\"\n\nReducer 2: type playbook, title \"Weekly capacity planning checklist\", description \"Step-by-step guide to schedule extra sessions while preserving flexibility and preventing burnout.\" artifact.playbookSteps: list 4-5 steps.\n\nReducer 3: type skill, title \"No-show pattern detector\", description \"Identify patients with repeated no-shows to prioritize overbooking and protect revenue.\" artifact.skillName: \"no-show-pattern-detector\". coverage partial_task maybe.\n\nMake sure each type unique.\n\nNow produce JSON compact.\n\nCheck schema: each workloadReducer must have fields: type, title, description, artifact, automationLevel, coverage, permission_tier.\n\nartifact must contain only the appropriate field.\n\nLet's craft.\n\nRationale: \"Adding 4–8 weekly clinical hours directly boosts revenue and patient acquisition while preserving the flexibility you value, though it carries higher burnout risk, which aligns with your energized, growth‑focused stance.\"\n\nNow JSON.\n\n"
         }
       },
       {
@@ -214,28 +214,28 @@
         "output": {
           "classifications": [
             {
-              "title": "Generate weekly waitlist summary",
+              "title": "Draft new slot announcement",
               "aiFeasibility": "skill",
               "feasibilityScore": 100,
               "impactScore": 40,
               "combinedScore": 40
             },
             {
-              "title": "Draft tiered waitlist messages",
+              "title": "No‑show pattern detector",
               "aiFeasibility": "skill",
               "feasibilityScore": 100,
               "impactScore": 28,
               "combinedScore": 28
             },
             {
-              "title": "Implement structured waitlist",
-              "aiFeasibility": "skill",
-              "feasibilityScore": 100,
+              "title": "Weekly capacity planning checklist",
+              "aiFeasibility": "plugin",
+              "feasibilityScore": 80,
               "impactScore": 18,
-              "combinedScore": 18
+              "combinedScore": 14
             }
           ],
-          "reasoning": "We need to classify each reducer by aiFeasibility tier: skill, plugin, agent, human.\n\nWe have three reducers:\n\n0: type prompt, title Draft tiered waitlist messages, description: create ready‑to‑send email templates for each intake tier. automationLevel user_executes, coverage partial_task. This is a single-turn copy-pasteable prompt to generate email templates. So \"skill\". signals: \"copy-paste\", \"template\", \"single-turn\". rationale: \"User can paste a prompt to get email drafts; no integration needed.\"\n\n1: type playbook, implement structured waitlist, step-by-step guide to set up tiers, criteria, tracking in practice system. This is a multi-step guide, but still user executes, no automation beyond instructions. Could be \"skill\"? It's a playbook, not code. The rubric: \"skill\" is single-turn copy-pasteable. This is multi-step but still just instructions; maybe \"plugin\"? Plugin requires small directory layout, commands. This is just a guide, not code. Could be \"skill\" as default low friction. The rubric says if ambiguous, prefer \"skill\". So classify as \"skill\". signals: \"guide\", \"setup\", \"instructions\". rationale: \"User follows a step‑by‑step guide; no code or runtime needed.\"\n\n2: type skill, generate weekly waitlist summary, run a local script that tallies patients per tier and outputs a quick report. This is a script that user runs locally; that's a single file script, copy-pasteable. So \"skill\". signals: \"script\", \"report\", \"single-turn\". rationale: \"User runs a one‑file script to produce the summary; no external services.\"\n\nAll are \"skill\". Provide JSON.\n\nCheck format: top-level {\"classifications\":[...]} each entry includes id, aiFeasibility, signals, rationale.\n\nMake sure signals array 1-3 short keywords <=20 chars.\n\nLet's craft:\n\nReducer 0: signals [\"copy-paste\",\"template\",\"single-turn\"] (each <=20). Good.\n\nReducer 1: signals [\"guide\",\"setup\",\"instructions\"].\n\nReducer 2: signals [\"script\",\"report\",\"single-turn\"].\n\nRationale each <=200 chars.\n\nNow produce compact JSON."
+          "reasoning": "We need to classify each reducer by aiFeasibility tier: skill, plugin, agent, human.\n\nWe have three reducers:\n\n0: type prompt, title Draft new slot announcement. Description: generate concise patient outreach email announcing additional appointment slots to attract new patients and fill capacity. automationLevel user_executes, coverage full_task. This is a single-turn copy-pasteable prompt to generate email. So tier \"skill\". signals: \"single-turn\", \"copy-paste\", maybe \"email\". Provide rationale.\n\n1: type playbook, weekly capacity planning checklist. Step-by-step guide to schedule extra sessions while preserving flexibility and preventing burnout. This is a multi-step bounded process, likely a playbook that user follows. Could be a plugin? It's a checklist, could be delivered as a static document; but to ship as a tool, maybe a plugin that provides interactive checklist. According to rubric: \"plugin\" is multi-step but bounded, needs small directory layout. This fits. So tier \"plugin\". signals: \"multi-step\", \"checklist\", \"bounded\". Rationale.\n\n2: type skill, No-show pattern detector. Identify patients with repeated no-shows to prioritize overbooking and protect revenue. automationLevel user_executes, coverage partial_task. This is a detection algorithm; could be a skill? The type is skill, but detection may require data processing. Could be a plugin if needs data access. However rubric: \"skill\" is single-turn copy-pasteable. This detection likely requires running a script on data; could be a small tool. Might be a plugin because it needs data input and maybe a small script. But the description says \"Identify patients with repeated no‑shows\". Could be a one-file script that takes a list and outputs. That's still a skill? The rubric: skill is copy-pasteable prompt or one-file Claude Code / Codex SKILL.md. This could be a one-file script. So we can classify as \"skill\". signals: \"pattern detection\", \"single-file\". Rationale.\n\nThus output JSON with classifications array in same order.\n\nMake sure JSON compact, no extra spaces? It's okay.\n\nLet's craft.\n\n"
         }
       },
       {
@@ -245,16 +245,16 @@
           "generatedCount": 3,
           "eligibleReducers": [
             {
-              "title": "Generate weekly waitlist summary",
+              "title": "Draft new slot announcement",
               "fileCount": 2
             },
             {
-              "title": "Draft tiered waitlist messages",
+              "title": "No‑show pattern detector",
               "fileCount": 2
             },
             {
-              "title": "Implement structured waitlist",
-              "fileCount": 2
+              "title": "Weekly capacity planning checklist",
+              "fileCount": 3
             }
           ]
         }
@@ -262,17 +262,17 @@
     ],
     "workloadReducers": [
       {
-        "type": "skill",
-        "title": "Generate weekly waitlist summary",
-        "description": "Run a local script that tallies patients per tier and outputs a quick report to support sustainable capacity planning.",
+        "type": "prompt",
+        "title": "Draft new slot announcement",
+        "description": "Generate a concise patient outreach email announcing additional appointment slots to attract new patients and fill capacity.",
         "artifact": {
-          "skillName": "waitlist-tier-summary"
+          "promptText": "I run a new primary‑care practice with 30 clinical hours per week and 20 patients. I plan to add 4–8 weekly clinical hours and currently lose several hours each week to scheduling admin. Draft a brief, friendly email to my patient list announcing the new slots, emphasizing flexible scheduling and encouraging referrals. Output only the email body, no extra commentary."
         },
         "automationLevel": "user_executes",
         "coverage": "full_task",
-        "permission_tier": "T1",
+        "permission_tier": "T0",
         "aiFeasibility": "skill",
-        "feasibilityRationale": "User runs a one‑file local script that tallies patients and outputs a weekly summary.",
+        "feasibilityRationale": "A one‑prompt email draft can be pasted and used immediately.",
         "feasibilityScore": 100,
         "impactScore": 40,
         "combinedScore": 40,
@@ -284,29 +284,29 @@
           "files": [
             {
               "path": "SKILL.md",
-              "content": "---\nname: waitlist-tier-summary\ndescription: Run a local script that tallies patients per tier and outputs a quick report to support sustainable capacity planning.\n---\n\n# Generate weekly waitlist summary\n\nRun a local script that tallies patients per tier and outputs a quick report to support sustainable capacity planning.\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"full_task\" coverage at the T1 permission tier.\n",
+              "content": "---\nname: draft-new-slot-announcement\ndescription: Generate a concise patient outreach email announcing additional appointment slots to attract new patients and fill capacity.\n---\n\n# Draft new slot announcement\n\nI run a new primary‑care practice with 30 clinical hours per week and 20 patients. I plan to add 4–8 weekly clinical hours and currently lose several hours each week to scheduling admin. Draft a brief, friendly email to my patient list announcing the new slots, emphasizing flexible scheduling and encouraging referrals. Output only the email body, no extra commentary.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"full_task\" coverage at the T0 permission tier.\n",
               "language": "markdown"
             },
             {
               "path": "AGENTS.md",
-              "content": "# Generate weekly waitlist summary\n\nRun a local script that tallies patients per tier and outputs a quick report to support sustainable capacity planning.\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"full_task\" coverage\n  workload-reducer at the T1 permission tier.\n-->\n",
+              "content": "# Draft new slot announcement\n\nI run a new primary‑care practice with 30 clinical hours per week and 20 patients. I plan to add 4–8 weekly clinical hours and currently lose several hours each week to scheduling admin. Draft a brief, friendly email to my patient list announcing the new slots, emphasizing flexible scheduling and encouraging referrals. Output only the email body, no extra commentary.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"full_task\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
               "language": "markdown"
             }
           ]
         }
       },
       {
-        "type": "prompt",
-        "title": "Draft tiered waitlist messages",
-        "description": "Create ready‑to‑send email templates for each intake tier so you don’t write them from scratch.",
+        "type": "skill",
+        "title": "No‑show pattern detector",
+        "description": "Identify patients with repeated no‑shows to prioritize overbooking and protect revenue.",
         "artifact": {
-          "promptText": "I run a new practice with 30 clinical hours per week, see 20 patients weekly, and want to implement a structured waitlist with tiered intake. Please draft four concise email templates:\n\n1. Tier 1 – immediate opening (high‑priority patients)\n2. Tier 2 – 2‑week wait (moderate priority)\n3. Tier 3 – 4‑week wait (low priority)\n4. Tier 4 – informational/keep‑in‑touch.\nEach template should include a greeting, brief explanation of the tier, next steps, and a clear call‑to‑action. Output plain text with headings for each tier."
+          "skillName": "no-show-pattern-detector"
         },
         "automationLevel": "user_executes",
         "coverage": "partial_task",
-        "permission_tier": "T0",
+        "permission_tier": "T1",
         "aiFeasibility": "skill",
-        "feasibilityRationale": "User pastes a prompt and gets ready‑to‑send email drafts; no integration needed.",
+        "feasibilityRationale": "A one‑file script can be run by the user to flag repeat no‑shows.",
         "feasibilityScore": 100,
         "impactScore": 28,
         "combinedScore": 28,
@@ -318,12 +318,12 @@
           "files": [
             {
               "path": "SKILL.md",
-              "content": "---\nname: draft-tiered-waitlist-messages\ndescription: Create ready‑to‑send email templates for each intake tier so you don’t write them from scratch.\n---\n\n# Draft tiered waitlist messages\n\nI run a new practice with 30 clinical hours per week, see 20 patients weekly, and want to implement a structured waitlist with tiered intake. Please draft four concise email templates:\n\n1. Tier 1 – immediate opening (high‑priority patients)\n2. Tier 2 – 2‑week wait (moderate priority)\n3. Tier 3 – 4‑week wait (low priority)\n4. Tier 4 – informational/keep‑in‑touch.\nEach template should include a greeting, brief explanation of the tier, next steps, and a clear call‑to‑action. Output plain text with headings for each tier.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"partial_task\" coverage at the T0 permission tier.\n",
+              "content": "---\nname: no-show-pattern-detector\ndescription: Identify patients with repeated no‑shows to prioritize overbooking and protect revenue.\n---\n\n# No‑show pattern detector\n\nIdentify patients with repeated no‑shows to prioritize overbooking and protect revenue.\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"partial_task\" coverage at the T1 permission tier.\n",
               "language": "markdown"
             },
             {
               "path": "AGENTS.md",
-              "content": "# Draft tiered waitlist messages\n\nI run a new practice with 30 clinical hours per week, see 20 patients weekly, and want to implement a structured waitlist with tiered intake. Please draft four concise email templates:\n\n1. Tier 1 – immediate opening (high‑priority patients)\n2. Tier 2 – 2‑week wait (moderate priority)\n3. Tier 3 – 4‑week wait (low priority)\n4. Tier 4 – informational/keep‑in‑touch.\nEach template should include a greeting, brief explanation of the tier, next steps, and a clear call‑to‑action. Output plain text with headings for each tier.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"partial_task\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
+              "content": "# No‑show pattern detector\n\nIdentify patients with repeated no‑shows to prioritize overbooking and protect revenue.\n\nWalk the user through this task end-to-end. Ask one question at a time.\nProduce the artifact in plain language, no jargon, and offer it for copy.\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"partial_task\" coverage\n  workload-reducer at the T1 permission tier.\n-->\n",
               "language": "markdown"
             }
           ]
@@ -331,39 +331,45 @@
       },
       {
         "type": "playbook",
-        "title": "Implement structured waitlist",
-        "description": "Step‑by‑step guide to set up tiers, criteria, and tracking in your practice system.",
+        "title": "Weekly capacity planning checklist",
+        "description": "Step‑by‑step guide to schedule extra sessions while preserving flexibility and preventing burnout.",
         "artifact": {
           "playbookSteps": [
-            "Define tier criteria based on urgency, insurance, and patient preference",
-            "Create a spreadsheet or EMR tag for each tier and assign current waitlist patients",
-            "Set up automated email triggers using the drafted templates from the prompt reducer",
-            "Schedule a weekly 15‑minute review to move patients between tiers as slots open"
+            "Review current weekly schedule and identify 2‑hour blocks that can be expanded",
+            "Set patient intake limits for the new blocks based on desired 4–8 extra hours",
+            "Update online booking system with the new slots and enable waitlist notifications",
+            "Communicate the added availability to existing patients via email or portal",
+            "Monitor daily booking volume and adjust if workload threatens energy levels"
           ]
         },
         "automationLevel": "user_executes",
         "coverage": "task_setup",
         "permission_tier": "T0",
-        "aiFeasibility": "skill",
-        "feasibilityRationale": "User follows a step‑by‑step playbook to configure tiers; no code or runtime required.",
-        "feasibilityScore": 100,
+        "aiFeasibility": "plugin",
+        "feasibilityRationale": "The weekly checklist requires a small interactive tool but no ongoing autonomy.",
+        "feasibilityScore": 80,
         "impactScore": 18,
-        "combinedScore": 18,
+        "combinedScore": 14,
         "scaffold": {
           "targets": [
-            "claude-code-skill",
-            "codex-skill"
+            "claude-code-plugin",
+            "codex-plugin"
           ],
           "files": [
             {
               "path": "SKILL.md",
-              "content": "---\nname: implement-structured-waitlist\ndescription: Step‑by‑step guide to set up tiers, criteria, and tracking in your practice system.\n---\n\n# Implement structured waitlist\n\nRun through these steps in order:\n1. Define tier criteria based on urgency, insurance, and patient preference\n2. Create a spreadsheet or EMR tag for each tier and assign current waitlist patients\n3. Set up automated email triggers using the drafted templates from the prompt reducer\n4. Schedule a weekly 15‑minute review to move patients between tiers as slots open\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"task_setup\" coverage at the T0 permission tier.\n",
+              "content": "---\nname: weekly-capacity-planning-checklist\ndescription: Step‑by‑step guide to schedule extra sessions while preserving flexibility and preventing burnout.\n---\n\n# Weekly capacity planning checklist\n\nRun through these steps in order:\n1. Review current weekly schedule and identify 2‑hour blocks that can be expanded\n2. Set patient intake limits for the new blocks based on desired 4–8 extra hours\n3. Update online booking system with the new slots and enable waitlist notifications\n4. Communicate the added availability to existing patients via email or portal\n5. Monitor daily booking volume and adjust if workload threatens energy levels\n\n## When to use\n\n- The user is doing the task this skill is named for.\n- The user has not asked for help with anything outside this skill's scope.\n\n## What to do\n\n1. If any required input is missing, ask once. Do not loop.\n2. Produce the artifact in the format the user expects, plain language, no jargon.\n3. Never include patient identifiers (PHI) in worked examples. Use placeholders.\n\n## What not to do\n\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n> Generated by Aida on {{ASOF}} from a workload-reducer scoped to \"task_setup\" coverage at the T0 permission tier.\n",
               "language": "markdown"
             },
             {
               "path": "AGENTS.md",
-              "content": "# Implement structured waitlist\n\nRun through these steps in order:\n1. Define tier criteria based on urgency, insurance, and patient preference\n2. Create a spreadsheet or EMR tag for each tier and assign current waitlist patients\n3. Set up automated email triggers using the drafted templates from the prompt reducer\n4. Schedule a weekly 15‑minute review to move patients between tiers as slots open\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"task_setup\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
+              "content": "# Weekly capacity planning checklist\n\nRun through these steps in order:\n1. Review current weekly schedule and identify 2‑hour blocks that can be expanded\n2. Set patient intake limits for the new blocks based on desired 4–8 extra hours\n3. Update online booking system with the new slots and enable waitlist notifications\n4. Communicate the added availability to existing patients via email or portal\n5. Monitor daily booking volume and adjust if workload threatens energy levels\n\n## Scope\n\nThis file applies to the directory tree rooted here. More-deeply-nested\n`AGENTS.md` files override these instructions on conflict. Direct user\nor system prompts override everything.\n\n## Conventions\n\n- Ask one question at a time when input is missing. Do not loop.\n- Produce the artifact in plain language; no jargon.\n- Never include patient identifiers (PHI) in worked examples. Use placeholders.\n- Do not invent clinical or financial details. If the user hasn't said it, ask.\n- Do not promise outcomes you cannot guarantee.\n\n<!--\n  Codex AGENTS.md, generated from an Aida workload-reducer.\n  Plain markdown (no frontmatter) per the Codex CLI spec.\n  Generated by Aida on {{ASOF}} for a \"task_setup\" coverage\n  workload-reducer at the T0 permission tier.\n-->\n",
               "language": "markdown"
+            },
+            {
+              "path": "plugin.json",
+              "content": "{\n  \"name\": \"weekly-capacity-planning-checklist\",\n  \"version\": \"0.1.0\",\n  \"description\": \"Step‑by‑step guide to schedule extra sessions while preserving flexibility and preventing burnout.\",\n  \"author\": \"Aida\",\n  \"homepage\": \"http://localhost:3006\",\n  \"commands\": [\n    {\n      \"name\": \"weekly-capacity-planning-checklist\",\n      \"description\": \"Weekly capacity planning checklist\",\n      \"argument-hint\": \"<your inputs here>\"\n    }\n  ]\n}\n",
+              "language": "json"
             }
           ]
         }
@@ -373,7 +379,7 @@
       {
         "type": "user_ui",
         "delivered": true,
-        "deliveredAt": "2026-05-12T06:34:12.462Z"
+        "deliveredAt": "2026-05-13T03:58:46.097Z"
       }
     ],
     "weightSource": "llm"
@@ -381,18 +387,18 @@
   "llmCalls": [
     {
       "stage": 1,
-      "tokensIn": 1059,
-      "tokensOut": 457
+      "tokensIn": 547,
+      "tokensOut": 420
     },
     {
       "stage": 5,
-      "tokensIn": 935,
-      "tokensOut": 1138
+      "tokensIn": 934,
+      "tokensOut": 840
     },
     {
       "stage": 6,
-      "tokensIn": 824,
-      "tokensOut": 613
+      "tokensIn": 810,
+      "tokensOut": 576
     }
   ]
 }
