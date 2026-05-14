@@ -60,12 +60,21 @@ type WorkspaceItem = {
   requiresAuth?: boolean;
 };
 
+// Order matters: Chat (the front door) first, then Library (the AI-adoption
+// reference users browse most often), then Learn / History / Skills / Audit.
+// Mirrored from the user-led IA reshuffle on 2026-05-14.
 const WORKSPACE: WorkspaceItem[] = [
   {
     href: "/app/chat",
     label: "Chat",
     icon: MessageSquare,
     match: (p) => p.startsWith("/app/chat"),
+  },
+  {
+    href: "/app/library",
+    label: "Library",
+    icon: Library,
+    match: (p: string) => p.startsWith("/app/library"),
   },
   {
     href: "/app/learn",
@@ -85,12 +94,6 @@ const WORKSPACE: WorkspaceItem[] = [
     icon: Sparkles,
     match: (p) => p.startsWith("/app/skills"),
     requiresAuth: true,
-  },
-  {
-    href: "/app/library",
-    label: "Library",
-    icon: Library,
-    match: (p: string) => p.startsWith("/app/library"),
   },
   {
     href: "/app/audit",
