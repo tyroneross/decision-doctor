@@ -9,14 +9,15 @@ import { runWithActor, withActor } from "@/lib/db/actor";
 import { getSessionActor } from "@/lib/auth-session";
 import { Card } from "@/components/ui/Card";
 import { PainCardGrid } from "@/components/pain-cards/PainCardGrid";
-import { HomeComposer } from "./_components/HomeComposer";
 
 /**
  * V2 U1 — Hybrid first screen.
  *
  * Layout per PRD Screen 1 + UX doc §"Screen 1 — Hybrid First Screen":
  *   1. Brand + tagline header
- *   2. Multiline PillSearchBar composer (chat-first path)
+ *   2. (Composer moved to workspace layout `PersistentTopBar` — the same
+ *      "Ask Aida" bar now appears on every non-chat page, with home being
+ *      one of those pages. The bar is rendered above this content.)
  *   3. "or pick a path" divider
  *   4. 6 pain cards (5 guided + custom) — 2-col mobile, 3-col desktop
  *   5. Secondary nav: library link + Ask DD link
@@ -76,10 +77,9 @@ export default async function HomePage() {
         </p>
       </header>
 
-      {/* Composer — chat-first entry path */}
-      <section aria-label="Describe your challenge">
-        <HomeComposer />
-      </section>
+      {/* Composer lives in the workspace layout (PersistentTopBar). It is
+          the same bar that appears on every non-chat page, so the home
+          screen and the rest of the workspace share a single entry surface. */}
 
       {/* Or-pick-a-path divider */}
       <div className="flex items-center gap-3" aria-hidden>

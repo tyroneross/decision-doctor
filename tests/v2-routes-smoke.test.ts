@@ -241,24 +241,42 @@ describe("NoPhiNotice promotion to components/ui/", () => {
 // ── 6. Search entry-point wiring ───────────────────────────────────────────
 
 describe("AI-adoption search entry points", () => {
-  it("home composer routes submitted text to /app/ask", () => {
+  it("persistent top bar routes submitted text to /app/chat?seed=", () => {
     expect(
-      fileContains("app/app/_components/HomeComposer.tsx", "/app/ask?q="),
-      "Home search must open the AI-adoption Q&A surface"
+      fileContains("app/app/_components/PersistentTopBar.tsx", "/app/chat?seed="),
+      "Workspace top bar must route to the chat thread with the seed payload"
     ).toBe(true);
   });
 
-  it("home composer uses predictive suggestions", () => {
+  it("persistent top bar uses predictive suggestions", () => {
     expect(
-      fileContains("app/app/_components/HomeComposer.tsx", "usePredictiveSuggestions"),
-      "Home search must show predictive suggestions"
+      fileContains("app/app/_components/PersistentTopBar.tsx", "usePredictiveSuggestions"),
+      "Workspace top bar must show predictive suggestions"
+    ).toBe(true);
+  });
+
+  it("persistent top bar is hidden on /app/chat", () => {
+    expect(
+      fileContains("app/app/_components/PersistentTopBar.tsx", "pathname.startsWith(\"/app/chat\")"),
+      "Top bar must hide itself on the chat surface so the bottom-of-thread composer is the only input"
+    ).toBe(true);
+  });
+
+  it("/app/chat consumes seed= URL params for auto-submitted first turn", () => {
+    expect(
+      fileContains("app/app/chat/page.tsx", "searchParams"),
+      "/app/chat must accept ?seed= as a Promise-shaped searchParams in Next.js 16"
+    ).toBe(true);
+    expect(
+      fileContains("components/chat/Chat.tsx", "seedFiredRef"),
+      "Chat must auto-submit the seed exactly once"
     ).toBe(true);
   });
 
   it("/app/ask consumes q= URL params for direct search entry", () => {
     expect(
       fileContains("app/app/ask/page.tsx", "new URLSearchParams(window.location.search)"),
-      "/app/ask should auto-submit URL query text"
+      "/app/ask should auto-submit URL query text (still reachable via secondary nav)"
     ).toBe(true);
   });
 
