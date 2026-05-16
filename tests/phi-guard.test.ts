@@ -5,7 +5,7 @@
 // Edge cases: 4-digit year alone, 5-digit ZIP, phone in URL context.
 
 import { describe, it, expect } from "vitest";
-import { detectPHI } from "@/lib/phi-guard";
+import { detectPHI, detectPhiFieldName } from "@/lib/phi-guard";
 
 describe("detectPHI — true positives (MUST be blocked)", () => {
   it("full PHI sentence with name, MRN, DOB", () => {
@@ -137,5 +137,33 @@ describe("detectPHI — edge cases", () => {
     );
     expect(result.hasPHI).toBe(true);
     expect(result.reasons.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("detectPhiFieldName — PHI-shaped field names (MUST be rejected)", () => {
+  it.each([
+    "patient_name",
+    "dob",
+    "mrn",
+    "patientPhone",
+    "client_email",
+    "ssn",
+    "patient-address",
+    "clientDob",
+  ])("rejects field name: %s", (key) => {
+    expect(detectPhiFieldName(key)).toBe(true);
+  });
+});
+
+describe("detectPhiFieldName — benign business field names (MUST pass)", () => {
+  it.each([
+    "weeklyVisitCount",
+    "waitlistWeeks",
+    "burnoutRisk",
+    "adminHoursPerWeek",
+    "growthGoal",
+    "scheduleFlexibility",
+  ])("accepts field name: %s", (key) => {
+    expect(detectPhiFieldName(key)).toBe(false);
   });
 });
