@@ -658,6 +658,9 @@ export const RecommendationIntakeQuestionSchema = z.object({
   id: z.string().min(1).max(80),
   topic: z.string().min(1).max(80),
   prompt: z.string().min(1).max(240),
+  // Optional concrete example shown muted below the prompt to anchor the
+  // user's mental model before they answer (harvest item #2).
+  example: z.string().max(140).optional(),
   widget: RecommendationIntakeWidgetSchema,
   fills: RecommendationIntakeFillSchema,
   blockingScore: RecommendationIntakeBlockingScoreSchema,

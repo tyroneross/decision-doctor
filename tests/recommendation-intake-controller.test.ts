@@ -124,3 +124,55 @@ describe("recommendation adaptive intake controller", () => {
     });
   });
 });
+
+describe("intake questions carry a muted example (harvest #2)", () => {
+  it("every asked question includes an example within the 140-char cap", async () => {
+    // Walk the full ask sequence and assert each emitted question carries a
+    // bounded, non-empty example string.
+    let step = await nextStep({
+      challengeText:
+        "Prior authorization paperwork eats every Monday morning and slows down new referrals.",
+    });
+    let asked = 0;
+    while (step.action === "ask" && asked < 12) {
+      expect(typeof step.question.example).toBe("string");
+      expect(step.question.example!.length).toBeGreaterThan(0);
+      expect(step.question.example!.length).toBeLessThanOrEqual(140);
+      const next = ingestAnswer({
+        state: step.state,
+        question: step.question,
+        display: step.question.widget.kind === "chips"
+          ? step.question.widget.options[0]!.label
+          : "1",
+        raw: step.question.widget.kind === "chips"
+          ? step.question.widget.options[0]!.value
+          : "1",
+      });
+      step = await nextStep({ state: next });
+      asked += 1;
+    }
+    expect(asked).toBeGreaterThan(0);
+  });
+
+  it("rejects an example longer than 140 chars at the schema layer", async () => {
+    const { RecommendationIntakeQuestionSchema } = await import(
+      "@/shared/schema"
+    );
+    const tooLong = "x".repeat(141);
+    const result = RecommendationIntakeQuestionSchema.safeParse({
+      id: "q1",
+      topic: "frequency",
+      prompt: "p",
+      example: tooLong,
+      widget: {
+        kind: "chips",
+        fieldId: "frequency",
+        label: "L",
+        options: [{ value: "0.5", label: "Weekly" }],
+      },
+      fills: { path: "scoringInput.frequency", kind: "number", mergeStrategy: "replace" },
+      blockingScore: { topic: "frequency", blocking: 1, decision: "ask", reason: "r" },
+    });
+    expect(result.success).toBe(false);
+  });
+});

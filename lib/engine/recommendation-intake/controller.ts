@@ -162,6 +162,7 @@ function chipsQuestion(args: {
   id: string;
   topic: string;
   prompt: string;
+  example: string;
   fieldId: string;
   label: string;
   hint?: string;
@@ -174,6 +175,7 @@ function chipsQuestion(args: {
     id: args.id,
     topic: args.topic,
     prompt: args.prompt,
+    example: args.example,
     widget: {
       kind: "chips",
       fieldId: args.fieldId,
@@ -224,6 +226,7 @@ function buildUnknowns(state: RecommendationIntakeState): CandidateUnknown[] {
         id: "pain-path",
         topic: "pain_path",
         prompt: "Pick the closest area so Aida can retrieve the right use cases.",
+        example: "e.g. scheduling and intake paperwork eats most of my admin time.",
         fieldId: "painPath",
         label: "Which area does this affect most?",
         hint: "Choose the closest match. You can still describe edge cases later.",
@@ -272,6 +275,7 @@ function buildUnknowns(state: RecommendationIntakeState): CandidateUnknown[] {
         topic: "hiring_driver",
         prompt:
           "What's driving the need? Pick the closest match.",
+        example: "e.g. I'm turning away patients because I can't keep up.",
         fieldId: "hiringDriver",
         label: "What's driving this?",
         hint: "We use this to frame the hire/automate/defer tradeoff before asking about frequency.",
@@ -303,6 +307,7 @@ function buildUnknowns(state: RecommendationIntakeState): CandidateUnknown[] {
         id: "frequency",
         topic: "frequency",
         prompt: "Estimate how often the pain shows up.",
+        example: "e.g. it slows me down most weekdays.",
         fieldId: "frequency",
         label: "How often does this challenge come up?",
         hint: "A rough estimate is enough.",
@@ -340,6 +345,7 @@ function buildUnknowns(state: RecommendationIntakeState): CandidateUnknown[] {
         id: "time-burden",
         topic: "time_burden",
         prompt: "Estimate the time burden per occurrence.",
+        example: "e.g. each insurance follow-up takes me about half an hour.",
         fieldId: "timeBurden",
         label: "How much time does it usually take?",
         hint: "Pick the closest option.",
@@ -377,6 +383,7 @@ function buildUnknowns(state: RecommendationIntakeState): CandidateUnknown[] {
         id: "pain-severity",
         topic: "pain_severity",
         prompt: "Estimate how much this slows the practice down.",
+        example: "e.g. it's a real drag but the practice still runs.",
         fieldId: "painSeverity",
         label: "How much does this slow your practice down?",
         hint: "Your gut read is enough.",

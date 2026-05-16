@@ -304,6 +304,10 @@ export function NewRecommendationClient({
           subtitle={action.question.widget.hint ?? action.question.prompt}
         />
 
+        {action.question.example && (
+          <p className="text-[12px] text-mute">{action.question.example}</p>
+        )}
+
         <QuestionControl
           question={action.question}
           value={selectedValue}
