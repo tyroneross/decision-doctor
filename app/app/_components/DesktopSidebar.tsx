@@ -173,8 +173,8 @@ export function DesktopSidebar({
           <Image
             src="/aida-wordmark.png"
             alt="Aida"
-            width={980}
-            height={420}
+            width={1100}
+            height={380}
             priority
             className="h-9 w-auto"
           />
