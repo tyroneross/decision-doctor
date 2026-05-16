@@ -81,6 +81,20 @@ export const RecommendationIntakeAnswerInputSchema = z.object({
   raw: z.union([z.string().max(240), z.number().finite()]),
 });
 
+/**
+ * Input for the "challenge this assumption" affordance (harvest #1). The user
+ * rejects an inferred default; the named topic is re-opened so the controller
+ * asks about it explicitly instead of inferring it.
+ */
+export const RecommendationIntakeChallengeInputSchema = z.object({
+  state: RecommendationIntakeStateSchema,
+  challengeTopic: z.string().min(1).max(80),
+});
+
+export type RecommendationIntakeChallengeInput = z.infer<
+  typeof RecommendationIntakeChallengeInputSchema
+>;
+
 export type RecommendationIntakeNextInput = z.infer<
   typeof RecommendationIntakeNextInputSchema
 >;
@@ -466,7 +480,95 @@ function buildUnknowns(state: RecommendationIntakeState): CandidateUnknown[] {
     });
   }
 
+  // Harvest #1: a user-challenged inference-only topic must be asked, not
+  // re-inferred. Attach a synthetic question + force an `ask` decision so it
+  // surfaces as an explicit step.
+  const challengedTopics = state.challengedTopics ?? [];
+  for (const u of unknowns) {
+    if (
+      !u.question &&
+      challengedTopics.includes(u.topic) &&
+      !state.askedTopics.includes(u.topic)
+    ) {
+      const synthetic = challengedQuestion(u);
+      if (synthetic) {
+        u.question = synthetic.question;
+        u.blockingScore = synthetic.blockingScore;
+      }
+    }
+  }
+
   return unknowns.filter((u) => !state.askedTopics.includes(u.topic));
+}
+
+/**
+ * Build a chips question for a challenged inference-only topic so the user can
+ * answer it explicitly. Numeric scoringInput topics get a low/medium/high
+ * scale; `goal` gets a keep/replace choice that re-enters the infer path if
+ * the user is fine with an inferred goal.
+ */
+function challengedQuestion(
+  u: CandidateUnknown,
+): { question: RecommendationIntakeQuestion; blockingScore: RecommendationIntakeBlockingScore } | null {
+  const blockingScore = score(
+    u.topic,
+    5,
+    5,
+    3,
+    "You chose to answer this yourself instead of letting Aida infer it.",
+  );
+  const askBlockingScore = { ...blockingScore, decision: "ask" as const };
+
+  if (u.fill.path === "goal") {
+    return {
+      blockingScore: askBlockingScore,
+      question: chipsQuestion({
+        id: `challenged-${u.topic}`,
+        topic: u.topic,
+        prompt: "You wanted to set this yourself. Pick the closest goal shape.",
+        example: "e.g. cut the time I spend on this in half within a month.",
+        fieldId: "goal",
+        label: "What outcome do you want from a first AI task?",
+        hint: "Pick the closest match; you can refine later.",
+        options: [
+          { value: "save_time", label: "Save time on a recurring task" },
+          { value: "reduce_errors", label: "Reduce mistakes or rework" },
+          { value: "increase_capacity", label: "See more patients without more hours" },
+          { value: "improve_followup", label: "Improve patient follow-up" },
+        ],
+        fill: RecommendationIntakeFillSchema.parse({
+          path: "goal",
+          kind: "string",
+          mergeStrategy: "replace",
+        }),
+        blockingScore: askBlockingScore,
+      }),
+    };
+  }
+
+  if (u.fill.path.startsWith("scoringInput.")) {
+    return {
+      blockingScore: askBlockingScore,
+      question: chipsQuestion({
+        id: `challenged-${u.topic}`,
+        topic: u.topic,
+        prompt: "You wanted to set this yourself. Pick the closest level.",
+        example: "e.g. somewhere in the middle for now.",
+        fieldId: u.fill.path,
+        label: "How would you rate this?",
+        hint: "A rough read is enough.",
+        options: [
+          { value: "0.25", label: "Low" },
+          { value: "0.5", label: "Medium" },
+          { value: "0.75", label: "High" },
+        ],
+        fill: u.fill,
+        blockingScore: askBlockingScore,
+      }),
+    };
+  }
+
+  return null;
 }
 
 function applyPath(
@@ -712,12 +814,64 @@ export function ingestAnswer(
   return RecommendationIntakeStateSchema.parse(next);
 }
 
+/**
+ * Re-open an inferred assumption so the controller asks about it explicitly
+ * (harvest #1). Drops the assumption, clears the value it set, removes its
+ * path from filledPaths and its topic from askedTopics so the next
+ * buildUnknowns pass re-emits it as an askable question.
+ */
+export function challengeAssumption(
+  input: RecommendationIntakeChallengeInput,
+): RecommendationIntakeState {
+  const parsed = RecommendationIntakeChallengeInputSchema.parse(input);
+  const target = parsed.state.assumptions.find(
+    (a) => a.topic === parsed.challengeTopic,
+  );
+
+  const next = RecommendationIntakeStateSchema.parse({
+    ...parsed.state,
+    scoringInput: { ...(parsed.state.scoringInput ?? {}) },
+    answers: [...parsed.state.answers],
+    assumptions: parsed.state.assumptions.filter(
+      (a) => a.topic !== parsed.challengeTopic,
+    ),
+    askedTopics: parsed.state.askedTopics.filter(
+      (t) => t !== parsed.challengeTopic,
+    ),
+    filledPaths: parsed.state.filledPaths.filter(
+      (p) => p !== target?.path,
+    ),
+    challengedTopics: parsed.state.challengedTopics.includes(
+      parsed.challengeTopic,
+    )
+      ? [...parsed.state.challengedTopics]
+      : [...parsed.state.challengedTopics, parsed.challengeTopic],
+  });
+
+  if (target) {
+    if (target.path === "painPath") {
+      next.painPath = undefined;
+    } else if (target.path === "goal") {
+      next.goal = undefined;
+    } else if (target.path.startsWith("scoringInput.")) {
+      const key = target.path.slice(
+        "scoringInput.".length,
+      ) as keyof NonNullable<RecommendationInput["scoringInput"]>;
+      const { [key]: _removed, ...rest } = next.scoringInput ?? {};
+      next.scoringInput = rest;
+    }
+  }
+
+  return RecommendationIntakeStateSchema.parse(next);
+}
+
 export function finalize(input: {
   state: RecommendationIntakeState;
 }): RecommendationInput {
+  const parsedState = RecommendationIntakeStateSchema.parse(input.state);
   const stateWithDefaults = addAssumptions(
-    RecommendationIntakeStateSchema.parse(input.state),
-    buildUnknowns(input.state).filter((u) => u.defaultValue !== undefined),
+    parsedState,
+    buildUnknowns(parsedState).filter((u) => u.defaultValue !== undefined),
   );
 
   const scoringInput = {

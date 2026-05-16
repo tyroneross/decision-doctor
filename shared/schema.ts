@@ -702,6 +702,13 @@ export const RecommendationIntakeStateSchema = z.object({
   assumptions: z.array(RecommendationIntakeAssumptionSchema).default([]),
   askedTopics: z.array(z.string().min(1).max(80)).default([]),
   filledPaths: z.array(z.string().min(1).max(80)).default([]),
+  /**
+   * Topics the user explicitly challenged via the "Challenge this assumption"
+   * affordance (harvest #1). The controller forces these to be asked rather
+   * than re-inferred, even when their blocking score is below the ask
+   * threshold — the user has signalled they want to answer it themselves.
+   */
+  challengedTopics: z.array(z.string().min(1).max(80)).default([]),
   questionCount: z.number().int().min(0).max(20).default(0),
   /**
    * Set to `true` when the user dismisses a `route_to_decision` affordance

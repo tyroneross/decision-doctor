@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  challengeAssumption,
   finalize,
   ingestAnswer,
   nextStep,
@@ -109,6 +110,7 @@ describe("recommendation adaptive intake controller", () => {
         assumptions: [],
         askedTopics: [],
         filledPaths: ["painPath", "scoringInput.frequency"],
+        challengedTopics: [],
         questionCount: 0,
         routingDeclined: false,
       },
@@ -174,5 +176,58 @@ describe("intake questions carry a muted example (harvest #2)", () => {
       blockingScore: { topic: "frequency", blocking: 1, decision: "ask", reason: "r" },
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("challengeAssumption re-opens an inferred topic (harvest #1)", () => {
+  it("moves a challenged assumption back into the ask queue", async () => {
+    // Answer every asked question until the controller switches to `infer`.
+    let step = await nextStep({
+      challengeText:
+        "Prior authorization paperwork eats every Monday morning and slows down new referrals.",
+      painPath: "admin",
+    });
+    let guard = 0;
+    while (step.action === "ask" && guard < 12) {
+      const next = ingestAnswer({
+        state: step.state,
+        question: step.question,
+        display:
+          step.question.widget.kind === "chips"
+            ? step.question.widget.options[0]!.label
+            : "1",
+        raw:
+          step.question.widget.kind === "chips"
+            ? step.question.widget.options[0]!.value
+            : "1",
+      });
+      step = await nextStep({ state: next });
+      guard += 1;
+    }
+
+    expect(step.action).toBe("infer");
+    if (step.action !== "infer") throw new Error("expected infer");
+    const target = step.defaults[0]!;
+    expect(step.state.assumptions.some((a) => a.topic === target.topic)).toBe(
+      true,
+    );
+
+    const reopened = challengeAssumption({
+      state: step.state,
+      challengeTopic: target.topic,
+    });
+
+    // Assumption gone, topic no longer marked asked, path cleared.
+    expect(reopened.assumptions.some((a) => a.topic === target.topic)).toBe(
+      false,
+    );
+    expect(reopened.askedTopics.includes(target.topic)).toBe(false);
+    expect(reopened.filledPaths.includes(target.path)).toBe(false);
+
+    // Next pass surfaces the challenged topic as an explicit question.
+    const after = await nextStep({ state: reopened });
+    expect(after.action).toBe("ask");
+    if (after.action !== "ask") throw new Error("expected ask after challenge");
+    expect(after.question.topic).toBe(target.topic);
   });
 });

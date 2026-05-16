@@ -194,6 +194,27 @@ export function NewRecommendationClient({
     }
   }
 
+  async function challengeAssumptionTopic(
+    challengeState: RecommendationIntakeState,
+    topic: string,
+  ) {
+    setSubmitState("saving-answer");
+    setError(null);
+    try {
+      const result = await postJson<{ state: RecommendationIntakeState }>(
+        "/api/recommendations/intake/answer",
+        { state: challengeState, challengeTopic: topic },
+      );
+      // Re-opened topic now surfaces as an explicit question on the next pass.
+      await loadNext(result.state);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not re-open the question.",
+      );
+      setSubmitState("idle");
+    }
+  }
+
   async function finalizeRecommendation(finalState: RecommendationIntakeState) {
     setSubmitState("finalizing");
     setError(null);
@@ -439,6 +460,17 @@ export function NewRecommendationClient({
               </div>
               <p className="mt-2 text-[14px] text-text">{String(item.value)}</p>
               <p className="mt-2 text-[12px] text-mute">{item.rationale}</p>
+              <button
+                type="button"
+                title={item.challengePrompt}
+                onClick={() =>
+                  void challengeAssumptionTopic(action.state, item.topic)
+                }
+                disabled={busy}
+                className="mt-3 inline-flex items-center rounded-full border border-line px-3 py-1 text-[12px] font-medium text-ink transition-colors hover:border-ink hover:bg-ink hover:text-paper disabled:opacity-50"
+              >
+                Challenge this assumption
+              </button>
             </div>
           ))}
         </div>
