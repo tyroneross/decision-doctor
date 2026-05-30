@@ -13,6 +13,7 @@ export default defineConfig({
       "tests/**/*.test.ts",
       "lib/engine/__tests__/**/*.test.ts",
       "lib/engine/workflow/__tests__/**/*.test.ts",
+      "lib/engine/recommendation-intake/__tests__/**/*.test.ts",
       "lib/chat/__tests__/**/*.test.ts",
     ],
     testTimeout: 15_000, // integration tests against Neon may take a few seconds

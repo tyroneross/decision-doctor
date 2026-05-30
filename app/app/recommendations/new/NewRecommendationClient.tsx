@@ -16,8 +16,28 @@ import { PillSearchBar } from "@/components/ui/PillSearchBar";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { NoPhiNotice } from "@/components/recommendations/NoPhiNotice";
+import { CollapsibleSection } from "@/components/recommendations/CollapsibleSection";
 import { detectPHI } from "@/lib/phi-guard";
 import { PATH_KICKOFFS, type PathKickoff } from "./path-kickoff";
+
+/** Cookie name set on first successful custom-challenge submit so returning
+ *  users see explainer sections collapsed by default. 2-year lifetime; not
+ *  PII; HttpOnly=false (client reads it). */
+const CUSTOM_SEEN_COOKIE = "dd:custom-seen";
+
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = document.cookie.match(new RegExp(`(?:^|; )${escaped}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]!) : null;
+}
+
+function writeCookie(name: string, value: string, maxAgeSeconds: number): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=${encodeURIComponent(
+    value,
+  )}; max-age=${maxAgeSeconds}; path=/; samesite=lax`;
+}
 
 function appendLine(value: string, line: string): string {
   if (value.includes(line)) return value;
@@ -133,6 +153,11 @@ export function NewRecommendationClient({
     setChallenge(nextChallenge);
     setState(null);
     setAction(null);
+    // Mark the user as a returning custom-challenge visitor so explainer
+    // sections collapse by default on subsequent visits. 2-year max-age.
+    if (initialPath === "custom") {
+      writeCookie(CUSTOM_SEEN_COOKIE, "1", 63072000);
+    }
     void loadNext(undefined, nextChallenge);
   }
 
@@ -165,6 +190,27 @@ export function NewRecommendationClient({
       await loadNext(result.state);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save answer.");
+      setSubmitState("idle");
+    }
+  }
+
+  async function challengeAssumptionTopic(
+    challengeState: RecommendationIntakeState,
+    topic: string,
+  ) {
+    setSubmitState("saving-answer");
+    setError(null);
+    try {
+      const result = await postJson<{ state: RecommendationIntakeState }>(
+        "/api/recommendations/intake/answer",
+        { state: challengeState, challengeTopic: topic },
+      );
+      // Re-opened topic now surfaces as an explicit question on the next pass.
+      await loadNext(result.state);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not re-open the question.",
+      );
       setSubmitState("idle");
     }
   }
@@ -207,6 +253,21 @@ export function NewRecommendationClient({
 
   if (!action) {
     if (selectedKickoff && !initialChallenge?.trim()) {
+      if (initialPath === "custom") {
+        return (
+          <CustomChallengeKickoff
+            kickoff={selectedKickoff}
+            value={challenge}
+            onChange={setChallenge}
+            onSubmit={handleChallengeSubmit}
+            onStart={beginSelectedPath}
+            warning={phi.hasPHI}
+            warningReasons={phi.reasons}
+            busy={busy}
+            error={error}
+          />
+        );
+      }
       return (
         <PathKickoffView
           kickoff={selectedKickoff}
@@ -264,6 +325,10 @@ export function NewRecommendationClient({
           subtitle={action.question.widget.hint ?? action.question.prompt}
         />
 
+        {action.question.example && (
+          <p className="text-[12px] text-mute">{action.question.example}</p>
+        )}
+
         <QuestionControl
           question={action.question}
           value={selectedValue}
@@ -296,6 +361,80 @@ export function NewRecommendationClient({
     );
   }
 
+  if (action.action === "route_to_decision") {
+    // S2.C1 — Decision-routing affordance. Surfaces when the controller
+    // detects a hiring-shaped, decision-shaped question (e.g., "should I hire
+    // an admin assistant?"). User can accept (route to decision template flow)
+    // or decline (continue here with the WHY-first fallback question).
+    const routeAction = action;
+    const templateLabels: Record<string, string> = {
+      "admin-hire": "hiring an admin or assistant",
+      capacity: "capacity and waitlist",
+      pricing: "pricing and rates",
+    };
+    const templateLabel =
+      templateLabels[routeAction.suggestedTemplate] ??
+      routeAction.suggestedTemplate;
+    // The decision-template flow lives at /app/history/new/[templateId]; the
+    // [templateId] params (admin-hire | capacity | pricing) align 1:1 with
+    // DecisionTemplateHintSchema. We pass the original challenge text as a
+    // ?seed= hint so the template intake can preserve user context (consumer
+    // wiring is a followup — current page ignores unknown params safely).
+    const decisionHref = `/app/history/new/${encodeURIComponent(
+      routeAction.suggestedTemplate,
+    )}?seed=${encodeURIComponent(routeAction.state.challengeText.slice(0, 400))}`;
+
+    async function declineRouting() {
+      const nextState: RecommendationIntakeState = {
+        ...routeAction.state,
+        routingDeclined: true,
+      };
+      setAction(null);
+      setState(nextState);
+      await loadNext(nextState);
+    }
+
+    return (
+      <div className="mx-auto max-w-xl space-y-6 px-5 py-10">
+        <IntakeHeader
+          eyebrow="Looks like a decision"
+          title={`This looks like a yes/no decision about ${templateLabel}.`}
+          subtitle="Aida has a dedicated decision flow that frames hire vs automate vs defer with constraints and a fallback."
+        />
+
+        <div className="rounded-xl border border-line bg-paper p-4 space-y-3">
+          <p className="text-[14px] text-text leading-relaxed">
+            {routeAction.rationale}
+          </p>
+          <p className="text-[12px] text-mute">
+            If this is really a repeating workflow you want to streamline, you
+            can continue here instead and Aida will start with what&apos;s
+            driving the change.
+          </p>
+        </div>
+
+        {error && <ErrorText>{error}</ErrorText>}
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => void declineRouting()}
+            disabled={busy}
+            className="text-[13px] font-medium text-mute hover:text-ink underline-offset-2 hover:underline disabled:opacity-50"
+          >
+            No, keep this as a workflow
+          </button>
+          <Link
+            href={decisionHref}
+            className="inline-flex items-center rounded-[10px] border border-ink bg-ink px-4 py-2 text-[13px] font-medium text-paper transition-colors hover:bg-text"
+          >
+            Use the decision template →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (action.action === "infer") {
     return (
       <div className="mx-auto max-w-xl space-y-6 px-5 py-10">
@@ -321,6 +460,17 @@ export function NewRecommendationClient({
               </div>
               <p className="mt-2 text-[14px] text-text">{String(item.value)}</p>
               <p className="mt-2 text-[12px] text-mute">{item.rationale}</p>
+              <button
+                type="button"
+                title={item.challengePrompt}
+                onClick={() =>
+                  void challengeAssumptionTopic(action.state, item.topic)
+                }
+                disabled={busy}
+                className="mt-3 inline-flex items-center rounded-full border border-line px-3 py-1 text-[12px] font-medium text-ink transition-colors hover:border-ink hover:bg-ink hover:text-paper disabled:opacity-50"
+              >
+                Challenge this assumption
+              </button>
             </div>
           ))}
         </div>
@@ -616,6 +766,280 @@ function PathKickoffView({
           </Button>
         </div>
       </section>
+    </div>
+  );
+}
+
+/**
+ * Custom-challenge variant of PathKickoffView. Differs from the default
+ * layout in two ways:
+ *   1. Input bar is the FIRST interactive element below a tight 2-line header
+ *      (per user feedback: "move search bar up higher").
+ *   2. Privacy / First-Advice / Starter-Assets / What-I-need are wrapped in
+ *      CollapsibleSection, default-collapsed for returning users (cookie
+ *      dd:custom-seen) so repeat users can submit in one move.
+ */
+function CustomChallengeKickoff({
+  kickoff,
+  value,
+  onChange,
+  onSubmit,
+  onStart,
+  warning,
+  warningReasons,
+  busy,
+  error,
+}: {
+  kickoff: PathKickoff;
+  value: string;
+  onChange: (next: string) => void;
+  onSubmit: (value: string) => void;
+  onStart: () => void;
+  warning: boolean;
+  warningReasons: string[];
+  busy: boolean;
+  error: string | null;
+}) {
+  // First-visit detection — read the cookie ONCE on mount. SSR safe (the
+  // helper returns null on server, hydration runs the read).
+  const [hasSeenBefore, setHasSeenBefore] = React.useState<boolean | null>(
+    null,
+  );
+  React.useEffect(() => {
+    setHasSeenBefore(readCookie(CUSTOM_SEEN_COOKIE) === "1");
+  }, []);
+  const defaultOpen = hasSeenBefore === false || hasSeenBefore === null;
+
+  // Same starter-asset / what-I-need selection logic as PathKickoffView but
+  // scoped here so the two views stay independent.
+  const [selectedArtifacts, setSelectedArtifacts] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+  const [selectedInfo, setSelectedInfo] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+
+  function toggleArtifact(key: string, line: string) {
+    const hadIt = selectedArtifacts.has(key);
+    const next = new Set(selectedArtifacts);
+    if (hadIt) next.delete(key);
+    else next.add(key);
+    setSelectedArtifacts(next);
+    onChange(hadIt ? removeLine(value, line) : appendLine(value, line));
+  }
+
+  function toggleInfo(item: string) {
+    const line = `- I'll share: ${item}`;
+    const hadIt = selectedInfo.has(item);
+    const next = new Set(selectedInfo);
+    if (hadIt) next.delete(item);
+    else next.add(item);
+    setSelectedInfo(next);
+    onChange(hadIt ? removeLine(value, line) : appendLine(value, line));
+  }
+
+  const canStart =
+    !busy &&
+    !warning &&
+    (!kickoff.requiresDetail || value.trim().length >= 8);
+  const startLabel = kickoff.requiresDetail
+    ? "Start with this detail"
+    : "Start with this path";
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-5 px-5 py-8">
+      {/* Tight 2-line header — input is the first interactive thing below. */}
+      <header className="space-y-1.5">
+        <h1 className="text-h1 sm:text-h1-lg text-ink">
+          Describe your challenge
+        </h1>
+        <p className="text-[14px] leading-relaxed text-mute">
+          Aida classifies it into a starter path and asks only what it needs.
+        </p>
+      </header>
+
+      <NoPhiNotice warning={warning} reasons={warningReasons} />
+
+      {/* PRIMARY INPUT — top of the page, immediately under the header. */}
+      <section className="space-y-3" aria-label="Describe your challenge">
+        <PillSearchBar
+          multiline
+          maxRows={6}
+          value={value}
+          onChange={onChange}
+          onSubmit={onSubmit}
+          placeholder={kickoff.detailPlaceholder}
+          ariaLabel="Describe your challenge"
+          leftIcon={false}
+          minLength={8}
+          autoFocus
+          disabled={busy}
+        />
+        {error && <ErrorText>{error}</ErrorText>}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Button
+            variant="primary"
+            onClick={onStart}
+            disabled={!canStart}
+            className={twMerge(
+              "min-h-[44px] sm:min-h-[36px]",
+              canStart ? "" : "opacity-50",
+            )}
+          >
+            {busy ? "Starting..." : startLabel}
+          </Button>
+        </div>
+      </section>
+
+      {/* PROGRESSIVE DISCLOSURE — collapsed for returning users. */}
+      <CollapsibleSection
+        id="custom-privacy"
+        eyebrow="Privacy reminder"
+        title="Skip patient identifiers and clinical narrative."
+        summary="Use counts, categories, and time ranges. Aida flags PHI-shaped input."
+        defaultOpen={defaultOpen}
+      >
+        <ul className="space-y-2 pt-2">
+          {kickoff.firstAdvice.slice(0, 1).map((item) => (
+            <li
+              key={item}
+              className="flex gap-2 text-[14px] leading-relaxed text-text"
+            >
+              <span
+                aria-hidden
+                className="mt-[0.65em] h-1.5 w-1.5 shrink-0 rounded-full bg-ink"
+              />
+              <span>{item}</span>
+            </li>
+          ))}
+          <li className="flex gap-2 text-[13px] leading-relaxed text-mute">
+            <span
+              aria-hidden
+              className="mt-[0.6em] h-1.5 w-1.5 shrink-0 rounded-full bg-mute"
+            />
+            <span>
+              Patient names, DOBs, contact details, MRNs, and clinical notes
+              are blocked client-side and server-side.
+            </span>
+          </li>
+        </ul>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        id="custom-first-advice"
+        eyebrow="How to describe the workflow"
+        title="What makes a good challenge description"
+        summary="Repeating task · frequency · time cost · what slips · AI-no-go line."
+        defaultOpen={defaultOpen}
+      >
+        <ul className="mt-2 space-y-2">
+          {kickoff.firstAdvice.map((item) => (
+            <li
+              key={item}
+              className="flex gap-2 text-[14px] leading-relaxed text-text"
+            >
+              <span
+                aria-hidden
+                className="mt-[0.65em] h-1.5 w-1.5 shrink-0 rounded-full bg-ink"
+              />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        id="custom-starter-assets"
+        eyebrow="Starter assets to consider"
+        title="Add a starter asset to your message"
+        summary={`${kickoff.artifacts.length} options · tap to include in your description.`}
+        defaultOpen={defaultOpen}
+      >
+        <div className="mt-2 grid gap-3 sm:grid-cols-3">
+          {kickoff.artifacts.map((artifact) => {
+            const key = `${artifact.kind}:${artifact.title}`;
+            const line = `- Want a starter ${artifact.kind.toLowerCase()}: "${artifact.title}"`;
+            const selected = selectedArtifacts.has(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggleArtifact(key, line)}
+                aria-pressed={selected}
+                className={twMerge(
+                  "text-left rounded-xl border bg-paper p-3 transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
+                  "min-h-[44px] sm:min-h-[40px]",
+                  selected
+                    ? "border-ink ring-1 ring-ink/30 bg-line/30"
+                    : "border-line hover:border-ink/40 hover:bg-line/20",
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-mute">
+                    {artifact.kind}
+                  </p>
+                  {selected && (
+                    <span
+                      aria-hidden
+                      className="text-[11px] font-semibold text-ink"
+                    >
+                      ✓ Selected
+                    </span>
+                  )}
+                </div>
+                <h3 className="mt-1 text-[14px] font-semibold leading-snug text-ink">
+                  {artifact.title}
+                </h3>
+                <p className="mt-1.5 text-[12px] leading-relaxed text-mute">
+                  {artifact.description}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        id="custom-info-needed"
+        eyebrow="What Aida still needs"
+        title="Tap what you can share"
+        summary={`${kickoff.infoNeeded.length} prompts · adds them to your description.`}
+        defaultOpen={defaultOpen}
+      >
+        <div className="mt-2 flex flex-wrap gap-2">
+          {kickoff.infoNeeded.map((item) => {
+            const selected = selectedInfo.has(item);
+            return (
+              <button
+                key={item}
+                type="button"
+                onClick={() => toggleInfo(item)}
+                aria-pressed={selected}
+                className={twMerge(
+                  "rounded-[10px] border px-3 py-1.5 text-[12px] font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
+                  "min-h-[36px]",
+                  selected
+                    ? "border-ink bg-ink text-paper"
+                    : "border-line text-text hover:border-ink/40 hover:bg-line/20",
+                )}
+              >
+                {selected ? `✓ ${item}` : item}
+              </button>
+            );
+          })}
+        </div>
+      </CollapsibleSection>
+
+      <div className="flex justify-start pt-2">
+        <Link
+          href="/app/library"
+          className="text-[13px] font-medium text-mute hover:text-ink underline-offset-2 hover:underline"
+        >
+          Browse library assets →
+        </Link>
+      </div>
     </div>
   );
 }

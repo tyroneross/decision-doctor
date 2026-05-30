@@ -3,6 +3,70 @@
 // Shared between client (form validation) and server (route handler).
 
 import { z } from "zod";
+import { detectPhiFieldName } from "../lib/phi-guard";
+
+// --- Shared-layer PHI value guard --------------------------------------------
+//
+// Value-shape detection for free-form intake. Returns a human-readable reason
+// string when a value looks like Protected Health Information, else null.
+// Couples with `detectPhiFieldName` (name-level guard) to make the shared Zod
+// schema reject PHI at the contract boundary before it reaches any AI call.
+//
+// Low false-negative bias: blocking a benign value is recoverable, leaking PHI
+// is not. The >80-char rule mirrors the decision-input validation layer — long
+// free text is treated as PHI-capable regardless of pattern match.
+
+const PHI_VALUE_RULES: Array<{ pattern: RegExp; reason: string }> = [
+  { pattern: /\b\d{3}-\d{2}-\d{4}\b/, reason: "SSN-shaped value detected" },
+  {
+    pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i,
+    reason: "email-shaped value detected",
+  },
+  {
+    pattern: /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/,
+    reason: "phone-shaped value detected",
+  },
+  {
+    pattern: /\b(?:MRN|medical record)\s*[:#-]?\s*[A-Z0-9-]{4,}\b/i,
+    reason: "medical record number detected",
+  },
+  {
+    pattern:
+      /\b(0?[1-9]|1[0-2])[\/.\-](0?[1-9]|[12]\d|3[01])[\/.\-](19|20)\d{2}\b/,
+    reason: "date-of-birth-shaped value detected",
+  },
+  {
+    pattern:
+      /\b\d+\s+\w+\s+(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Court|Ct|Place|Pl|Way)\b/i,
+    reason: "street-address-shaped value detected",
+  },
+  {
+    // Person-name shape: two (optionally three) capitalised words, or a
+    // capitalised word followed by the literal "Patient"/"Client" token.
+    pattern:
+      /\b[A-Z][a-z]+\s+(?:[A-Z][a-z]+\s+)?(?:Patient|Client|[A-Z][a-z]+)\b/,
+    reason: "person-name-shaped value detected",
+  },
+];
+
+/**
+ * Returns a reason string when `value` is PHI-shaped, else null.
+ * Long free text (>80 chars) is treated as PHI-capable regardless of pattern.
+ */
+export function detectPhiLikeText(value: string): string | null {
+  if (typeof value !== "string" || value.length === 0) {
+    return null;
+  }
+  if (value.length > 80) {
+    return "free-text value too long to safely accept (possible PHI)";
+  }
+  for (const { pattern, reason } of PHI_VALUE_RULES) {
+    if (pattern.test(value)) {
+      return reason;
+    }
+  }
+  return null;
+}
 
 // --- Field value types ---
 const FieldValueSchema = z.union([
@@ -42,15 +106,52 @@ export const AhpComparisonsSchema = z.record(
   z.number().finite().positive(),
 );
 
-export const DecisionInputSchema = z.object({
-  templateId: TemplateIdSchema,
-  source: DecisionSourceSchema,
-  fields: z.record(z.string(), FieldValueSchema),
-  context: DecisionContextSchema,
-  // F-10: optional alternative weight elicitation path.
-  weightSource: z.enum(["llm", "ahp"]).optional(),
-  ahpComparisons: AhpComparisonsSchema.optional(),
-});
+export const DecisionInputSchema = z
+  .object({
+    templateId: TemplateIdSchema,
+    source: DecisionSourceSchema,
+    fields: z.record(z.string(), FieldValueSchema),
+    context: DecisionContextSchema,
+    // F-10: optional alternative weight elicitation path.
+    weightSource: z.enum(["llm", "ahp"]).optional(),
+    ahpComparisons: AhpComparisonsSchema.optional(),
+  })
+  // PHI hard stop at the shared contract boundary: reject patient-shaped
+  // field NAMES and PHI-shaped string VALUES before anything reaches an AI
+  // call. Name guard + value guard are MECE; either match fails the parse.
+  .superRefine((input, ctx) => {
+    for (const [key, value] of Object.entries(input.fields)) {
+      if (detectPhiFieldName(key)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["fields", key],
+          message: "PHI-shaped field name is not accepted in v1.",
+        });
+        continue;
+      }
+      if (typeof value === "string") {
+        const reason = detectPhiLikeText(value);
+        if (reason) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["fields", key],
+            message: `PHI-shaped value is not accepted in v1: ${reason}.`,
+          });
+        }
+      } else if (Array.isArray(value)) {
+        for (const item of value) {
+          if (typeof item === "string" && detectPhiLikeText(item)) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["fields", key],
+              message: "PHI-shaped list value is not accepted in v1.",
+            });
+            break;
+          }
+        }
+      }
+    }
+  });
 export type DecisionInput = z.infer<typeof DecisionInputSchema>;
 
 // --- DecisionOutput (PRD §6.3) ---
@@ -557,6 +658,9 @@ export const RecommendationIntakeQuestionSchema = z.object({
   id: z.string().min(1).max(80),
   topic: z.string().min(1).max(80),
   prompt: z.string().min(1).max(240),
+  // Optional concrete example shown muted below the prompt to anchor the
+  // user's mental model before they answer (harvest item #2).
+  example: z.string().max(140).optional(),
   widget: RecommendationIntakeWidgetSchema,
   fills: RecommendationIntakeFillSchema,
   blockingScore: RecommendationIntakeBlockingScoreSchema,
@@ -598,11 +702,36 @@ export const RecommendationIntakeStateSchema = z.object({
   assumptions: z.array(RecommendationIntakeAssumptionSchema).default([]),
   askedTopics: z.array(z.string().min(1).max(80)).default([]),
   filledPaths: z.array(z.string().min(1).max(80)).default([]),
+  /**
+   * Topics the user explicitly challenged via the "Challenge this assumption"
+   * affordance (harvest #1). The controller forces these to be asked rather
+   * than re-inferred, even when their blocking score is below the ask
+   * threshold — the user has signalled they want to answer it themselves.
+   */
+  challengedTopics: z.array(z.string().min(1).max(80)).default([]),
   questionCount: z.number().int().min(0).max(20).default(0),
+  /**
+   * Set to `true` when the user dismisses a `route_to_decision` affordance
+   * and chooses to continue with the pain-recommendation intake. Prevents the
+   * controller from re-emitting the same routing hint on subsequent calls.
+   */
+  routingDeclined: z.boolean().default(false),
 });
 export type RecommendationIntakeState = z.infer<
   typeof RecommendationIntakeStateSchema
 >;
+
+/**
+ * Suggested decision template when intake detects a decision-shaped question
+ * (e.g., "should I hire an admin assistant?"). Aligns with the decision template
+ * registry in lib/engine/templates/index.ts.
+ */
+export const DecisionTemplateHintSchema = z.enum([
+  "admin-hire",
+  "capacity",
+  "pricing",
+]);
+export type DecisionTemplateHint = z.infer<typeof DecisionTemplateHintSchema>;
 
 export const RecommendationIntakeActionSchema = z.discriminatedUnion("action", [
   z.object({
@@ -630,6 +759,25 @@ export const RecommendationIntakeActionSchema = z.discriminatedUnion("action", [
     state: RecommendationIntakeStateSchema,
     recommendationInput: RecommendationInputSchema,
     reason: z.string().min(1).max(240),
+  }),
+  /**
+   * Emitted when intake detects a decision-shaped question (e.g., "should I
+   * hire X"). The client SHOULD surface an affordance offering to route the
+   * user to the matching decision-template flow. When the user accepts, the
+   * client navigates to /app/decisions/new?template=<hint>&seed=<text>. When
+   * the user declines, the client posts back to /api/recommendations/intake/next
+   * with state.routingDeclined=true to continue the pain-recommendation pipeline.
+   *
+   * Pay-it-forward (Path B): adding a typed variant rather than a hint field
+   * unlocks future routing variants (e.g., route_to_chat, route_to_existing_session)
+   * without re-shaping every consumer.
+   */
+  z.object({
+    action: z.literal("route_to_decision"),
+    state: RecommendationIntakeStateSchema,
+    suggestedTemplate: DecisionTemplateHintSchema,
+    confidence: z.number().min(0).max(1),
+    rationale: z.string().min(1).max(240),
   }),
 ]);
 export type RecommendationIntakeAction = z.infer<

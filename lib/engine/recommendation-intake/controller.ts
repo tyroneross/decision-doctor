@@ -2,12 +2,14 @@ import "server-only";
 
 import { z } from "zod";
 import {
+  DecisionTemplateHintSchema,
   PainPathIdSchema,
   RecommendationInputSchema,
   RecommendationIntakeActionSchema,
   RecommendationIntakeFillSchema,
   RecommendationIntakeQuestionSchema,
   RecommendationIntakeStateSchema,
+  type DecisionTemplateHint,
   type PainPathId,
   type RecommendationInput,
   type RecommendationIntakeAction,
@@ -18,9 +20,44 @@ import {
   type RecommendationIntakeState,
 } from "@/shared/schema";
 import { classifyPainPath } from "@/lib/engine/pain-path/classifier";
+import {
+  detectDecisionIntent,
+  type DecisionDetection,
+} from "@/lib/chat/decision-detector";
 
 const MAX_ASKED_QUESTIONS = 7;
 const ASK_THRESHOLD = 8;
+
+/**
+ * Hiring/delegation keyword shortlist. Harvested from branch-codex's
+ * decision-guide.ts admin-hire signal config — captures the surface forms
+ * of "should I hire X" questions before any LLM call.
+ *
+ * Two-stage gate: this keyword regex is the cheap pre-filter. When it fires
+ * positive, the controller calls detectDecisionIntent() (a ~200ms Groq call)
+ * to confirm the question is decision-shaped. When the regex misses, no Groq
+ * call is made.
+ */
+const HIRING_KEYWORD_PATTERN =
+  /\b(hire|hiring|hir(e|ing) an?|delegate|outsource|contract(or)?|virtual assistant|\bva\b|admin (assistant|hire|support)|biller|biller|associate|w-?2|1099)\b/i;
+
+const HIRING_DRIVER_OPTIONS = [
+  { value: "too_many_calls", label: "Too many calls" },
+  { value: "after_hours_messages", label: "After-hours messages" },
+  { value: "missed_follow_ups", label: "Missed follow-ups" },
+  { value: "no_vacation", label: "Can't take vacation" },
+  { value: "recent_mistake", label: "Recent mistake" },
+  { value: "other", label: "Other" },
+];
+
+/**
+ * Pure pre-filter: does the free-text challenge look like a hiring/delegation
+ * question? Cheap synchronous regex check; no I/O.
+ */
+export function isHiringShapedChallenge(text: string | undefined): boolean {
+  if (!text) return false;
+  return HIRING_KEYWORD_PATTERN.test(text);
+}
 
 export const RecommendationIntakeNextInputSchema = z.object({
   state: RecommendationIntakeStateSchema.optional(),
@@ -43,6 +80,20 @@ export const RecommendationIntakeAnswerInputSchema = z.object({
   display: z.string().min(1).max(240),
   raw: z.union([z.string().max(240), z.number().finite()]),
 });
+
+/**
+ * Input for the "challenge this assumption" affordance (harvest #1). The user
+ * rejects an inferred default; the named topic is re-opened so the controller
+ * asks about it explicitly instead of inferring it.
+ */
+export const RecommendationIntakeChallengeInputSchema = z.object({
+  state: RecommendationIntakeStateSchema,
+  challengeTopic: z.string().min(1).max(80),
+});
+
+export type RecommendationIntakeChallengeInput = z.infer<
+  typeof RecommendationIntakeChallengeInputSchema
+>;
 
 export type RecommendationIntakeNextInput = z.infer<
   typeof RecommendationIntakeNextInputSchema
@@ -125,6 +176,7 @@ function chipsQuestion(args: {
   id: string;
   topic: string;
   prompt: string;
+  example: string;
   fieldId: string;
   label: string;
   hint?: string;
@@ -137,6 +189,7 @@ function chipsQuestion(args: {
     id: args.id,
     topic: args.topic,
     prompt: args.prompt,
+    example: args.example,
     widget: {
       kind: "chips",
       fieldId: args.fieldId,
@@ -187,10 +240,60 @@ function buildUnknowns(state: RecommendationIntakeState): CandidateUnknown[] {
         id: "pain-path",
         topic: "pain_path",
         prompt: "Pick the closest area so Aida can retrieve the right use cases.",
+        example: "e.g. scheduling and intake paperwork eats most of my admin time.",
         fieldId: "painPath",
         label: "Which area does this affect most?",
         hint: "Choose the closest match. You can still describe edge cases later.",
         options: PAIN_PATH_OPTIONS,
+        fill,
+        blockingScore,
+      }),
+    });
+  }
+
+  // S2.C2 — WHY-first driver question for hiring-shaped challenges.
+  // Fires before frequency/time_burden so the user is asked "what's driving
+  // this?" before "how often does it come up?". Stored as a free-form
+  // assumption on `state.goal` so it doesn't need a new scoringInput field.
+  const hiringShaped =
+    isHiringShapedChallenge(state.challengeText) &&
+    (state.painPath === "admin" ||
+      state.painPath === "custom" ||
+      state.painPath === "capacity_growth");
+  if (
+    hiringShaped &&
+    !state.askedTopics.includes("hiring_driver") &&
+    !maybeAssumption(state, "hiring_driver")
+  ) {
+    // Synthetic path — applyPath() falls through to a no-op record on
+    // unrecognized paths, so the answer is captured in state.answers[]
+    // and state.filledPaths[] without mutating painPath/goal/scoringInput.
+    const fill = RecommendationIntakeFillSchema.parse({
+      path: "meta.hiringDriver",
+      kind: "string",
+      mergeStrategy: "replace",
+    });
+    const blockingScore = score(
+      "hiring_driver",
+      5,
+      4,
+      3,
+      "The driving cause shapes whether to hire, automate, or restructure — first-question quality matters more than frequency for hiring decisions.",
+    );
+    unknowns.push({
+      topic: "hiring_driver",
+      fill,
+      blockingScore,
+      question: chipsQuestion({
+        id: "hiring-driver",
+        topic: "hiring_driver",
+        prompt:
+          "What's driving the need? Pick the closest match.",
+        example: "e.g. I'm turning away patients because I can't keep up.",
+        fieldId: "hiringDriver",
+        label: "What's driving this?",
+        hint: "We use this to frame the hire/automate/defer tradeoff before asking about frequency.",
+        options: HIRING_DRIVER_OPTIONS,
         fill,
         blockingScore,
       }),
@@ -218,6 +321,7 @@ function buildUnknowns(state: RecommendationIntakeState): CandidateUnknown[] {
         id: "frequency",
         topic: "frequency",
         prompt: "Estimate how often the pain shows up.",
+        example: "e.g. it slows me down most weekdays.",
         fieldId: "frequency",
         label: "How often does this challenge come up?",
         hint: "A rough estimate is enough.",
@@ -255,6 +359,7 @@ function buildUnknowns(state: RecommendationIntakeState): CandidateUnknown[] {
         id: "time-burden",
         topic: "time_burden",
         prompt: "Estimate the time burden per occurrence.",
+        example: "e.g. each insurance follow-up takes me about half an hour.",
         fieldId: "timeBurden",
         label: "How much time does it usually take?",
         hint: "Pick the closest option.",
@@ -292,6 +397,7 @@ function buildUnknowns(state: RecommendationIntakeState): CandidateUnknown[] {
         id: "pain-severity",
         topic: "pain_severity",
         prompt: "Estimate how much this slows the practice down.",
+        example: "e.g. it's a real drag but the practice still runs.",
         fieldId: "painSeverity",
         label: "How much does this slow your practice down?",
         hint: "Your gut read is enough.",
@@ -374,7 +480,95 @@ function buildUnknowns(state: RecommendationIntakeState): CandidateUnknown[] {
     });
   }
 
+  // Harvest #1: a user-challenged inference-only topic must be asked, not
+  // re-inferred. Attach a synthetic question + force an `ask` decision so it
+  // surfaces as an explicit step.
+  const challengedTopics = state.challengedTopics ?? [];
+  for (const u of unknowns) {
+    if (
+      !u.question &&
+      challengedTopics.includes(u.topic) &&
+      !state.askedTopics.includes(u.topic)
+    ) {
+      const synthetic = challengedQuestion(u);
+      if (synthetic) {
+        u.question = synthetic.question;
+        u.blockingScore = synthetic.blockingScore;
+      }
+    }
+  }
+
   return unknowns.filter((u) => !state.askedTopics.includes(u.topic));
+}
+
+/**
+ * Build a chips question for a challenged inference-only topic so the user can
+ * answer it explicitly. Numeric scoringInput topics get a low/medium/high
+ * scale; `goal` gets a keep/replace choice that re-enters the infer path if
+ * the user is fine with an inferred goal.
+ */
+function challengedQuestion(
+  u: CandidateUnknown,
+): { question: RecommendationIntakeQuestion; blockingScore: RecommendationIntakeBlockingScore } | null {
+  const blockingScore = score(
+    u.topic,
+    5,
+    5,
+    3,
+    "You chose to answer this yourself instead of letting Aida infer it.",
+  );
+  const askBlockingScore = { ...blockingScore, decision: "ask" as const };
+
+  if (u.fill.path === "goal") {
+    return {
+      blockingScore: askBlockingScore,
+      question: chipsQuestion({
+        id: `challenged-${u.topic}`,
+        topic: u.topic,
+        prompt: "You wanted to set this yourself. Pick the closest goal shape.",
+        example: "e.g. cut the time I spend on this in half within a month.",
+        fieldId: "goal",
+        label: "What outcome do you want from a first AI task?",
+        hint: "Pick the closest match; you can refine later.",
+        options: [
+          { value: "save_time", label: "Save time on a recurring task" },
+          { value: "reduce_errors", label: "Reduce mistakes or rework" },
+          { value: "increase_capacity", label: "See more patients without more hours" },
+          { value: "improve_followup", label: "Improve patient follow-up" },
+        ],
+        fill: RecommendationIntakeFillSchema.parse({
+          path: "goal",
+          kind: "string",
+          mergeStrategy: "replace",
+        }),
+        blockingScore: askBlockingScore,
+      }),
+    };
+  }
+
+  if (u.fill.path.startsWith("scoringInput.")) {
+    return {
+      blockingScore: askBlockingScore,
+      question: chipsQuestion({
+        id: `challenged-${u.topic}`,
+        topic: u.topic,
+        prompt: "You wanted to set this yourself. Pick the closest level.",
+        example: "e.g. somewhere in the middle for now.",
+        fieldId: u.fill.path,
+        label: "How would you rate this?",
+        hint: "A rough read is enough.",
+        options: [
+          { value: "0.25", label: "Low" },
+          { value: "0.5", label: "Medium" },
+          { value: "0.75", label: "High" },
+        ],
+        fill: u.fill,
+        blockingScore: askBlockingScore,
+      }),
+    };
+  }
+
+  return null;
 }
 
 function applyPath(
@@ -474,11 +668,88 @@ function progress(state: RecommendationIntakeState, remaining: number) {
   };
 }
 
+/**
+ * Match hiring-shaped challenge text to a decision template hint.
+ * Returns null when no template applies. Today only admin-hire is wired; the
+ * shape is extensible (Path B — typed return) for capacity / pricing once
+ * their template intake flows ship.
+ */
+function suggestedTemplateForHiring(text: string): DecisionTemplateHint | null {
+  // Anchor terms come straight from branch-codex's admin-hire signal config
+  // — they're the textbook surface forms of "should I hire X" questions.
+  if (
+    /\b(admin (assistant|hire|support)|virtual assistant|\bva\b|biller|associate|contractor|delegate|outsource|hire (an? )?(admin|assistant|biller))\b/i.test(
+      text,
+    )
+  ) {
+    return "admin-hire";
+  }
+  return null;
+}
+
+/**
+ * Injectable detector. Tests pass a stub that returns a deterministic
+ * DecisionDetection; production passes the real Groq-backed detector.
+ */
+export type IntentDetector = (
+  text: string,
+) => Promise<DecisionDetection>;
+
+const DEFAULT_DETECTOR: IntentDetector = detectDecisionIntent;
+
 export async function nextStep(
   input: RecommendationIntakeNextInput,
+  options?: { detector?: IntentDetector },
 ): Promise<RecommendationIntakeAction> {
   let state = buildInitialState(RecommendationIntakeNextInputSchema.parse(input));
   state = await classifyIntoState(state);
+
+  // S2.C1 — Decision-intent routing for hiring-shaped challenges.
+  //
+  // Two-stage gate:
+  //   1. Cheap keyword regex (isHiringShapedChallenge) decides whether the
+  //      challenge text is worth confirming.
+  //   2. If yes AND no detection has been performed yet (questionCount === 0)
+  //      AND the user hasn't already declined routing, call the LLM detector.
+  //      When kind=decision + suggestedPath=decision + confidence≥0.7 AND a
+  //      template hint matches, emit route_to_decision.
+  //
+  // The client's "No, keep this as a workflow" affordance sets
+  // state.routingDeclined=true on its callback, so this branch is suppressed
+  // on the next call and the user continues into the WHY-first fallback.
+  if (
+    state.questionCount === 0 &&
+    !state.routingDeclined &&
+    isHiringShapedChallenge(state.challengeText)
+  ) {
+    const detector = options?.detector ?? DEFAULT_DETECTOR;
+    let detection: DecisionDetection | null = null;
+    try {
+      detection = await detector(state.challengeText);
+    } catch {
+      // Detector failures are non-fatal — fall through to normal intake.
+      detection = null;
+    }
+    if (
+      detection &&
+      detection.kind === "decision" &&
+      detection.suggestedPath === "decision" &&
+      detection.confidence >= 0.7
+    ) {
+      const hint = suggestedTemplateForHiring(state.challengeText);
+      if (hint) {
+        const parsedHint = DecisionTemplateHintSchema.parse(hint);
+        const action = {
+          action: "route_to_decision",
+          state,
+          suggestedTemplate: parsedHint,
+          confidence: detection.confidence,
+          rationale: detection.rationale.slice(0, 240),
+        } satisfies RecommendationIntakeAction;
+        return RecommendationIntakeActionSchema.parse(action);
+      }
+    }
+  }
 
   const unknowns = buildUnknowns(state);
   const askable = unknowns
@@ -543,12 +814,64 @@ export function ingestAnswer(
   return RecommendationIntakeStateSchema.parse(next);
 }
 
+/**
+ * Re-open an inferred assumption so the controller asks about it explicitly
+ * (harvest #1). Drops the assumption, clears the value it set, removes its
+ * path from filledPaths and its topic from askedTopics so the next
+ * buildUnknowns pass re-emits it as an askable question.
+ */
+export function challengeAssumption(
+  input: RecommendationIntakeChallengeInput,
+): RecommendationIntakeState {
+  const parsed = RecommendationIntakeChallengeInputSchema.parse(input);
+  const target = parsed.state.assumptions.find(
+    (a) => a.topic === parsed.challengeTopic,
+  );
+
+  const next = RecommendationIntakeStateSchema.parse({
+    ...parsed.state,
+    scoringInput: { ...(parsed.state.scoringInput ?? {}) },
+    answers: [...parsed.state.answers],
+    assumptions: parsed.state.assumptions.filter(
+      (a) => a.topic !== parsed.challengeTopic,
+    ),
+    askedTopics: parsed.state.askedTopics.filter(
+      (t) => t !== parsed.challengeTopic,
+    ),
+    filledPaths: parsed.state.filledPaths.filter(
+      (p) => p !== target?.path,
+    ),
+    challengedTopics: parsed.state.challengedTopics.includes(
+      parsed.challengeTopic,
+    )
+      ? [...parsed.state.challengedTopics]
+      : [...parsed.state.challengedTopics, parsed.challengeTopic],
+  });
+
+  if (target) {
+    if (target.path === "painPath") {
+      next.painPath = undefined;
+    } else if (target.path === "goal") {
+      next.goal = undefined;
+    } else if (target.path.startsWith("scoringInput.")) {
+      const key = target.path.slice(
+        "scoringInput.".length,
+      ) as keyof NonNullable<RecommendationInput["scoringInput"]>;
+      const { [key]: _removed, ...rest } = next.scoringInput ?? {};
+      next.scoringInput = rest;
+    }
+  }
+
+  return RecommendationIntakeStateSchema.parse(next);
+}
+
 export function finalize(input: {
   state: RecommendationIntakeState;
 }): RecommendationInput {
+  const parsedState = RecommendationIntakeStateSchema.parse(input.state);
   const stateWithDefaults = addAssumptions(
-    RecommendationIntakeStateSchema.parse(input.state),
-    buildUnknowns(input.state).filter((u) => u.defaultValue !== undefined),
+    parsedState,
+    buildUnknowns(parsedState).filter((u) => u.defaultValue !== undefined),
   );
 
   const scoringInput = {

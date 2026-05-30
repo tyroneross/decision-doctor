@@ -6,7 +6,9 @@ import { isGuestRequest } from "@/lib/auth-guest";
 import { detectPHI } from "@/lib/phi-guard";
 import {
   RecommendationIntakeAnswerInputSchema,
+  RecommendationIntakeChallengeInputSchema,
   ingestAnswer,
+  challengeAssumption,
 } from "@/lib/engine/recommendation-intake/controller";
 
 export const runtime = "nodejs";
@@ -19,6 +21,18 @@ export async function POST(req: NextRequest) {
   }
 
   const rawBody = await req.json().catch(() => ({}));
+
+  // Harvest #1: "challenge this assumption" re-opens an inferred topic.
+  // No display text, so no PHI scan is needed on this branch.
+  const challenge =
+    RecommendationIntakeChallengeInputSchema.safeParse(rawBody);
+  if (challenge.success) {
+    return Response.json(
+      { state: challengeAssumption(challenge.data) },
+      { status: 200 },
+    );
+  }
+
   const parsed = RecommendationIntakeAnswerInputSchema.safeParse(rawBody);
   if (!parsed.success) {
     return Response.json(

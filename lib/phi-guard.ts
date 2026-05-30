@@ -14,6 +14,24 @@ export interface PhiDetection {
   reasons: string[];
 }
 
+// --- Field-name PHI guard ----------------------------------------------------
+//
+// Rejects structured-input field NAMES that signal patient-identifiable data
+// (e.g. `patient_name`, `dob`, `mrn`, `patientPhone`). This is a name-level
+// hard stop, complementary to the free-text value scanner below. Lifted from
+// the decision-input validation layer so the shared Zod schema can enforce it.
+export const PHI_FIELD_NAME_PATTERN =
+  /(^|[_\-\s])(?:name|dob|birthdate|mrn|ssn|phone|email|address|diagnosis|diagnoses)($|[_\-\s])|(?:patient|client)[_\-\s]*(?:name|dob|birthdate|mrn|id|phone|email|address)|(?:patient|client)(?:Name|Dob|Birthdate|Mrn|Id|Phone|Email|Address)/;
+
+/**
+ * True when a structured-input field name is PHI-shaped and must be rejected.
+ * Name-level guard — does not inspect the value. Recoverable false positives
+ * are acceptable; a false negative leaks PHI into downstream AI calls.
+ */
+export function detectPhiFieldName(key: string): boolean {
+  return typeof key === "string" && PHI_FIELD_NAME_PATTERN.test(key);
+}
+
 // --- Individual pattern definitions ------------------------------------------
 
 /** HIPAA DOB pattern: MM/DD/YYYY, MM-DD-YYYY, MM.DD.YYYY */
