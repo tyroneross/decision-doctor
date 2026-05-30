@@ -107,7 +107,7 @@ const STORAGE_KEY = "dd:chat:thread:v2";
 const OPENING: ChatMessage = {
   role: "assistant",
   content:
-    "Hi. Tell me where the hours go in a normal week. I'll rank what AI can take off your plate and ship you a starter skill so the time comes back this week.",
+    "Where do the hours go in a normal week? Start anywhere; I'll take it from there.",
 };
 
 const QUICK_PROMPTS = [
@@ -615,13 +615,13 @@ export function Chat({ seed }: { seed?: string } = {}) {
           <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-mute">
             Tell me what's eating your time
           </p>
-          <h1 className="mt-2 text-display sm:text-display-lg tracking-tight text-text">
-            I'll rank what AI can take off your plate, and build the skill to do it.
+          <h1 className="mt-2 whitespace-nowrap text-display sm:text-display-lg tracking-tight text-text">
+            I'll find what AI can take off your plate.
           </h1>
           <p className="mt-3 max-w-xl text-[15px] leading-snug text-mute sm:text-[16px]">
-            Five-minute conversation. You get a ranked list of capacity drains, an
-            AI-feasibility score for each, and a paste-ready skill or playbook for
-            the top one, so the time comes back this week, not "someday."
+            A five-minute conversation. You leave with a ranked list of time
+            drains, an AI-feasibility score for each, and a paste-ready skill
+            for the top one.
           </p>
           <p className="mt-3 text-[12.5px] text-mute">
             Already know the shape of it?{" "}
