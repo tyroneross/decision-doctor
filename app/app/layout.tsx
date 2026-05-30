@@ -14,6 +14,7 @@ import { MobileBottomNav } from "./_components/MobileBottomNav";
 import { DesktopSidebar } from "./_components/DesktopSidebar";
 import { SkillPanel, type SkillSummary } from "./_components/SkillPanel";
 import { BackToParent } from "./_components/BackToParent";
+import { PersistentTopBar } from "./_components/PersistentTopBar";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { GuestBanner } from "@/components/GuestBanner";
 import { desc } from "drizzle-orm";
@@ -204,9 +205,14 @@ export default async function AppLayout({
 
       {/* Main column. Padding-bottom on mobile reserves space for the
           fixed 52px bottom nav. Desktop expands to fill the grid cell.
-          BackToParent renders a subtle "← <Parent>" affordance that hides
-          itself on /app (the workspace root). */}
+          PersistentTopBar is the workspace-wide "Ask Aida" entry — sticky
+          at the top of every page except /app/chat (which owns its own
+          bottom-of-thread composer). BackToParent renders a subtle
+          "← <Parent>" affordance that hides itself on /app. */}
       <main className="flex-1 min-w-0 pb-[60px] lg:pb-0">
+        <Suspense fallback={null}>
+          <PersistentTopBar />
+        </Suspense>
         <BackToParent />
         {children}
       </main>
