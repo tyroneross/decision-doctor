@@ -36,7 +36,7 @@ import { getPool } from "../db.js";
 import { extractRenderedHtml } from "../cdp/extract-content.js";
 
 const UA =
-  "decision-doctor-workers/0.1 (+https://github.com/tyroneross/decision-doctor-cc; contact: tyrone.ross@gmail.com)";
+  "decision-doctor-workers/0.1 (+https://github.com/tyroneross/decision-doctor-cc)";
 
 const SITEMAP_FETCH_TIMEOUT_MS = 15_000;
 const ARTICLE_FETCH_TIMEOUT_MS = 15_000;

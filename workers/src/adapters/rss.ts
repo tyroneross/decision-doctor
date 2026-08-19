@@ -17,7 +17,7 @@ import { createHash } from "node:crypto";
 import { getPool } from "../db.js";
 
 const UA =
-  "decision-doctor-workers/0.1 (+https://github.com/tyroneross/decision-doctor-cc; contact: tyrone.ross@gmail.com)";
+  "decision-doctor-workers/0.1 (+https://github.com/tyroneross/decision-doctor-cc)";
 
 export interface RssItem {
   guid: string;

@@ -27,7 +27,7 @@ interface ArxivEntry {
 }
 
 const UA =
-  "decision-doctor-workers/0.1 (+https://github.com/tyroneross/decision-doctor-cc; contact: tyrone.ross@gmail.com)";
+  "decision-doctor-workers/0.1 (+https://github.com/tyroneross/decision-doctor-cc)";
 
 /**
  * Extract a single value from an Atom <entry> by tag name. Returns first match.
