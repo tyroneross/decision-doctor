@@ -51,11 +51,17 @@ interface SourceSpec {
   audience: string[];
 }
 
+// Directory holding the sibling source repos (prompt-builder, pyramid-principle,
+// RossLabs-AI-Toolkit, stratagem). Defaults to the folder that contains this repo.
+const SOURCES_ROOT = process.env.DD_SOURCES_ROOT
+  ? path.resolve(process.env.DD_SOURCES_ROOT)
+  : path.resolve(process.cwd(), "..");
+
 const SOURCES: SourceSpec[] = [
   {
     kind: "plugin",
     slug: "prompt-builder",
-    root: "/Users/tyroneross/dev/git-folder/prompt-builder",
+    root: path.join(SOURCES_ROOT, "prompt-builder"),
     title: "Prompt Builder",
     description:
       "Classify, diagnose, rewrite, and score prompts by model tier and deployment.",
@@ -66,7 +72,7 @@ const SOURCES: SourceSpec[] = [
   {
     kind: "plugin",
     slug: "pyramid-principle",
-    root: "/Users/tyroneross/dev/git-folder/pyramid-principle",
+    root: path.join(SOURCES_ROOT, "pyramid-principle"),
     title: "Pyramid Principle",
     description:
       "Barbara Minto's Pyramid Principle for short-form, long-form, presentations, and audits.",
@@ -77,7 +83,7 @@ const SOURCES: SourceSpec[] = [
   {
     kind: "skill",
     slug: "agent-builder",
-    root: "/Users/tyroneross/dev/git-folder/RossLabs-AI-Toolkit/skills/agent-builder",
+    root: path.join(SOURCES_ROOT, "RossLabs-AI-Toolkit/skills/agent-builder"),
     title: "Agent Builder",
     description:
       "Design, evaluate, and improve agentic harnesses for developer tools, assistants, workflow runtimes, copilots, and AI-powered products.",
@@ -87,7 +93,7 @@ const SOURCES: SourceSpec[] = [
   {
     kind: "skill",
     slug: "analyze-earnings",
-    root: "/Users/tyroneross/dev/git-folder/stratagem/plugin/skills/analyze-earnings",
+    root: path.join(SOURCES_ROOT, "stratagem/plugin/skills/analyze-earnings"),
     title: "Analyze Earnings",
     description: "Extract and reason about quarterly earnings releases.",
     version: "0.1.0",
@@ -96,7 +102,7 @@ const SOURCES: SourceSpec[] = [
   {
     kind: "skill",
     slug: "extract-data",
-    root: "/Users/tyroneross/dev/git-folder/stratagem/plugin/skills/extract-data",
+    root: path.join(SOURCES_ROOT, "stratagem/plugin/skills/extract-data"),
     title: "Extract Data",
     description: "Pull structured data out of unstructured documents.",
     version: "0.1.0",
@@ -105,7 +111,7 @@ const SOURCES: SourceSpec[] = [
   {
     kind: "skill",
     slug: "flowchart",
-    root: "/Users/tyroneross/dev/git-folder/stratagem/plugin/skills/flowchart",
+    root: path.join(SOURCES_ROOT, "stratagem/plugin/skills/flowchart"),
     title: "Flowchart",
     description: "Render decision and process flowcharts.",
     version: "0.1.0",
@@ -114,7 +120,7 @@ const SOURCES: SourceSpec[] = [
   {
     kind: "skill",
     slug: "research",
-    root: "/Users/tyroneross/dev/git-folder/stratagem/plugin/skills/research",
+    root: path.join(SOURCES_ROOT, "stratagem/plugin/skills/research"),
     title: "Research",
     description: "Run structured research workflows with citation tracking.",
     version: "0.1.0",

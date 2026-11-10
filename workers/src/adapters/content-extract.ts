@@ -36,7 +36,7 @@ import {
 } from "../ingestion/quality.js";
 
 const UA =
-  "decision-doctor-workers/0.1 (+https://github.com/tyroneross/decision-doctor-cc)";
+  "decision-doctor-workers/0.1 (+https://github.com/tyroneross/decision-doctor)";
 
 const CHEERIO_FALLBACK_THRESHOLD = 500;
 const OPENAI_RSS_URL = "https://openai.com/news/rss.xml";
