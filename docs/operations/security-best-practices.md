@@ -1,7 +1,7 @@
 # Security Best Practices Report
 
 Date: 2026-05-11
-Repo: `/Users/tyroneross/dev/git-folder/decision-doctor-cc`
+Repo: `<repo-root>`
 
 ## Executive Summary
 

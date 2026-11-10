@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-10
 **Build:** commits `9e01dda..63d37bd` (12 commits, 16 files)
-**Anchor:** v2 mockup set at `/Users/tyroneross/dev/git-folder/UI Guidance/mockups/decision-doctor--v2-*`
+**Anchor:** v2 mockup set at `<repos-root>/UI Guidance/mockups/decision-doctor--v2-*`
 
 This document records the research that grounded each design decision in the build-loop pass. Each section names the source, the specific finding pulled, and how it shaped the code.
 

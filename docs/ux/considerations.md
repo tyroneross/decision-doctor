@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-05-10
 **Companion docs:** `docs/design/calm-precision.md` (rules) · `docs/research/ui-overhaul-2026-05-10.md` (research) · `docs/research/question-type-coverage-2026-05-10.md` (decline-and-reframe rules)
-**Mockups:** `/Users/tyroneross/dev/git-folder/UI Guidance/mockups/decision-doctor--v2-{01,06,07}.html`
+**Mockups:** `<repos-root>/UI Guidance/mockups/decision-doctor--v2-{01,06,07}.html`
 **Picked design north star:** v2-01 Sunrise Hero (coral / peach / sun palette, 16-17px body, 30-36px h1)
 
 ---
@@ -325,4 +325,4 @@ These rules apply across all routes, not specific to one surface.
 - `docs/research/question-type-coverage-2026-05-10.md` — decline-and-reframe rules
 - `docs/research/f08-f09-plan-2026-05-10.md` — F-08/F-09 specific UI specs
 - `docs/architecture/architecture.md` — backend counterpart (data flow + components)
-- `/Users/tyroneross/dev/git-folder/UI Guidance/mockups/decision-doctor--v2-*` — visual design north star
+- `<repos-root>/UI Guidance/mockups/decision-doctor--v2-*` — visual design north star

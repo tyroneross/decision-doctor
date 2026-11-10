@@ -796,11 +796,11 @@ Local evidence:
 - `lib/db/schema.ts`
 - `docs/handover/2026-05-11-preflight.md`
 - `.build-loop/research/2026-05-11-dd-combined-crawler-research.md`
-- `/Users/tyroneross/dev/git-folder/atomize-ai/lib/source-orchestrator.ts`
-- `/Users/tyroneross/dev/git-folder/atomize-ai/lib/extraction/extraction-service.ts`
-- `/Users/tyroneross/dev/git-folder/atomize-ai/lib/extraction/image-extractor.ts`
-- `/Users/tyroneross/dev/git-folder/atomize-ai/lib/services/reference-parser-service.ts`
-- `/Users/tyroneross/dev/git-folder/interface-built-right/src/engine/cdp/browser.ts`
+- `<repos-root>/atomize-ai/lib/source-orchestrator.ts`
+- `<repos-root>/atomize-ai/lib/extraction/extraction-service.ts`
+- `<repos-root>/atomize-ai/lib/extraction/image-extractor.ts`
+- `<repos-root>/atomize-ai/lib/services/reference-parser-service.ts`
+- `<repos-root>/interface-built-right/src/engine/cdp/browser.ts`
 
 External references:
 

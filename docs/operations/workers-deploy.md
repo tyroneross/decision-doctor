@@ -10,7 +10,7 @@ manual (Railway API access not wired into this dispatch).
 railway login
 
 # Link this checkout to the existing Railway project:
-cd /Users/tyroneross/dev/git-folder/decision-doctor-cc
+cd <repo-root>
 railway link --project 11d80262-9690-428d-ac73-ec689f9d5574
 
 # Create a new service for the worker:

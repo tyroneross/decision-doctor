@@ -1,6 +1,6 @@
 # Ingestion Accuracy V2 — Build-Loop Plan
 
-**Repo:** `/Users/tyroneross/dev/git-folder/decision-doctor-cc`
+**Repo:** `<repo-root>`
 **Branch:** `v2-pain-to-ai-recommendation`
 **Plan version:** 2.1 metadata-first reliability slice, updated 2026-05-12
 

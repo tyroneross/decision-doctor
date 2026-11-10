@@ -1,6 +1,6 @@
 # Sunrise Palette — Decision Doctor's Calm Precision Application
 
-**Picked:** 2026-05-10 (v2-01 Sunrise Hero mockup at `/Users/tyroneross/dev/git-folder/UI Guidance/mockups/decision-doctor--v2-01-sunrise-hero.html`)
+**Picked:** 2026-05-10 (v2-01 Sunrise Hero mockup at `<repos-root>/UI Guidance/mockups/decision-doctor--v2-01-sunrise-hero.html`)
 **Shipped:** commit `9e01dda` (palette tokens + gradients)
 **Calm Precision version:** 6.4.1 (canonical spec at `docs/design/calm-precision.md`)
 
@@ -129,7 +129,7 @@ Calm Precision's universal anti-patterns apply (see canonical doc). Additions sp
 
 ## Archived design directions (for reference)
 
-These were explored 2026-05-10 morning and **not selected**. The central UI Guidance library at `/Users/tyroneross/dev/git-folder/UI Guidance/` holds them in full.
+These were explored 2026-05-10 morning and **not selected**. The central UI Guidance library at `<repos-root>/UI Guidance/` holds them in full.
 
 | Direction | Why archived | Where to find |
 |---|---|---|
@@ -161,4 +161,4 @@ When a new component is built, ensure it uses tokens from this doc only. If a ne
 - `docs/design/data-viz-patterns.md` — chart/metric patterns from central UI Guidance
 - `docs/ux/considerations.md` — how these tokens apply to specific Decision Doctor routes
 - `docs/research/ui-overhaul-2026-05-10.md` — the research that led to picking Sunrise
-- `/Users/tyroneross/dev/git-folder/UI Guidance/mockups/decision-doctor--v2-*` — visual design north star
+- `<repos-root>/UI Guidance/mockups/decision-doctor--v2-*` — visual design north star

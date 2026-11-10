@@ -1,6 +1,6 @@
 # Decision Doctor `decision-doctor-cc` — Build Status
 
-Updated by Claude Code (Opus 4.7, 1M context). Working directory: `/Users/tyroneross/dev/git-folder/decision-doctor-cc`.
+Updated by Claude Code (Opus 4.7, 1M context). Working directory: `<repo-root>`.
 
 ## Phase 1 — Pre-build (✅ complete)
 

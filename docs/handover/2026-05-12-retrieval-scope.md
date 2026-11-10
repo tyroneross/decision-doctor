@@ -133,7 +133,7 @@ disabled toggle + empty Focused, not a hard error.
 
 ## Provenance
 
-- Plan: `/Users/tyroneross/.claude/plans/curious-sniffing-comet.md`
+- Plan: `~/.claude/plans/curious-sniffing-comet.md`
 - Stashed pre-Track-A changes (3 stashes): pain-path engine work, survey
   targetTemplateId additions, chat survey adapter draft. Restorable via
   `git stash list | grep buildloop-tracka`.
