@@ -4,7 +4,6 @@
 **First successful deploy:** 2026-05-10 (under Nixpacks). Re-converged 2026-05-11 after Railway's Nixpacks→Railpack migration broke the original config — see "Railpack migration" section below.
 **Project:** `decision-doc-railway` (`11d80262-9690-428d-ac73-ec689f9d5574`)
 **Service:** `decision-doctor-workers` (`07399a5d-1b4b-4aa9-84d5-cfbcc506cee0`)
-**Reference precedent:** `<repos-root>/atomize-ai/docs/04-operations/RAILWAY_WORKERS.md` — production for ~30 days under Nixpacks.
 
 ---
 

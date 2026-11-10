@@ -150,7 +150,6 @@ Human-readable architecture summary lives at `docs/architecture/architecture.md`
 | Next-steps execution plan | `docs/next-steps.md` |
 | Historical challenge material | `Reference files/Hackathon and Rubric/` (gitignored; archival only) |
 | Status + open follow-ups | `docs/handover/STATUS.md` |
-| Mockups (visual north star) | `<repos-root>/UI Guidance/mockups/decision-doctor--v2-*` |
 
 When adding a new doc, place it in the matching subfolder and add a row to this table.
 
